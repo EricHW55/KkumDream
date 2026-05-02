@@ -1,0 +1,30 @@
+import { requestJson } from './httpClient';
+import type { Dream, DreamDraftPayload, DreamGivePayload } from '../types/dream';
+
+export function createDreamDraft(payload: DreamDraftPayload, token?: string | null) {
+  return requestJson<Dream>('/dreams/draft', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function giveDream(dreamId: string, payload: DreamGivePayload, token?: string | null) {
+  return requestJson<Pick<Dream, 'id' | 'status' | 'givenAt' | 'imageStatus'>>(
+    `/dreams/${dreamId}/give`,
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function fetchInbox(token?: string | null) {
+  return requestJson<Dream[]>('/dreams/inbox', { token });
+}
+
+export function fetchOutbox(token?: string | null) {
+  return requestJson<Dream[]>('/dreams/outbox', { token });
+}
+

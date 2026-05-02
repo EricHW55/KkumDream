@@ -1,0 +1,20 @@
+export const colors = {
+  primary: '#5C4FB1',
+  primaryDark: '#4C3A8A',
+  primaryLight: '#A99CF2',
+  lavenderTint: '#E9E4FB',
+  lavenderMist: '#F5F3FF',
+  cardBase: '#FFFFFF',
+  cardIvory: '#FDFBF6',
+  background: '#FBFAFD',
+  accent: '#FFD66B',
+  outboxAccent: '#7FC8D9',
+  textPrimary: '#222222',
+  textSecondary: '#666666',
+  textMuted: '#999999',
+  divider: '#E5E0F4',
+  success: '#7FC8B5',
+  warning: '#F5C36B',
+  error: '#E78B8B',
+};
+
