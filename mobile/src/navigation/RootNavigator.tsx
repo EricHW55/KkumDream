@@ -5,6 +5,7 @@ import { Home, Inbox, Send, UserRound } from 'lucide-react-native';
 
 import { ComposeScreen } from '../screens/ComposeScreen';
 import { DreamDetailScreen } from '../screens/DreamDetailScreen';
+import { GroupRoomScreen } from '../screens/GroupRoomScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { InboxScreen } from '../screens/InboxScreen';
 import { OutboxScreen } from '../screens/OutboxScreen';
@@ -58,7 +59,8 @@ function MainTabs() {
           borderTopColor: colors.divider,
         },
         headerShown: false,
-      }}>
+      }}
+    >
       <Tab.Screen
         name="Home"
         component={HomeScreen}
@@ -104,9 +106,23 @@ export function RootNavigator() {
           headerStyle: { backgroundColor: colors.background },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: colors.background },
-        }}>
-        <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
-        <Stack.Screen name="Compose" component={ComposeScreen} options={{ title: '꿈 주기' }} />
+        }}
+      >
+        <Stack.Screen
+          name="MainTabs"
+          component={MainTabs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="GroupRoom"
+          component={GroupRoomScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Compose"
+          component={ComposeScreen}
+          options={{ title: '꿈 주기' }}
+        />
         <Stack.Screen
           name="DreamDetail"
           component={DreamDetailScreen}

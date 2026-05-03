@@ -1,4 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { MessageCircle } from 'lucide-react-native';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DreamCard } from '../components/DreamCard';
@@ -7,15 +8,37 @@ import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DreamDetail'>;
 
+const comments = [
+  {
+    id: 'comment-1',
+    author: '유하람',
+    body: '이 꿈은 색감이 너무 선명해서 카드로 보면 더 오래 기억날 것 같아.',
+  },
+  {
+    id: 'comment-2',
+    author: '나',
+    body: '뒤집어서 읽으니까 장면이 이어지는 느낌이 좋다.',
+  },
+];
+
 export function DreamDetailScreen({ route }: Props) {
   const { dream } = route.params;
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <DreamCard dream={dream} size="full" />
+
       <View style={styles.commentBox}>
-        <Text style={styles.commentTitle}>꿈 주인의 메인 코멘트</Text>
-        <Text style={styles.commentText}>이 꿈은 너에게 주고 싶어서 카드로 접어두었어.</Text>
+        <View style={styles.commentHeader}>
+          <MessageCircle color={colors.primary} size={20} />
+          <Text style={styles.commentTitle}>댓글</Text>
+        </View>
+        {comments.map(comment => (
+          <View key={comment.id} style={styles.commentItem}>
+            <Text style={styles.commentAuthor}>{comment.author}</Text>
+            <Text style={styles.commentText}>{comment.body}</Text>
+          </View>
+        ))}
       </View>
     </ScrollView>
   );
@@ -36,17 +59,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBase,
     borderWidth: 1,
     borderColor: colors.divider,
+    gap: 14,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   commentTitle: {
     color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  commentItem: {
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: colors.lavenderMist,
+  },
+  commentAuthor: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '900',
   },
   commentText: {
-    marginTop: 8,
+    marginTop: 6,
     color: colors.textSecondary,
     fontSize: 15,
     lineHeight: 23,
   },
 });
-

@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -20,13 +27,18 @@ type Props = {
 export function DreamCard({ dream, size = 'feed', onPress }: Props) {
   const [isBackVisible, setIsBackVisible] = useState(false);
   const rotation = useSharedValue(0);
+  const cardHeight = size === 'full' ? 560 : 430;
+  const imageHeight = size === 'full' ? 300 : 250;
 
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
   }));
 
   const backStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1100 }, { rotateY: `${rotation.value + 180}deg` }],
+    transform: [
+      { perspective: 1100 },
+      { rotateY: `${rotation.value + 180}deg` },
+    ],
   }));
 
   const flip = () => {
@@ -39,13 +51,21 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
   };
 
   return (
-    <Pressable onPress={onPress ?? flip} onLongPress={flip} style={styles.pressable}>
-      <View style={[styles.scene, size === 'full' && styles.fullScene]}>
-        <Animated.View style={[styles.card, styles.face, frontStyle]}>
-          <View style={styles.imageWrap}>
+    <Pressable
+      onPress={onPress ?? flip}
+      onLongPress={flip}
+      style={styles.pressable}
+    >
+      <View style={[styles.scene, { height: cardHeight }]}>
+        <Animated.View
+          style={[styles.card, styles.face, { height: cardHeight }, frontStyle]}
+        >
+          <View style={[styles.imageWrap, { height: imageHeight }]}>
             {dream.thumbnailUrl || dream.imageUrl ? (
               <Image
-                source={{ uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined }}
+                source={{
+                  uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
+                }}
                 style={styles.image}
               />
             ) : (
@@ -56,7 +76,9 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
           </View>
           <View style={styles.content}>
             <Text style={styles.message}>{dream.shortMessage}</Text>
-            {dream.titleVisible ? <Text style={styles.title}>{dream.title}</Text> : null}
+            {dream.titleVisible ? (
+              <Text style={styles.title}>{dream.title}</Text>
+            ) : null}
             <View style={styles.tags}>
               {dream.tags.map(tag => (
                 <TagChip key={tag} label={tag} />
@@ -65,11 +87,25 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
           </View>
         </Animated.View>
 
-        <Animated.View style={[styles.card, styles.face, styles.backFace, backStyle]}>
-          <View style={styles.backContent}>
+        <Animated.View
+          style={[
+            styles.card,
+            styles.face,
+            styles.backFace,
+            { height: cardHeight },
+            backStyle,
+          ]}
+        >
+          <ScrollView
+            bounces={false}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+            style={styles.backScroll}
+            contentContainerStyle={styles.backContent}
+          >
             <Text style={styles.backTitle}>{dream.title}</Text>
             <Text style={styles.story}>{dream.story}</Text>
-          </View>
+          </ScrollView>
         </Animated.View>
       </View>
     </Pressable>
@@ -81,13 +117,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   scene: {
-    minHeight: 430,
-  },
-  fullScene: {
-    minHeight: 560,
+    width: '100%',
   },
   card: {
-    minHeight: 430,
     borderRadius: radius.card,
     backgroundColor: colors.cardIvory,
     overflow: 'hidden',
@@ -110,7 +142,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBase,
   },
   imageWrap: {
-    height: 250,
     backgroundColor: colors.lavenderTint,
   },
   image: {
@@ -127,8 +158,10 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 28,
     fontWeight: '800',
+    includeFontPadding: false,
   },
   content: {
+    flex: 1,
     padding: 18,
     gap: 12,
   },
@@ -136,27 +169,33 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
+    includeFontPadding: false,
   },
   title: {
     color: colors.textPrimary,
     fontSize: 22,
     fontWeight: '800',
     lineHeight: 28,
+    includeFontPadding: false,
   },
   tags: {
     flexDirection: 'row',
     gap: 8,
     flexWrap: 'wrap',
   },
-  backContent: {
+  backScroll: {
     flex: 1,
+  },
+  backContent: {
     padding: 24,
     gap: 18,
+    minHeight: '100%',
   },
   backTitle: {
     color: colors.textPrimary,
     fontSize: 22,
     fontWeight: '800',
+    includeFontPadding: false,
   },
   story: {
     color: colors.textSecondary,
