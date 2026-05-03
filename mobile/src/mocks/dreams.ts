@@ -136,6 +136,9 @@ export function buildMockDraft(rawInput: string, mood: string): Dream {
   return {
     ...mockDreams[0],
     id: `draft-${Date.now()}`,
+    giverId: 'mock-user-1',
+    receiverId: null,
+    groupId: null,
     rawInput,
     title: '밤하늘에 접어 둔 꿈',
     summary: `${rawInput.slice(0, 40)}...`,

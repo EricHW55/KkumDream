@@ -16,6 +16,7 @@ import Animated, {
 import { colors } from '../theme/colors';
 import { radius } from '../theme/spacing';
 import type { Dream } from '../types/dream';
+import { getMember } from '../mocks/groups';
 import { TagChip } from './TagChip';
 
 type Props = {
@@ -29,6 +30,10 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
   const rotation = useSharedValue(0);
   const cardHeight = size === 'full' ? 560 : 430;
   const imageHeight = size === 'full' ? 300 : 250;
+  const giverName = getMember(dream.giverId)?.name ?? '나';
+  const receiverName = dream.receiverId
+    ? getMember(dream.receiverId)?.name ?? '받는 사람'
+    : '받는 사람 미정';
 
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
@@ -75,6 +80,9 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
             )}
           </View>
           <View style={styles.content}>
+            <Text style={styles.senderLine}>
+              {giverName} → {receiverName}
+            </Text>
             <Text style={styles.message}>{dream.shortMessage}</Text>
             {dream.titleVisible ? (
               <Text style={styles.title}>{dream.title}</Text>
@@ -104,6 +112,9 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
             contentContainerStyle={styles.backContent}
           >
             <Text style={styles.backTitle}>{dream.title}</Text>
+            <Text style={styles.backSenderLine}>
+              {giverName}이 {receiverName}에게 보낸 꿈
+            </Text>
             <Text style={styles.story}>{dream.story}</Text>
           </ScrollView>
         </Animated.View>
@@ -171,6 +182,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     includeFontPadding: false,
   },
+  senderLine: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
   title: {
     color: colors.textPrimary,
     fontSize: 22,
@@ -194,6 +211,12 @@ const styles = StyleSheet.create({
   backTitle: {
     color: colors.textPrimary,
     fontSize: 22,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  backSenderLine: {
+    color: colors.primary,
+    fontSize: 14,
     fontWeight: '800',
     includeFontPadding: false,
   },

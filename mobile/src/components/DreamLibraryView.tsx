@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { CalendarDays, Grid2X2, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -36,12 +37,14 @@ export function DreamLibraryView({
   dreams,
 }: Props) {
   const navigation = useNavigation<Navigation>();
+  const { width } = useWindowDimensions();
   const [mode, setMode] = useState<LibraryMode>('archive');
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null);
   const groupedDreams = useMemo(
     () => groupDreamsByDate(dreams, calendarLabel),
     [calendarLabel, dreams],
   );
+  const miniCardWidth = Math.floor((width - 40 - 20) / 3);
 
   const openDetail = (dream: Dream) => {
     setSelectedDream(null);
@@ -98,7 +101,7 @@ export function DreamLibraryView({
         <FlatList
           data={dreams}
           keyExtractor={item => item.id}
-          numColumns={2}
+          numColumns={3}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.archiveGrid}
@@ -106,6 +109,7 @@ export function DreamLibraryView({
             <MiniDreamCard
               dream={item}
               index={index}
+              width={miniCardWidth}
               onPress={() => setSelectedDream(item)}
             />
           )}
@@ -205,17 +209,19 @@ export function DreamLibraryView({
 function MiniDreamCard({
   dream,
   index,
+  width,
   onPress,
 }: {
   dream: Dream;
   index: number;
+  width: number;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={styles.miniCard}
+      style={[styles.miniCard, { width }]}
     >
       <View
         style={[
@@ -324,13 +330,12 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   gridRow: {
-    gap: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 10,
   },
   miniCard: {
-    flex: 1,
-    minHeight: 212,
-    borderRadius: 22,
+    minHeight: 170,
+    borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: colors.cardBase,
     shadowColor: colors.primary,
@@ -340,25 +345,25 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   miniImage: {
-    height: 128,
+    height: 94,
     alignItems: 'center',
     justifyContent: 'center',
   },
   miniMood: {
     color: colors.primaryDark,
-    fontSize: 24,
+    fontSize: 19,
     fontWeight: '800',
     includeFontPadding: false,
   },
   miniBody: {
-    padding: 12,
-    gap: 8,
+    padding: 10,
+    gap: 7,
   },
   miniTitle: {
     color: colors.textPrimary,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '800',
-    lineHeight: 21,
+    lineHeight: 18,
   },
   miniMeta: {
     color: colors.textMuted,
