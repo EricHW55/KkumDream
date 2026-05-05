@@ -6,6 +6,7 @@ from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.dream import Dream
+from app.models.user import User
 
 
 @dataclass
@@ -36,13 +37,20 @@ async def list_rooms(session: AsyncSession, user_id: UUID) -> list[DreamRoom]:
         .order_by(func.max(Dream.given_at).desc())
     )
     rows = (await session.execute(stmt)).all()
+    other_user_ids = [row.other_user_id for row in rows if row.other_user_id is not None]
+    users_by_id: dict[UUID, User] = {}
+    if other_user_ids:
+        users = await session.scalars(select(User).where(User.id.in_(other_user_ids)))
+        users_by_id = {user.id: user for user in users}
+
     rooms: list[DreamRoom] = []
     for row in rows:
         ids = sorted([str(user_id), str(row.other_user_id)])
+        other_user_name = users_by_id.get(row.other_user_id).nickname if row.other_user_id else None
         rooms.append(
             DreamRoom(
                 room_id=f"{ids[0]}_{ids[1]}",
-                title="꿈방",
+                title=other_user_name or "꿈친구",
                 last_given_at=row.last_given_at,
                 dream_count=row.dream_count,
             )
@@ -82,4 +90,3 @@ async def list_room_dreams(
         .limit(limit)
     )
     return list((await session.scalars(stmt)).all())
-

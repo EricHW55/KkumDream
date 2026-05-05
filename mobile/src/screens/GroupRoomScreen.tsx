@@ -1,4 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowUp, ChevronLeft } from 'lucide-react-native';
 import {
   FlatList,
@@ -12,28 +13,37 @@ import {
   View,
 } from 'react-native';
 
-import { TagChip } from '../components/TagChip';
 import { MoonAvatar } from '../components/MoonAvatar';
+import { TagChip } from '../components/TagChip';
 import {
-  getDream,
-  getGroupMessages,
-  getGroupRoom,
-  getMember,
-} from '../mocks/groups';
+  getCachedRoomDreams,
+  getCachedRooms,
+  loadRoomDreams,
+} from '../data/dreamRepository';
+import { isCurrentUserId } from '../data/currentUser';
+import { getDisplayMember } from '../data/members';
 import type { RootStackParamList } from '../navigation/types';
+import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
-import type { GroupDreamMessage } from '../types/group';
+import { interactionStyles } from '../theme/interactions';
+import type { Dream } from '../types/dream';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupRoom'>;
 
 export function GroupRoomScreen({ navigation, route }: Props) {
-  const room = getGroupRoom(route.params.groupId);
-  const title = room?.name ?? route.params.groupName ?? '새 꿈방';
+  const token = useSessionStore(state => state.token);
+  const room = getCachedRooms().find(item => item.id === route.params.groupId);
+  const title = room?.name ?? route.params.groupName ?? '꿈방';
   const description =
     room?.description ??
     route.params.description ??
-    '아직 도착한 꿈카드가 없습니다';
-  const messages = getGroupMessages(route.params.groupId);
+    '아직 주고받은 꿈카드가 없습니다';
+  const { data: dreams = getCachedRoomDreams(route.params.groupId) } = useQuery({
+    queryKey: ['rooms', route.params.groupId, 'dreams', token],
+    queryFn: () => loadRoomDreams(route.params.groupId, token),
+    initialData: () => getCachedRoomDreams(route.params.groupId),
+    staleTime: 60 * 1000,
+  });
 
   return (
     <KeyboardAvoidingView
@@ -45,7 +55,10 @@ export function GroupRoomScreen({ navigation, route }: Props) {
           accessibilityLabel="뒤로가기"
           accessibilityRole="button"
           onPress={() => navigation.goBack()}
-          style={styles.backButton}
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed && interactionStyles.pressed,
+          ]}
         >
           <ChevronLeft color={colors.textPrimary} size={26} strokeWidth={2.8} />
         </Pressable>
@@ -57,34 +70,28 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       </View>
 
       <FlatList
-        data={messages}
+        data={dreams}
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.messages,
-          messages.length === 0 && styles.emptyMessages,
+          dreams.length === 0 && styles.emptyMessages,
         ]}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Text style={styles.emptyTitle}>첫 꿈카드를 기다리는 중</Text>
             <Text style={styles.emptyText}>
-              아래 메시지 창에서 짧은 인사를 남길 수 있어요.
+              아래 메시지 창에서 짧은 인사를 함께 남길 수 있어요.
             </Text>
           </View>
         }
         ListHeaderComponent={
-          messages.length > 0 ? (
-            <Text style={styles.dateDivider}>일, 5월 3</Text>
-          ) : null
+          dreams.length > 0 ? <Text style={styles.dateDivider}>오늘</Text> : null
         }
         renderItem={({ item }) => (
           <DreamMessage
-            message={item}
-            onPress={() =>
-              navigation.navigate('DreamDetail', {
-                dream: getDream(item.dreamId),
-              })
-            }
+            dream={item}
+            onPress={() => navigation.navigate('DreamDetail', { dream: item })}
           />
         )}
       />
@@ -95,7 +102,13 @@ export function GroupRoomScreen({ navigation, route }: Props) {
           placeholderTextColor={colors.textMuted}
           style={styles.messageInput}
         />
-        <Pressable accessibilityRole="button" style={styles.sendButton}>
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.sendButton,
+            pressed && interactionStyles.pressed,
+          ]}
+        >
           <ArrowUp color={colors.textSecondary} size={24} strokeWidth={2.8} />
         </Pressable>
       </View>
@@ -104,15 +117,15 @@ export function GroupRoomScreen({ navigation, route }: Props) {
 }
 
 function DreamMessage({
-  message,
+  dream,
   onPress,
 }: {
-  message: GroupDreamMessage;
+  dream: Dream;
   onPress: () => void;
 }) {
-  const dream = getDream(message.dreamId);
-  const sender = getMember(message.senderId);
-  const isMine = sender.id === 'mock-user-1';
+  const sessionUserId = useSessionStore(state => state.userId);
+  const sender = getDisplayMember(dream.giverId, sessionUserId);
+  const isMine = isCurrentUserId(dream.giverId, sessionUserId);
   const visibleTags = dream.tags.slice(0, 3);
 
   return (
@@ -128,7 +141,7 @@ function DreamMessage({
           style={({ pressed }) => [
             styles.dreamBubble,
             isMine && styles.myDreamBubble,
-            pressed && styles.pressedBubble,
+            pressed && interactionStyles.pressedSoft,
           ]}
         >
           <View style={styles.previewWrap}>
@@ -146,7 +159,9 @@ function DreamMessage({
             )}
           </View>
           <View style={styles.bubbleText}>
-            <Text style={styles.bubbleMeta}>{message.sentAtLabel}</Text>
+            <Text style={styles.bubbleMeta}>
+              {formatSentAt(dream.givenAt ?? dream.createdAt)}
+            </Text>
             <Text style={styles.bubbleTitle}>{dream.title}</Text>
             <Text style={styles.bubbleSummary} numberOfLines={2}>
               {dream.summary}
@@ -170,6 +185,24 @@ function Avatar({ color }: { color: string }) {
       <MoonAvatar size={42} color={color} />
     </View>
   );
+}
+
+function formatSentAt(value: string | null) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
 }
 
 const styles = StyleSheet.create({
@@ -278,9 +311,6 @@ const styles = StyleSheet.create({
   },
   myDreamBubble: {
     backgroundColor: colors.lavenderMist,
-  },
-  pressedBubble: {
-    opacity: 0.88,
   },
   previewWrap: {
     height: 188,

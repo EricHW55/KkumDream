@@ -10,21 +10,28 @@ import {
 } from 'react-native';
 import { Check, PencilLine, X } from 'lucide-react-native';
 
+import { createDreamDraft } from '../api/dreams';
 import { DreamCard } from '../components/DreamCard';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { getCachedRooms } from '../data/dreamRepository';
+import { LOCAL_MOCK_USER_ID } from '../data/currentUser';
+import { getDisplayMember, getSeedFriends } from '../data/members';
 import { buildMockDraft } from '../mocks/dreams';
-import { getGroupRoom, getMember, mockGroupRooms } from '../mocks/groups';
+import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
+import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
-const currentUserId = 'mock-user-1';
+const currentUserId = LOCAL_MOCK_USER_ID;
 
 export function ComposeScreen() {
+  const token = useSessionStore(state => state.token);
   const [rawInput, setRawInput] = useState('');
   const [mood, setMood] = useState('몽환');
   const [draft, setDraft] = useState<Dream | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editStory, setEditStory] = useState('');
@@ -33,11 +40,12 @@ export function ComposeScreen() {
     null,
   );
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const rooms = useMemo(() => getCachedRooms(), []);
 
   const friends = useMemo(() => {
     const memberIds = new Set<string>();
 
-    mockGroupRooms.forEach(room => {
+    rooms.forEach(room => {
       room.memberIds.forEach(memberId => {
         if (memberId !== currentUserId) {
           memberIds.add(memberId);
@@ -45,29 +53,48 @@ export function ComposeScreen() {
       });
     });
 
-    return Array.from(memberIds).map(memberId => getMember(memberId));
-  }, []);
+    const availableFriends = Array.from(memberIds).map(memberId =>
+      getDisplayMember(memberId),
+    );
+    return availableFriends.length > 0 ? availableFriends : getSeedFriends();
+  }, [rooms]);
 
   const availableGroups = useMemo(() => {
     if (!selectedReceiverId) {
       return [];
     }
 
-    return mockGroupRooms.filter(
+    return rooms.filter(
       room =>
         room.memberIds.includes(currentUserId) &&
         room.memberIds.includes(selectedReceiverId),
     );
-  }, [selectedReceiverId]);
+  }, [rooms, selectedReceiverId]);
 
-  const canGenerate = rawInput.trim().length > 0;
+  const canGenerate = rawInput.trim().length > 0 && !isGenerating;
   const selectedReceiver = selectedReceiverId
-    ? getMember(selectedReceiverId)
+    ? getDisplayMember(selectedReceiverId)
     : null;
-  const selectedGroup = selectedGroupId ? getGroupRoom(selectedGroupId) : null;
+  const selectedGroup = selectedGroupId
+    ? rooms.find(room => room.id === selectedGroupId) ?? null
+    : null;
 
-  const createPreview = () => {
-    const nextDraft = buildMockDraft(rawInput.trim(), mood);
+  const createPreview = async () => {
+    const input = rawInput.trim();
+    if (!input) {
+      return;
+    }
+
+    setIsGenerating(true);
+    let nextDraft: Dream;
+    try {
+      nextDraft = await createDreamDraft({ rawInput: input, mood }, token);
+    } catch {
+      nextDraft = buildMockDraft(input, mood);
+    } finally {
+      setIsGenerating(false);
+    }
+
     setDraft(nextDraft);
     setEditTitle(nextDraft.title);
     setEditStory(nextDraft.story);
@@ -100,7 +127,7 @@ export function ComposeScreen() {
 
   const chooseReceiver = (memberId: string) => {
     setSelectedReceiverId(memberId);
-    const firstAvailableGroup = mockGroupRooms.find(
+    const firstAvailableGroup = rooms.find(
       room =>
         room.memberIds.includes(currentUserId) &&
         room.memberIds.includes(memberId),
@@ -176,7 +203,10 @@ export function ComposeScreen() {
             <Pressable
               accessibilityRole="button"
               onPress={openEdit}
-              style={styles.editButton}
+              style={({ pressed }) => [
+                styles.editButton,
+                pressed && interactionStyles.pressed,
+              ]}
             >
               <PencilLine color={colors.primary} size={18} />
               <Text style={styles.editButtonText}>수정</Text>
@@ -239,7 +269,10 @@ export function ComposeScreen() {
                 accessibilityLabel="닫기"
                 accessibilityRole="button"
                 onPress={() => setIsRecipientModalVisible(false)}
-                style={styles.closeButton}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
               >
                 <X color={colors.textSecondary} size={20} />
               </Pressable>
@@ -252,9 +285,10 @@ export function ComposeScreen() {
                   key={friend.id}
                   accessibilityRole="button"
                   onPress={() => chooseReceiver(friend.id)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.friendItem,
                     selectedReceiverId === friend.id && styles.selectedItem,
+                    pressed && interactionStyles.pressedSoft,
                   ]}
                 >
                   <MoonAvatar size={38} color={friend.avatarColor} />
@@ -273,16 +307,17 @@ export function ComposeScreen() {
                   key={room.id}
                   accessibilityRole="button"
                   onPress={() => setSelectedGroupId(room.id)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.groupItem,
                     selectedGroupId === room.id && styles.selectedItem,
+                    pressed && interactionStyles.pressedSoft,
                   ]}
                 >
                   <View style={styles.groupText}>
                     <Text style={styles.groupName}>{room.name}</Text>
                     <Text style={styles.groupMeta} numberOfLines={1}>
                       {room.memberIds
-                        .map(memberId => getMember(memberId).name)
+                        .map(memberId => getDisplayMember(memberId).name)
                         .join(', ')}
                     </Text>
                   </View>

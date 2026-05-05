@@ -14,9 +14,10 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { colors } from '../theme/colors';
+import { interactionStyles } from '../theme/interactions';
 import { radius } from '../theme/spacing';
 import type { Dream } from '../types/dream';
-import { getMember } from '../mocks/groups';
+import { getDisplayMember } from '../data/members';
 import { TagChip } from './TagChip';
 
 type Props = {
@@ -30,9 +31,9 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
   const rotation = useSharedValue(0);
   const cardHeight = size === 'full' ? 560 : 430;
   const imageHeight = size === 'full' ? 300 : 250;
-  const giverName = getMember(dream.giverId)?.name ?? '나';
+  const giverName = getDisplayMember(dream.giverId).name;
   const receiverName = dream.receiverId
-    ? getMember(dream.receiverId)?.name ?? '받는 사람'
+    ? getDisplayMember(dream.receiverId).name
     : '받는 사람 미정';
 
   const frontStyle = useAnimatedStyle(() => ({
@@ -59,7 +60,10 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
     <Pressable
       onPress={onPress ?? flip}
       onLongPress={flip}
-      style={styles.pressable}
+      style={({ pressed }) => [
+        styles.pressable,
+        pressed && interactionStyles.pressedSoft,
+      ]}
     >
       <View style={[styles.scene, { height: cardHeight }]}>
         <Animated.View

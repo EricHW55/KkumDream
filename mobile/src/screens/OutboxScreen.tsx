@@ -1,9 +1,18 @@
+import { useQuery } from '@tanstack/react-query';
+
 import { DreamLibraryView } from '../components/DreamLibraryView';
 import { Screen } from '../components/Screen';
-import { mockDreams } from '../mocks/dreams';
+import { getCachedOutbox, loadOutbox } from '../data/dreamRepository';
+import { useSessionStore } from '../store/sessionStore';
 
 export function OutboxScreen() {
-  const outbox = mockDreams.filter(dream => dream.giverId === 'mock-user-1');
+  const token = useSessionStore(state => state.token);
+  const { data: outbox = getCachedOutbox() } = useQuery({
+    queryKey: ['dreams', 'outbox', token],
+    queryFn: () => loadOutbox(token),
+    initialData: getCachedOutbox,
+    staleTime: 60 * 1000,
+  });
 
   return (
     <Screen>

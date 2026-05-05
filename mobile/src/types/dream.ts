@@ -29,11 +29,10 @@ export interface Dream {
 
 export interface DreamDraftPayload {
   rawInput: string;
-  mood?: Mood;
+  mood?: string;
 }
 
 export interface DreamGivePayload {
   receiverId?: string;
   groupId?: string;
 }
-

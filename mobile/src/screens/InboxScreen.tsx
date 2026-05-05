@@ -1,9 +1,18 @@
+import { useQuery } from '@tanstack/react-query';
+
 import { DreamLibraryView } from '../components/DreamLibraryView';
 import { Screen } from '../components/Screen';
-import { mockDreams } from '../mocks/dreams';
+import { getCachedInbox, loadInbox } from '../data/dreamRepository';
+import { useSessionStore } from '../store/sessionStore';
 
 export function InboxScreen() {
-  const inbox = mockDreams.filter(dream => dream.receiverId === 'mock-user-1');
+  const token = useSessionStore(state => state.token);
+  const { data: inbox = getCachedInbox() } = useQuery({
+    queryKey: ['dreams', 'inbox', token],
+    queryFn: () => loadInbox(token),
+    initialData: getCachedInbox,
+    staleTime: 60 * 1000,
+  });
 
   return (
     <Screen>

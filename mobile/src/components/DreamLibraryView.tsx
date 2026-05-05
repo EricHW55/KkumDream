@@ -15,6 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
+import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 import { TagChip } from './TagChip';
 
@@ -62,7 +63,11 @@ export function DreamLibraryView({
         <Pressable
           accessibilityRole="button"
           onPress={() => setMode('archive')}
-          style={[styles.segment, mode === 'archive' && styles.segmentActive]}
+          style={({ pressed }) => [
+            styles.segment,
+            mode === 'archive' && styles.segmentActive,
+            pressed && interactionStyles.pressed,
+          ]}
         >
           <Grid2X2
             color={mode === 'archive' ? colors.textPrimary : colors.textMuted}
@@ -80,7 +85,11 @@ export function DreamLibraryView({
         <Pressable
           accessibilityRole="button"
           onPress={() => setMode('calendar')}
-          style={[styles.segment, mode === 'calendar' && styles.segmentActive]}
+          style={({ pressed }) => [
+            styles.segment,
+            mode === 'calendar' && styles.segmentActive,
+            pressed && interactionStyles.pressed,
+          ]}
         >
           <CalendarDays
             color={mode === 'calendar' ? colors.textPrimary : colors.textMuted}
@@ -128,7 +137,10 @@ export function DreamLibraryView({
                     key={dream.id}
                     accessibilityRole="button"
                     onPress={() => setSelectedDream(dream)}
-                    style={styles.calendarCard}
+                    style={({ pressed }) => [
+                      styles.calendarCard,
+                      pressed && interactionStyles.pressedSoft,
+                    ]}
                   >
                     <View
                       style={[
@@ -169,14 +181,20 @@ export function DreamLibraryView({
         >
           {selectedDream ? (
             <Pressable
-              style={styles.previewCard}
+              style={({ pressed }) => [
+                styles.previewCard,
+                pressed && interactionStyles.pressedSoft,
+              ]}
               onPress={() => openDetail(selectedDream)}
             >
               <Pressable
                 accessibilityLabel="닫기"
                 accessibilityRole="button"
                 onPress={() => setSelectedDream(null)}
-                style={styles.previewClose}
+                style={({ pressed }) => [
+                  styles.previewClose,
+                  pressed && interactionStyles.pressed,
+                ]}
               >
                 <X color={colors.textSecondary} size={18} />
               </Pressable>
@@ -221,7 +239,11 @@ function MiniDreamCard({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={[styles.miniCard, { width }]}
+      style={({ pressed }) => [
+        styles.miniCard,
+        { width },
+        pressed && interactionStyles.pressedSoft,
+      ]}
     >
       <View
         style={[

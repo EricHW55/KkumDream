@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -17,17 +17,31 @@ import {
   UsersRound,
   X,
 } from 'lucide-react-native';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { MoonAvatar } from '../components/MoonAvatar';
 import { Screen } from '../components/Screen';
-import { getDream, mockGroupRooms, mockMembers } from '../mocks/groups';
-import type { RootStackParamList } from '../navigation/types';
+import {
+  getCachedDream,
+  getCachedRooms,
+  loadRooms,
+} from '../data/dreamRepository';
+import { getCurrentUserId } from '../data/currentUser';
+import { getDisplayMember } from '../data/members';
+import type { MainTabParamList, RootStackParamList } from '../navigation/types';
+import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
+import { interactionStyles } from '../theme/interactions';
 import type { GroupRoom } from '../types/group';
 
-type Navigation = NativeStackNavigationProp<RootStackParamList>;
+type Navigation = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Home'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 type RoomSheetMode = 'menu' | 'created' | 'join';
 
 function buildInviteCode() {
@@ -36,11 +50,23 @@ function buildInviteCode() {
 
 export function HomeScreen() {
   const navigation = useNavigation<Navigation>();
+  const token = useSessionStore(state => state.token);
+  const sessionUserId = useSessionStore(state => state.userId);
   const [isRoomSheetVisible, setIsRoomSheetVisible] = useState(false);
   const [roomSheetMode, setRoomSheetMode] = useState<RoomSheetMode>('menu');
   const [joinCode, setJoinCode] = useState('');
   const [createdRoom, setCreatedRoom] = useState<GroupRoom | null>(null);
-  const [rooms, setRooms] = useState<GroupRoom[]>(mockGroupRooms);
+  const [localRooms, setLocalRooms] = useState<GroupRoom[]>([]);
+  const { data: syncedRooms = getCachedRooms() } = useQuery({
+    queryKey: ['rooms', token],
+    queryFn: () => loadRooms(token),
+    initialData: getCachedRooms,
+    staleTime: 60 * 1000,
+  });
+  const rooms = useMemo(
+    () => [...localRooms, ...syncedRooms],
+    [localRooms, syncedRooms],
+  );
 
   const openRoom = (room: GroupRoom) => {
     navigation.navigate('GroupRoom', {
@@ -65,11 +91,11 @@ export function HomeScreen() {
       inviteCode: buildInviteCode(),
       lastActivityLabel: '새 방',
       unreadCount: 0,
-      memberIds: ['mock-user-1'],
+      memberIds: [getCurrentUserId(sessionUserId)],
       latestDreamId: null,
     };
 
-    setRooms(currentRooms => [room, ...currentRooms]);
+    setLocalRooms(currentRooms => [room, ...currentRooms]);
     setCreatedRoom(room);
     setRoomSheetMode('created');
   };
@@ -90,12 +116,12 @@ export function HomeScreen() {
         inviteCode: normalizedCode,
         lastActivityLabel: '참가',
         unreadCount: 0,
-        memberIds: ['mock-user-1'],
+        memberIds: [getCurrentUserId(sessionUserId)],
         latestDreamId: null,
       } satisfies GroupRoom);
 
     if (!existingRoom) {
-      setRooms(currentRooms => [room, ...currentRooms]);
+      setLocalRooms(currentRooms => [room, ...currentRooms]);
     }
 
     setIsRoomSheetVisible(false);
@@ -123,7 +149,10 @@ export function HomeScreen() {
             accessibilityLabel="꿈 작성"
             accessibilityRole="button"
             onPress={() => navigation.navigate('Compose')}
-            style={styles.circleButton}
+            style={({ pressed }) => [
+              styles.circleButton,
+              pressed && interactionStyles.pressed,
+            ]}
           >
             <PenLine color={colors.textPrimary} size={26} strokeWidth={2.5} />
           </Pressable>
@@ -131,13 +160,25 @@ export function HomeScreen() {
             accessibilityLabel="그룹방 추가"
             accessibilityRole="button"
             onPress={openRoomSheet}
-            style={styles.circleButton}
+            style={({ pressed }) => [
+              styles.circleButton,
+              pressed && interactionStyles.pressed,
+            ]}
           >
             <Plus color={colors.textPrimary} size={28} strokeWidth={2.6} />
           </Pressable>
-          <View style={styles.profileBadge}>
+          <Pressable
+            accessibilityLabel="내 정보"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => navigation.navigate('Profile')}
+            style={({ pressed }) => [
+              styles.profileBadge,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
             <MoonAvatar size={48} color={colors.primary} />
-          </View>
+          </Pressable>
         </View>
       </View>
 
@@ -148,7 +189,7 @@ export function HomeScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <Text style={styles.helperText}>
-            싱어송, 고양이의 삶, vlog는 화면 구성을 보여주는 임시 데이터입니다.
+            백엔드와 동기화된 꿈방이 여기에 표시됩니다.
           </Text>
         }
         renderItem={({ item }) => (
@@ -176,7 +217,10 @@ export function HomeScreen() {
                 accessibilityLabel="닫기"
                 accessibilityRole="button"
                 onPress={() => setIsRoomSheetVisible(false)}
-                style={styles.closeButton}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
               >
                 <X color={colors.textSecondary} size={20} />
               </Pressable>
@@ -187,7 +231,10 @@ export function HomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   onPress={createRoom}
-                  style={styles.sheetAction}
+                  style={({ pressed }) => [
+                    styles.sheetAction,
+                    pressed && interactionStyles.pressedSoft,
+                  ]}
                 >
                   <View style={styles.actionIcon}>
                     <UsersRound color={colors.primary} size={22} />
@@ -203,7 +250,10 @@ export function HomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => setRoomSheetMode('join')}
-                  style={styles.sheetAction}
+                  style={({ pressed }) => [
+                    styles.sheetAction,
+                    pressed && interactionStyles.pressedSoft,
+                  ]}
                 >
                   <View style={styles.actionIcon}>
                     <LogIn color={colors.primary} size={22} />
@@ -233,7 +283,10 @@ export function HomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   onPress={enterCreatedRoom}
-                  style={styles.primaryAction}
+                  style={({ pressed }) => [
+                    styles.primaryAction,
+                    pressed && interactionStyles.pressed,
+                  ]}
                 >
                   <Text style={styles.primaryActionText}>방 들어가기</Text>
                 </Pressable>
@@ -256,9 +309,10 @@ export function HomeScreen() {
                   accessibilityRole="button"
                   disabled={!joinCode.trim()}
                   onPress={joinRoom}
-                  style={[
+                  style={({ pressed }) => [
                     styles.primaryAction,
                     !joinCode.trim() && styles.disabledAction,
+                    pressed && joinCode.trim() && interactionStyles.pressed,
                   ]}
                 >
                   <Text style={styles.primaryActionText}>참가하기</Text>
@@ -279,17 +333,21 @@ function GroupRoomItem({
   room: GroupRoom;
   onPress: () => void;
 }) {
-  const latestDream = room.latestDreamId ? getDream(room.latestDreamId) : null;
+  const latestDream = room.latestDreamId
+    ? getCachedDream(room.latestDreamId)
+    : null;
   const members = room.memberIds
-    .map(memberId => mockMembers.find(member => member.id === memberId))
-    .filter(Boolean)
+    .map(memberId => getDisplayMember(memberId))
     .slice(0, 3);
 
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={styles.roomItem}
+      style={({ pressed }) => [
+        styles.roomItem,
+        pressed && interactionStyles.pressedSoft,
+      ]}
     >
       <View style={styles.roomText}>
         <Text style={styles.roomName}>{room.name}</Text>
@@ -304,7 +362,10 @@ function GroupRoomItem({
             member ? (
               <View
                 key={member.id}
-                style={[styles.memberDot, { marginLeft: index === 0 ? 0 : -8 }]}
+                style={[
+                  styles.memberDot,
+                  index > 0 && styles.stackedMemberDot,
+                ]}
               >
                 <MoonAvatar size={27} color={member.avatarColor} />
               </View>
@@ -425,6 +486,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E5E5E8',
     overflow: 'hidden',
+  },
+  stackedMemberDot: {
+    marginLeft: -8,
   },
   roomDivider: {
     width: 1,
