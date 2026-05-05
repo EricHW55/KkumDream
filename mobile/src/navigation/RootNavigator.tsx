@@ -1,5 +1,5 @@
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Home, Inbox, Send, UserRound } from 'lucide-react-native';
 
@@ -8,8 +8,10 @@ import { DreamDetailScreen } from '../screens/DreamDetailScreen';
 import { GroupRoomScreen } from '../screens/GroupRoomScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { InboxScreen } from '../screens/InboxScreen';
+import { LoginScreen } from '../screens/LoginScreen';
 import { OutboxScreen } from '../screens/OutboxScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import type { MainTabParamList, RootStackParamList } from './types';
 
@@ -97,38 +99,65 @@ function MainTabs() {
   );
 }
 
+function AuthenticatedStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerTintColor: colors.textPrimary,
+        headerStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <Stack.Screen
+        name="MainTabs"
+        component={MainTabs}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="GroupRoom"
+        component={GroupRoomScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Compose"
+        component={ComposeScreen}
+        options={{ title: '꿈 주기' }}
+      />
+      <Stack.Screen
+        name="DreamDetail"
+        component={DreamDetailScreen}
+        options={{ title: '꿈 카드' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function AuthStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerTintColor: colors.textPrimary,
+        headerStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 export function RootNavigator() {
+  const isAuthenticated = useSessionStore(state => state.isAuthenticated);
+
   return (
     <NavigationContainer theme={theme}>
-      <Stack.Navigator
-        screenOptions={{
-          headerTintColor: colors.textPrimary,
-          headerStyle: { backgroundColor: colors.background },
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      >
-        <Stack.Screen
-          name="MainTabs"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="GroupRoom"
-          component={GroupRoomScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Compose"
-          component={ComposeScreen}
-          options={{ title: '꿈 주기' }}
-        />
-        <Stack.Screen
-          name="DreamDetail"
-          component={DreamDetailScreen}
-          options={{ title: '꿈 카드' }}
-        />
-      </Stack.Navigator>
+      {isAuthenticated ? <AuthenticatedStack /> : <AuthStack />}
     </NavigationContainer>
   );
 }

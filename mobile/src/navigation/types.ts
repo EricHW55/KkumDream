@@ -1,6 +1,7 @@
 import type { Dream } from '../types/dream';
 
 export type RootStackParamList = {
+  Login: undefined;
   MainTabs: undefined;
   GroupRoom: { groupId: string; groupName?: string; description?: string };
   Compose: undefined;

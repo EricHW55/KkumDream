@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/kkumdream"
     auth_mock_user_id: str | None = None
     supabase_jwt_secret: str | None = None
+    app_jwt_secret: str = "change-me-in-production"
+    app_jwt_expire_days: int = 30
+    google_web_client_id: str | None = None
 
     ai_mock_mode: bool = True
     anthropic_api_key: str | None = None
@@ -49,4 +52,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-
