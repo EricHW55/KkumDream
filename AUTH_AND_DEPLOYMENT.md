@@ -75,13 +75,15 @@ Important:
 - If `AUTH_MOCK_USER_ID` is set, local requests without a bearer token use that mock user.
 - Requests with a KKUMDREAM bearer token still use the token user.
 
-Create tables:
+Run database migrations:
 
 ```powershell
 cd C:\dev\KkumDream\KKUMDREAM\backend
 conda activate kkumdream
-python scripts/create_tables.py
+alembic upgrade head
 ```
+
+`python scripts/create_tables.py` is kept as a compatibility shortcut and runs the same migration upgrade.
 
 Run API:
 

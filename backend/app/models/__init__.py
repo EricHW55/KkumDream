@@ -2,7 +2,7 @@ from app.models.ai_generation import AiGenerationJob, AiGenerationLog
 from app.models.dream import DailyGiveLimit, Dream, DreamComment, DreamReaction
 from app.models.friendship import Friendship
 from app.models.group import Group, GroupMember
-from app.models.user import User
+from app.models.user import DeviceToken, User
 
 __all__ = [
     "AiGenerationJob",
@@ -11,9 +11,9 @@ __all__ = [
     "Dream",
     "DreamComment",
     "DreamReaction",
+    "DeviceToken",
     "Friendship",
     "Group",
     "GroupMember",
     "User",
 ]
-

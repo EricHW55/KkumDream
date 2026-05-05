@@ -19,11 +19,13 @@ python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements-dev.txt
 copy .env.example .env
-python scripts/create_tables.py
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
 Local mock auth is enabled by setting `AUTH_MOCK_USER_ID` in `.env`.
+
+`python scripts/create_tables.py` is still available as a shortcut for `alembic upgrade head`.
 
 ## Image Worker
 

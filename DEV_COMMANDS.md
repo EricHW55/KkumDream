@@ -8,10 +8,13 @@ Open **Anaconda Prompt** or a PowerShell where conda works.
 conda activate kkumdream
 cd C:\dev\KkumDream\KKUMDREAM\backend
 copy .env.example .env
+alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Run the `copy .env.example .env` command only once, or when `.env` does not exist.
+
+Run `alembic upgrade head` whenever backend DB migrations are added.
 
 Backend docs should open at:
 

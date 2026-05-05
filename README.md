@@ -31,5 +31,6 @@ KKUMDREAM/
 See:
 
 - `docs/architecture.md`
+- `docs/database.md`
 - `docs/development.md`
 - `docs/next_milestones.md`

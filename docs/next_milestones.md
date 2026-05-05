@@ -2,7 +2,7 @@
 
 ## M1: Backend Data Contract
 
-- Add Alembic migrations instead of `create_tables.py`
+- Use Alembic migrations for every schema change
 - Finish friendship permission checks before `give`
 - Add comments and reactions endpoints
 - Add Supabase Auth token verification against production config
@@ -29,4 +29,3 @@
 - Add content moderation before draft creation
 - Upload generated WebP and thumbnail to R2
 - Add generation cost dashboard query
-

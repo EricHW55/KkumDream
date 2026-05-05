@@ -20,10 +20,22 @@ python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements-dev.txt
 copy .env.example .env
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
 Python is not currently available through this machine's PATH except the Windows Store alias. Install Python 3.12 or disable the Windows Store `python.exe` alias before running the commands.
+
+## Database Migrations
+
+Use Alembic for all schema changes:
+
+```powershell
+alembic upgrade head
+alembic revision --autogenerate -m "describe schema change"
+```
+
+`python scripts/create_tables.py` is kept as a compatibility shortcut and now runs `alembic upgrade head`.
 
 ## Mock Mode
 
