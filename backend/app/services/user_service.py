@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 
@@ -16,7 +16,7 @@ async def get_or_create_mock_user(session: AsyncSession, user_id: UUID) -> User:
         return user
     user = User(
         id=user_id,
-        nickname="꿈드림 사용자",
+        nickname="KkumDream User",
         provider="mock",
         provider_user_id=str(user_id),
     )

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.ai_generation import AiGenerationJob, AiGenerationLog
 from app.models.dream import DailyGiveLimit, Dream
+from app.models.group import GroupMember
 from app.schemas.dream import DreamDraftCreate, DreamGiveRequest, DreamUpdate
 from app.services.ai_text_service import generate_dream_text
 
@@ -82,6 +83,8 @@ async def give_dream(
         raise ForbiddenError("Only the giver can give this dream")
     if dream.status != "draft":
         raise BadRequestError("Dream has already been given")
+    if payload.group_id is not None:
+        await _require_group_member(session, payload.group_id, user_id)
 
     await _consume_daily_give_limit(session, user_id)
     dream.receiver_id = payload.receiver_id
@@ -159,6 +162,17 @@ async def _get_dream(session: AsyncSession, dream_id: UUID) -> Dream:
     if dream is None:
         raise NotFoundError("Dream not found")
     return dream
+
+
+async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: UUID) -> None:
+    member_id = await session.scalar(
+        select(GroupMember.id).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == user_id,
+        )
+    )
+    if member_id is None:
+        raise ForbiddenError("You cannot give a dream to this room")
 
 
 async def _consume_daily_give_limit(session: AsyncSession, user_id: UUID) -> None:

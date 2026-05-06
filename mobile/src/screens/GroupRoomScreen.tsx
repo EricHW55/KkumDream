@@ -32,16 +32,19 @@ type Props = NativeStackScreenProps<RootStackParamList, 'GroupRoom'>;
 
 export function GroupRoomScreen({ navigation, route }: Props) {
   const token = useSessionStore(state => state.token);
-  const room = getCachedRooms().find(item => item.id === route.params.groupId);
+  const sessionUserId = useSessionStore(state => state.userId);
+  const room = getCachedRooms(sessionUserId).find(
+    item => item.id === route.params.groupId,
+  );
   const title = room?.name ?? route.params.groupName ?? '꿈방';
   const description =
     room?.description ??
     route.params.description ??
     '아직 주고받은 꿈카드가 없습니다';
-  const { data: dreams = getCachedRoomDreams(route.params.groupId) } = useQuery({
-    queryKey: ['rooms', route.params.groupId, 'dreams', token],
-    queryFn: () => loadRoomDreams(route.params.groupId, token),
-    initialData: () => getCachedRoomDreams(route.params.groupId),
+  const { data: dreams = getCachedRoomDreams(route.params.groupId, sessionUserId) } = useQuery({
+    queryKey: ['rooms', route.params.groupId, 'dreams', sessionUserId, token],
+    queryFn: () => loadRoomDreams(route.params.groupId, token, sessionUserId),
+    initialData: () => getCachedRoomDreams(route.params.groupId, sessionUserId),
     staleTime: 60 * 1000,
   });
 

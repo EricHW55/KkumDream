@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -17,7 +17,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -26,11 +26,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { Screen } from '../components/Screen';
 import {
+  createGroupRoom,
   getCachedDream,
   getCachedRooms,
+  joinGroupRoom,
   loadRooms,
 } from '../data/dreamRepository';
-import { getCurrentUserId } from '../data/currentUser';
 import { getDisplayMember } from '../data/members';
 import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
@@ -44,29 +45,24 @@ type Navigation = CompositeNavigationProp<
 >;
 type RoomSheetMode = 'menu' | 'created' | 'join';
 
-function buildInviteCode() {
-  return `DREAM-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-}
-
 export function HomeScreen() {
   const navigation = useNavigation<Navigation>();
+  const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
   const [isRoomSheetVisible, setIsRoomSheetVisible] = useState(false);
   const [roomSheetMode, setRoomSheetMode] = useState<RoomSheetMode>('menu');
   const [joinCode, setJoinCode] = useState('');
   const [createdRoom, setCreatedRoom] = useState<GroupRoom | null>(null);
-  const [localRooms, setLocalRooms] = useState<GroupRoom[]>([]);
-  const { data: syncedRooms = getCachedRooms() } = useQuery({
-    queryKey: ['rooms', token],
-    queryFn: () => loadRooms(token),
-    initialData: getCachedRooms,
+  const [roomError, setRoomError] = useState<string | null>(null);
+  const [isRoomActionPending, setIsRoomActionPending] = useState(false);
+  const roomsQueryKey = ['rooms', sessionUserId, token] as const;
+  const { data: rooms = getCachedRooms(sessionUserId) } = useQuery({
+    queryKey: roomsQueryKey,
+    queryFn: () => loadRooms(token, sessionUserId),
+    initialData: () => getCachedRooms(sessionUserId),
     staleTime: 60 * 1000,
   });
-  const rooms = useMemo(
-    () => [...localRooms, ...syncedRooms],
-    [localRooms, syncedRooms],
-  );
 
   const openRoom = (room: GroupRoom) => {
     navigation.navigate('GroupRoom', {
@@ -80,52 +76,64 @@ export function HomeScreen() {
     setRoomSheetMode('menu');
     setCreatedRoom(null);
     setJoinCode('');
+    setRoomError(null);
     setIsRoomSheetVisible(true);
   };
 
-  const createRoom = () => {
-    const room: GroupRoom = {
-      id: `local-create-${Date.now()}`,
-      name: '새 꿈방',
-      description: '첫 꿈카드를 기다리는 중',
-      inviteCode: buildInviteCode(),
-      lastActivityLabel: '새 방',
-      unreadCount: 0,
-      memberIds: [getCurrentUserId(sessionUserId)],
-      latestDreamId: null,
-    };
+  const createRoom = async () => {
+    if (!token) {
+      setRoomError('로그인이 필요합니다.');
+      return;
+    }
 
-    setLocalRooms(currentRooms => [room, ...currentRooms]);
-    setCreatedRoom(room);
-    setRoomSheetMode('created');
+    setRoomError(null);
+    setIsRoomActionPending(true);
+    try {
+      const room = await createGroupRoom('새 꿈방', token, sessionUserId);
+      queryClient.setQueryData<GroupRoom[]>(roomsQueryKey, currentRooms =>
+        upsertRoom(currentRooms ?? [], room),
+      );
+      setCreatedRoom(room);
+      setRoomSheetMode('created');
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : '꿈방을 만들지 못했어요.');
+    } finally {
+      setIsRoomActionPending(false);
+    }
   };
 
-  const joinRoom = () => {
+  const joinRoom = async () => {
     const normalizedCode = joinCode.trim().toUpperCase();
     if (!normalizedCode) {
       return;
     }
 
     const existingRoom = rooms.find(room => room.inviteCode === normalizedCode);
-    const room: GroupRoom =
-      existingRoom ??
-      ({
-        id: `local-join-${Date.now()}`,
-        name: '초대받은 꿈방',
-        description: `${normalizedCode} 코드로 참가함`,
-        inviteCode: normalizedCode,
-        lastActivityLabel: '참가',
-        unreadCount: 0,
-        memberIds: [getCurrentUserId(sessionUserId)],
-        latestDreamId: null,
-      } satisfies GroupRoom);
-
-    if (!existingRoom) {
-      setLocalRooms(currentRooms => [room, ...currentRooms]);
+    if (existingRoom) {
+      setIsRoomSheetVisible(false);
+      openRoom(existingRoom);
+      return;
     }
 
-    setIsRoomSheetVisible(false);
-    openRoom(room);
+    if (!token) {
+      setRoomError('로그인이 필요합니다.');
+      return;
+    }
+
+    setRoomError(null);
+    setIsRoomActionPending(true);
+    try {
+      const room = await joinGroupRoom(normalizedCode, token, sessionUserId);
+      queryClient.setQueryData<GroupRoom[]>(roomsQueryKey, currentRooms =>
+        upsertRoom(currentRooms ?? [], room),
+      );
+      setIsRoomSheetVisible(false);
+      openRoom(room);
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : '초대코드를 확인하지 못했어요.');
+    } finally {
+      setIsRoomActionPending(false);
+    }
   };
 
   const enterCreatedRoom = () => {
@@ -157,7 +165,7 @@ export function HomeScreen() {
             <PenLine color={colors.textPrimary} size={26} strokeWidth={2.5} />
           </Pressable>
           <Pressable
-            accessibilityLabel="그룹방 추가"
+            accessibilityLabel="꿈방 추가"
             accessibilityRole="button"
             onPress={openRoomSheet}
             style={({ pressed }) => [
@@ -186,14 +194,24 @@ export function HomeScreen() {
         data={rooms}
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, rooms.length === 0 && styles.emptyList]}
         ListHeaderComponent={
-          <Text style={styles.helperText}>
-            백엔드와 동기화된 꿈방이 여기에 표시됩니다.
-          </Text>
+          rooms.length > 0 ? (
+            <Text style={styles.helperText}>백엔드 DB에 저장된 내 꿈방입니다.</Text>
+          ) : null
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyTitle}>아직 꿈방이 없어요</Text>
+            <Text style={styles.emptyText}>오른쪽 위 + 버튼으로 새 꿈방을 만들 수 있어요.</Text>
+          </View>
         }
         renderItem={({ item }) => (
-          <GroupRoomItem room={item} onPress={() => openRoom(item)} />
+          <GroupRoomItem
+            room={item}
+            sessionUserId={sessionUserId}
+            onPress={() => openRoom(item)}
+          />
         )}
       />
 
@@ -212,7 +230,7 @@ export function HomeScreen() {
             onPress={event => event.stopPropagation()}
           >
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>그룹방</Text>
+              <Text style={styles.sheetTitle}>꿈방</Text>
               <Pressable
                 accessibilityLabel="닫기"
                 accessibilityRole="button"
@@ -226,13 +244,17 @@ export function HomeScreen() {
               </Pressable>
             </View>
 
+            {roomError ? <Text style={styles.errorText}>{roomError}</Text> : null}
+
             {roomSheetMode === 'menu' ? (
               <>
                 <Pressable
                   accessibilityRole="button"
+                  disabled={isRoomActionPending}
                   onPress={createRoom}
                   style={({ pressed }) => [
                     styles.sheetAction,
+                    isRoomActionPending && styles.disabledAction,
                     pressed && interactionStyles.pressedSoft,
                   ]}
                 >
@@ -240,9 +262,9 @@ export function HomeScreen() {
                     <UsersRound color={colors.primary} size={22} />
                   </View>
                   <View style={styles.actionTextWrap}>
-                    <Text style={styles.actionTitle}>그룹방 만들기</Text>
+                    <Text style={styles.actionTitle}>꿈방 만들기</Text>
                     <Text style={styles.actionSubtitle}>
-                      초대 코드를 만들어 친구를 초대합니다.
+                      DB에 새 꿈방을 만들고 초대코드를 발급합니다.
                     </Text>
                   </View>
                 </Pressable>
@@ -259,9 +281,9 @@ export function HomeScreen() {
                     <LogIn color={colors.primary} size={22} />
                   </View>
                   <View style={styles.actionTextWrap}>
-                    <Text style={styles.actionTitle}>초대 코드로 참가</Text>
+                    <Text style={styles.actionTitle}>초대코드로 참가</Text>
                     <Text style={styles.actionSubtitle}>
-                      받은 코드를 입력해 그룹방에 들어갑니다.
+                      받은 초대코드를 입력해 같은 꿈방에 들어갑니다.
                     </Text>
                   </View>
                 </Pressable>
@@ -270,7 +292,7 @@ export function HomeScreen() {
 
             {roomSheetMode === 'created' && createdRoom ? (
               <View style={styles.codePanel}>
-                <Text style={styles.codeLabel}>참가 코드</Text>
+                <Text style={styles.codeLabel}>초대코드</Text>
                 <View style={styles.inviteCodeRow}>
                   <Text selectable style={styles.inviteCode}>
                     {createdRoom.inviteCode}
@@ -278,7 +300,7 @@ export function HomeScreen() {
                   <Copy color={colors.primary} size={22} />
                 </View>
                 <Text style={styles.codeHelp}>
-                  친구에게 이 코드를 보내면 같은 꿈방에 참가할 수 있습니다.
+                  친구에게 이 코드를 보내면 같은 꿈방에 참가할 수 있어요.
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -295,24 +317,27 @@ export function HomeScreen() {
 
             {roomSheetMode === 'join' ? (
               <View style={styles.codePanel}>
-                <Text style={styles.codeLabel}>초대 코드 입력</Text>
+                <Text style={styles.codeLabel}>초대코드 입력</Text>
                 <TextInput
                   autoCapitalize="characters"
                   autoCorrect={false}
                   value={joinCode}
                   onChangeText={setJoinCode}
-                  placeholder="예: SING-0503"
+                  placeholder="예: DREAM-ABC123"
                   placeholderTextColor={colors.textMuted}
                   style={styles.codeInput}
                 />
                 <Pressable
                   accessibilityRole="button"
-                  disabled={!joinCode.trim()}
+                  disabled={!joinCode.trim() || isRoomActionPending}
                   onPress={joinRoom}
                   style={({ pressed }) => [
                     styles.primaryAction,
-                    !joinCode.trim() && styles.disabledAction,
-                    pressed && joinCode.trim() && interactionStyles.pressed,
+                    (!joinCode.trim() || isRoomActionPending) && styles.disabledAction,
+                    pressed &&
+                      joinCode.trim() &&
+                      !isRoomActionPending &&
+                      interactionStyles.pressed,
                   ]}
                 >
                   <Text style={styles.primaryActionText}>참가하기</Text>
@@ -328,16 +353,18 @@ export function HomeScreen() {
 
 function GroupRoomItem({
   room,
+  sessionUserId,
   onPress,
 }: {
   room: GroupRoom;
+  sessionUserId?: string | null;
   onPress: () => void;
 }) {
   const latestDream = room.latestDreamId
-    ? getCachedDream(room.latestDreamId)
+    ? getCachedDream(room.latestDreamId, sessionUserId)
     : null;
   const members = room.memberIds
-    .map(memberId => getDisplayMember(memberId))
+    .map(memberId => getDisplayMember(memberId, sessionUserId))
     .slice(0, 3);
 
   return (
@@ -358,19 +385,17 @@ function GroupRoomItem({
       </View>
       <View style={styles.roomSide}>
         <View style={styles.memberStack}>
-          {members.map((member, index) =>
-            member ? (
-              <View
-                key={member.id}
-                style={[
-                  styles.memberDot,
-                  index > 0 && styles.stackedMemberDot,
-                ]}
-              >
-                <MoonAvatar size={27} color={member.avatarColor} />
-              </View>
-            ) : null,
-          )}
+          {members.map((member, index) => (
+            <View
+              key={member.id}
+              style={[
+                styles.memberDot,
+                index > 0 && styles.stackedMemberDot,
+              ]}
+            >
+              <MoonAvatar size={27} color={member.avatarColor} />
+            </View>
+          ))}
         </View>
         <View style={styles.roomDivider} />
         {latestDream ? (
@@ -385,6 +410,10 @@ function GroupRoomItem({
       </View>
     </Pressable>
   );
+}
+
+function upsertRoom(rooms: GroupRoom[], room: GroupRoom) {
+  return [room, ...rooms.filter(item => item.id !== room.id)];
 }
 
 const styles = StyleSheet.create({
@@ -440,6 +469,27 @@ const styles = StyleSheet.create({
   list: {
     gap: 14,
     paddingBottom: 120,
+  },
+  emptyList: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyBox: {
+    borderRadius: 24,
+    padding: 22,
+    backgroundColor: colors.lavenderMist,
+  },
+  emptyTitle: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  emptyText: {
+    marginTop: 8,
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
   },
   roomItem: {
     minHeight: 96,
@@ -630,5 +680,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     includeFontPadding: false,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
   },
 });

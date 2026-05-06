@@ -7,10 +7,11 @@ import { useSessionStore } from '../store/sessionStore';
 
 export function InboxScreen() {
   const token = useSessionStore(state => state.token);
-  const { data: inbox = getCachedInbox() } = useQuery({
-    queryKey: ['dreams', 'inbox', token],
-    queryFn: () => loadInbox(token),
-    initialData: getCachedInbox,
+  const userId = useSessionStore(state => state.userId);
+  const { data: inbox = getCachedInbox(userId) } = useQuery({
+    queryKey: ['dreams', 'inbox', userId, token],
+    queryFn: () => loadInbox(token, userId),
+    initialData: () => getCachedInbox(userId),
     staleTime: 60 * 1000,
   });
 

@@ -7,10 +7,11 @@ import { useSessionStore } from '../store/sessionStore';
 
 export function OutboxScreen() {
   const token = useSessionStore(state => state.token);
-  const { data: outbox = getCachedOutbox() } = useQuery({
-    queryKey: ['dreams', 'outbox', token],
-    queryFn: () => loadOutbox(token),
-    initialData: getCachedOutbox,
+  const userId = useSessionStore(state => state.userId);
+  const { data: outbox = getCachedOutbox(userId) } = useQuery({
+    queryKey: ['dreams', 'outbox', userId, token],
+    queryFn: () => loadOutbox(token, userId),
+    initialData: () => getCachedOutbox(userId),
     staleTime: 60 * 1000,
   });
 

@@ -1,5 +1,11 @@
 import { fetchInbox, fetchOutbox } from '../api/dreams';
-import { fetchRoomDreams, fetchRooms, type ApiDreamRoom } from '../api/rooms';
+import {
+  createRoom,
+  fetchRoomDreams,
+  fetchRooms,
+  joinRoom,
+  type ApiDreamRoom,
+} from '../api/rooms';
 import { mockDreams } from '../mocks/dreams';
 import { mockGroupMessages, mockGroupRooms } from '../mocks/groups';
 import type { Dream } from '../types/dream';
@@ -8,91 +14,114 @@ import { LOCAL_MOCK_USER_ID } from './currentUser';
 import { readCache, writeCache } from './cache';
 
 const CACHE_KEYS = {
-  rooms: 'rooms',
-  inbox: 'dreams:inbox',
-  outbox: 'dreams:outbox',
-  allDreams: 'dreams:all',
-  roomDreams: (roomId: string) => `rooms:${roomId}:dreams`,
+  rooms: (userId?: string | null) => scopedKey(userId, 'rooms'),
+  inbox: (userId?: string | null) => scopedKey(userId, 'dreams:inbox'),
+  outbox: (userId?: string | null) => scopedKey(userId, 'dreams:outbox'),
+  allDreams: (userId?: string | null) => scopedKey(userId, 'dreams:all'),
+  roomDreams: (roomId: string, userId?: string | null) =>
+    scopedKey(userId, `rooms:${roomId}:dreams`),
 };
 
-export function getCachedRooms() {
-  return readCache<GroupRoom[]>(CACHE_KEYS.rooms) ?? mockGroupRooms;
+export function getCachedRooms(userId?: string | null) {
+  return readCache<GroupRoom[]>(CACHE_KEYS.rooms(userId)) ?? getMockRooms(userId);
 }
 
-export async function loadRooms(token?: string | null) {
+export async function loadRooms(token?: string | null, userId?: string | null) {
   try {
     const apiRooms = await fetchRooms(token);
     const rooms = apiRooms.map(toGroupRoom);
-    writeCache(CACHE_KEYS.rooms, rooms);
+    writeCache(CACHE_KEYS.rooms(userId), rooms);
     return rooms;
   } catch {
-    return getCachedRooms();
+    return getCachedRooms(userId);
   }
 }
 
-export function getCachedInbox() {
-  return (
-    readCache<Dream[]>(CACHE_KEYS.inbox) ??
-    mockDreams.filter(dream => dream.receiverId === LOCAL_MOCK_USER_ID)
-  );
+export async function createGroupRoom(
+  name: string,
+  token?: string | null,
+  userId?: string | null,
+) {
+  const room = toGroupRoom(await createRoom(name, token));
+  const rooms = [room, ...getCachedRooms(userId).filter(item => item.id !== room.id)];
+  writeCache(CACHE_KEYS.rooms(userId), rooms);
+  return room;
 }
 
-export async function loadInbox(token?: string | null) {
+export async function joinGroupRoom(
+  inviteCode: string,
+  token?: string | null,
+  userId?: string | null,
+) {
+  const room = toGroupRoom(await joinRoom(inviteCode, token));
+  const rooms = [room, ...getCachedRooms(userId).filter(item => item.id !== room.id)];
+  writeCache(CACHE_KEYS.rooms(userId), rooms);
+  return room;
+}
+
+export function getCachedInbox(userId?: string | null) {
+  return readCache<Dream[]>(CACHE_KEYS.inbox(userId)) ?? getMockInbox(userId);
+}
+
+export async function loadInbox(token?: string | null, userId?: string | null) {
   try {
     const dreams = await fetchInbox(token);
-    writeDreamCaches(CACHE_KEYS.inbox, dreams);
+    writeDreamCaches(CACHE_KEYS.inbox(userId), dreams, userId);
     return dreams;
   } catch {
-    return getCachedInbox();
+    return getCachedInbox(userId);
   }
 }
 
-export function getCachedOutbox() {
-  return (
-    readCache<Dream[]>(CACHE_KEYS.outbox) ??
-    mockDreams.filter(dream => dream.giverId === LOCAL_MOCK_USER_ID)
-  );
+export function getCachedOutbox(userId?: string | null) {
+  return readCache<Dream[]>(CACHE_KEYS.outbox(userId)) ?? getMockOutbox(userId);
 }
 
-export async function loadOutbox(token?: string | null) {
+export async function loadOutbox(token?: string | null, userId?: string | null) {
   try {
     const dreams = await fetchOutbox(token);
-    writeDreamCaches(CACHE_KEYS.outbox, dreams);
+    writeDreamCaches(CACHE_KEYS.outbox(userId), dreams, userId);
     return dreams;
   } catch {
-    return getCachedOutbox();
+    return getCachedOutbox(userId);
   }
 }
 
-export function getCachedRoomDreams(roomId: string) {
-  return readCache<Dream[]>(CACHE_KEYS.roomDreams(roomId)) ?? getSeedRoomDreams(roomId);
-}
-
-export async function loadRoomDreams(roomId: string, token?: string | null) {
-  try {
-    const dreams = await fetchRoomDreams(roomId, token);
-    writeDreamCaches(CACHE_KEYS.roomDreams(roomId), dreams);
-    return dreams;
-  } catch {
-    return getCachedRoomDreams(roomId);
-  }
-}
-
-export function getCachedDream(dreamId: string) {
-  const cachedDreams = readCache<Dream[]>(CACHE_KEYS.allDreams) ?? [];
+export function getCachedRoomDreams(roomId: string, userId?: string | null) {
   return (
-    cachedDreams.find(dream => dream.id === dreamId) ??
-    mockDreams.find(dream => dream.id === dreamId) ??
-    null
+    readCache<Dream[]>(CACHE_KEYS.roomDreams(roomId, userId)) ??
+    getSeedRoomDreams(roomId, userId)
   );
 }
 
-function writeDreamCaches(key: string, dreams: Dream[]) {
+export async function loadRoomDreams(
+  roomId: string,
+  token?: string | null,
+  userId?: string | null,
+) {
+  try {
+    const dreams = await fetchRoomDreams(roomId, token);
+    writeDreamCaches(CACHE_KEYS.roomDreams(roomId, userId), dreams, userId);
+    return dreams;
+  } catch {
+    return getCachedRoomDreams(roomId, userId);
+  }
+}
+
+export function getCachedDream(dreamId: string, userId?: string | null) {
+  const cachedDreams = readCache<Dream[]>(CACHE_KEYS.allDreams(userId)) ?? [];
+  return (
+    cachedDreams.find(dream => dream.id === dreamId) ??
+    (userId ? null : mockDreams.find(dream => dream.id === dreamId) ?? null)
+  );
+}
+
+function writeDreamCaches(key: string, dreams: Dream[], userId?: string | null) {
   writeCache(key, dreams);
-  const cachedDreams = readCache<Dream[]>(CACHE_KEYS.allDreams) ?? [];
+  const cachedDreams = readCache<Dream[]>(CACHE_KEYS.allDreams(userId)) ?? [];
   const merged = new Map(cachedDreams.map(dream => [dream.id, dream]));
   dreams.forEach(dream => merged.set(dream.id, dream));
-  writeCache(CACHE_KEYS.allDreams, Array.from(merged.values()));
+  writeCache(CACHE_KEYS.allDreams(userId), Array.from(merged.values()));
 }
 
 function toGroupRoom(room: ApiDreamRoom): GroupRoom {
@@ -101,15 +130,30 @@ function toGroupRoom(room: ApiDreamRoom): GroupRoom {
     name: room.title || '꿈방',
     description:
       room.dreamCount > 0 ? `꿈카드 ${room.dreamCount}개` : '아직 꿈카드가 없어요',
-    inviteCode: '',
+    inviteCode: room.inviteCode,
     lastActivityLabel: room.lastGivenAt ? formatActivityLabel(room.lastGivenAt) : '',
     unreadCount: 0,
-    memberIds: [],
+    memberIds: room.memberIds,
     latestDreamId: null,
   };
 }
 
-function getSeedRoomDreams(roomId: string) {
+function getMockRooms(userId?: string | null) {
+  return userId ? [] : mockGroupRooms;
+}
+
+function getMockInbox(userId?: string | null) {
+  return userId ? [] : mockDreams.filter(dream => dream.receiverId === LOCAL_MOCK_USER_ID);
+}
+
+function getMockOutbox(userId?: string | null) {
+  return userId ? [] : mockDreams.filter(dream => dream.giverId === LOCAL_MOCK_USER_ID);
+}
+
+function getSeedRoomDreams(roomId: string, userId?: string | null) {
+  if (userId) {
+    return [];
+  }
   const dreamIds = mockGroupMessages
     .filter(message => message.groupId === roomId)
     .map(message => message.dreamId);
@@ -131,4 +175,8 @@ function formatActivityLabel(value: string) {
     return `${elapsedHours}시간 전`;
   }
   return `${Math.floor(elapsedHours / 24)}일 전`;
+}
+
+function scopedKey(userId: string | null | undefined, key: string) {
+  return userId ? `users:${userId}:${key}` : `mock:${key}`;
 }

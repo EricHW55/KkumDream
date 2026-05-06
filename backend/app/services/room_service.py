@@ -1,58 +1,93 @@
 from dataclasses import dataclass
 from datetime import datetime
+from secrets import choice
+from string import ascii_uppercase, digits
 from uuid import UUID
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.dream import Dream
-from app.models.user import User
+from app.models.group import Group, GroupMember
 
 
 @dataclass
 class DreamRoom:
     room_id: str
     title: str
+    invite_code: str
     last_given_at: datetime | None
     dream_count: int
+    member_ids: list[UUID]
+
+
+async def create_room(session: AsyncSession, user_id: UUID, name: str) -> DreamRoom:
+    normalized_name = name.strip()
+    if not normalized_name:
+        raise BadRequestError("Room name is required")
+
+    group = Group(
+        name=normalized_name,
+        owner_id=user_id,
+        invite_code=await _build_unique_invite_code(session),
+    )
+    session.add(group)
+    await session.flush()
+    session.add(GroupMember(group_id=group.id, user_id=user_id, role="owner"))
+    await session.commit()
+    return await _build_room(session, group)
+
+
+async def join_room(session: AsyncSession, user_id: UUID, invite_code: str) -> DreamRoom:
+    normalized_code = _normalize_invite_code(invite_code)
+    group = await session.scalar(select(Group).where(Group.invite_code == normalized_code))
+    if group is None:
+        raise NotFoundError("Room invite code was not found")
+
+    existing_member = await session.scalar(
+        select(GroupMember).where(
+            GroupMember.group_id == group.id,
+            GroupMember.user_id == user_id,
+        )
+    )
+    if existing_member is None:
+        session.add(GroupMember(group_id=group.id, user_id=user_id, role="member"))
+        await session.commit()
+    return await _build_room(session, group)
 
 
 async def list_rooms(session: AsyncSession, user_id: UUID) -> list[DreamRoom]:
-    other_user = case(
-        (Dream.giver_id == user_id, Dream.receiver_id),
-        else_=Dream.giver_id,
-    )
-    stmt = (
+    stats_subquery = (
         select(
-            other_user.label("other_user_id"),
+            Dream.group_id.label("group_id"),
             func.max(Dream.given_at).label("last_given_at"),
             func.count(Dream.id).label("dream_count"),
         )
-        .where(
-            Dream.receiver_id.is_not(None),
-            Dream.status != "draft",
-            or_(Dream.giver_id == user_id, Dream.receiver_id == user_id),
+        .where(Dream.group_id.is_not(None), Dream.status != "draft")
+        .group_by(Dream.group_id)
+        .subquery()
+    )
+    stmt = (
+        select(
+            Group,
+            stats_subquery.c.last_given_at,
+            func.coalesce(stats_subquery.c.dream_count, 0).label("dream_count"),
         )
-        .group_by(other_user)
-        .order_by(func.max(Dream.given_at).desc())
+        .join(GroupMember, GroupMember.group_id == Group.id)
+        .outerjoin(stats_subquery, stats_subquery.c.group_id == Group.id)
+        .where(GroupMember.user_id == user_id)
+        .order_by(stats_subquery.c.last_given_at.desc().nullslast(), Group.created_at.desc())
     )
     rows = (await session.execute(stmt)).all()
-    other_user_ids = [row.other_user_id for row in rows if row.other_user_id is not None]
-    users_by_id: dict[UUID, User] = {}
-    if other_user_ids:
-        users = await session.scalars(select(User).where(User.id.in_(other_user_ids)))
-        users_by_id = {user.id: user for user in users}
-
     rooms: list[DreamRoom] = []
-    for row in rows:
-        ids = sorted([str(user_id), str(row.other_user_id)])
-        other_user_name = users_by_id.get(row.other_user_id).nickname if row.other_user_id else None
+    for group, last_given_at, dream_count in rows:
         rooms.append(
-            DreamRoom(
-                room_id=f"{ids[0]}_{ids[1]}",
-                title=other_user_name or "꿈친구",
-                last_given_at=row.last_given_at,
-                dream_count=row.dream_count,
+            await _build_room(
+                session,
+                group=group,
+                last_given_at=last_given_at,
+                dream_count=dream_count,
             )
         )
     return rooms
@@ -64,29 +99,74 @@ async def list_room_dreams(
     room_id: str,
     limit: int,
 ) -> list[Dream]:
-    if room_id.startswith("g:"):
-        group_id = UUID(room_id[2:])
-        stmt = (
-            select(Dream)
-            .where(Dream.group_id == group_id, Dream.status != "draft")
-            .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
-            .limit(limit)
-        )
-        return list((await session.scalars(stmt)).all())
-
-    user_a, user_b = [UUID(value) for value in room_id.split("_", maxsplit=1)]
-    if user_id not in {user_a, user_b}:
-        return []
+    group_id = _parse_room_id(room_id)
+    await _require_group_member(session, group_id, user_id)
     stmt = (
         select(Dream)
-        .where(
-            Dream.status != "draft",
-            or_(
-                (Dream.giver_id == user_a) & (Dream.receiver_id == user_b),
-                (Dream.giver_id == user_b) & (Dream.receiver_id == user_a),
-            ),
-        )
+        .where(Dream.group_id == group_id, Dream.status != "draft")
         .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
         .limit(limit)
     )
     return list((await session.scalars(stmt)).all())
+
+
+async def _build_room(
+    session: AsyncSession,
+    group: Group,
+    last_given_at: datetime | None = None,
+    dream_count: int | None = None,
+) -> DreamRoom:
+    if dream_count is None:
+        dream_count = await session.scalar(
+            select(func.count(Dream.id)).where(Dream.group_id == group.id, Dream.status != "draft")
+        )
+    member_ids = list(
+        (
+            await session.scalars(
+                select(GroupMember.user_id)
+                .where(GroupMember.group_id == group.id)
+                .order_by(GroupMember.joined_at.asc())
+            )
+        ).all()
+    )
+    return DreamRoom(
+        room_id=f"g:{group.id}",
+        title=group.name,
+        invite_code=group.invite_code,
+        last_given_at=last_given_at,
+        dream_count=dream_count or 0,
+        member_ids=member_ids,
+    )
+
+
+async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: UUID) -> None:
+    member = await session.scalar(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == user_id,
+        )
+    )
+    if member is None:
+        raise ForbiddenError("You are not a member of this room")
+
+
+async def _build_unique_invite_code(session: AsyncSession) -> str:
+    for _ in range(20):
+        code = "DREAM-" + "".join(choice(ascii_uppercase + digits) for _ in range(6))
+        exists = await session.scalar(select(Group.id).where(Group.invite_code == code))
+        if exists is None:
+            return code
+    raise RuntimeError("Could not generate a unique invite code")
+
+
+def _parse_room_id(room_id: str) -> UUID:
+    if not room_id.startswith("g:"):
+        raise NotFoundError("Room not found")
+    try:
+        return UUID(room_id[2:])
+    except ValueError as exc:
+        raise NotFoundError("Room not found") from exc
+
+
+def _normalize_invite_code(invite_code: str) -> str:
+    return invite_code.strip().upper()

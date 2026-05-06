@@ -9,8 +9,9 @@ import {
   View,
 } from 'react-native';
 import { Check, PencilLine, X } from 'lucide-react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
-import { createDreamDraft } from '../api/dreams';
+import { createDreamDraft, giveDream } from '../api/dreams';
 import { DreamCard } from '../components/DreamCard';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -24,10 +25,11 @@ import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
-const currentUserId = LOCAL_MOCK_USER_ID;
-
 export function ComposeScreen() {
+  const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
+  const sessionUserId = useSessionStore(state => state.userId);
+  const currentUserId = sessionUserId ?? LOCAL_MOCK_USER_ID;
   const [rawInput, setRawInput] = useState('');
   const [mood, setMood] = useState('몽환');
   const [draft, setDraft] = useState<Dream | null>(null);
@@ -40,7 +42,9 @@ export function ComposeScreen() {
     null,
   );
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const rooms = useMemo(() => getCachedRooms(), []);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isGiving, setIsGiving] = useState(false);
+  const rooms = useMemo(() => getCachedRooms(sessionUserId), [sessionUserId]);
 
   const friends = useMemo(() => {
     const memberIds = new Set<string>();
@@ -54,10 +58,13 @@ export function ComposeScreen() {
     });
 
     const availableFriends = Array.from(memberIds).map(memberId =>
-      getDisplayMember(memberId),
+      getDisplayMember(memberId, sessionUserId),
     );
-    return availableFriends.length > 0 ? availableFriends : getSeedFriends();
-  }, [rooms]);
+    if (availableFriends.length > 0 || sessionUserId) {
+      return availableFriends;
+    }
+    return getSeedFriends();
+  }, [currentUserId, rooms, sessionUserId]);
 
   const availableGroups = useMemo(() => {
     if (!selectedReceiverId) {
@@ -69,11 +76,11 @@ export function ComposeScreen() {
         room.memberIds.includes(currentUserId) &&
         room.memberIds.includes(selectedReceiverId),
     );
-  }, [rooms, selectedReceiverId]);
+  }, [currentUserId, rooms, selectedReceiverId]);
 
   const canGenerate = rawInput.trim().length > 0 && !isGenerating;
   const selectedReceiver = selectedReceiverId
-    ? getDisplayMember(selectedReceiverId)
+    ? getDisplayMember(selectedReceiverId, sessionUserId)
     : null;
   const selectedGroup = selectedGroupId
     ? rooms.find(room => room.id === selectedGroupId) ?? null
@@ -85,11 +92,18 @@ export function ComposeScreen() {
       return;
     }
 
+    setActionError(null);
     setIsGenerating(true);
     let nextDraft: Dream;
     try {
       nextDraft = await createDreamDraft({ rawInput: input, mood }, token);
-    } catch {
+    } catch (error) {
+      if (token) {
+        setActionError(
+          error instanceof Error ? error.message : '카드 미리보기를 만들지 못했어요.',
+        );
+        return;
+      }
       nextDraft = buildMockDraft(input, mood);
     } finally {
       setIsGenerating(false);
@@ -135,23 +149,44 @@ export function ComposeScreen() {
     setSelectedGroupId(firstAvailableGroup?.id ?? null);
   };
 
-  const confirmRecipient = () => {
-    if (!selectedReceiverId || !selectedGroupId) {
+  const confirmRecipient = async () => {
+    if (!draft || !selectedReceiverId || !selectedGroupId) {
       return;
     }
 
-    setDraft(currentDraft =>
-      currentDraft
-        ? {
-            ...currentDraft,
-            receiverId: selectedReceiverId,
-            groupId: selectedGroupId,
-            status: 'given',
-            givenAt: new Date().toISOString(),
-          }
-        : currentDraft,
-    );
-    setIsRecipientModalVisible(false);
+    if (!token) {
+      setActionError('로그인이 필요합니다.');
+      return;
+    }
+
+    setActionError(null);
+    setIsGiving(true);
+    try {
+      const result = await giveDream(
+        draft.id,
+        { groupId: toApiGroupId(selectedGroupId) },
+        token,
+      );
+      const nextDraft: Dream = {
+        ...draft,
+        receiverId: null,
+        groupId: selectedGroupId,
+        status: result.status,
+        imageStatus: result.imageStatus,
+        givenAt: result.givenAt ?? new Date().toISOString(),
+      };
+      setDraft(nextDraft);
+      setIsRecipientModalVisible(false);
+      queryClient.invalidateQueries({ queryKey: ['rooms', sessionUserId] });
+      queryClient.invalidateQueries({
+        queryKey: ['rooms', selectedGroupId, 'dreams', sessionUserId],
+      });
+      queryClient.invalidateQueries({ queryKey: ['dreams', 'outbox', sessionUserId] });
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : '꿈카드를 보내지 못했어요.');
+    } finally {
+      setIsGiving(false);
+    }
   };
 
   return (
@@ -188,6 +223,7 @@ export function ComposeScreen() {
       <PrimaryButton disabled={!canGenerate} onPress={createPreview}>
         카드 미리보기 만들기
       </PrimaryButton>
+      {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
 
       {draft ? (
         <View style={styles.preview}>
@@ -277,6 +313,7 @@ export function ComposeScreen() {
                 <X color={colors.textSecondary} size={20} />
               </Pressable>
             </View>
+            {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
 
             <Text style={styles.sectionTitle}>친구</Text>
             <View style={styles.friendList}>
@@ -298,6 +335,11 @@ export function ComposeScreen() {
                   ) : null}
                 </Pressable>
               ))}
+              {friends.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  함께 속한 꿈방 멤버가 아직 없습니다.
+                </Text>
+              ) : null}
             </View>
 
             <Text style={styles.sectionTitle}>공유할 그룹방</Text>
@@ -317,7 +359,7 @@ export function ComposeScreen() {
                     <Text style={styles.groupName}>{room.name}</Text>
                     <Text style={styles.groupMeta} numberOfLines={1}>
                       {room.memberIds
-                        .map(memberId => getDisplayMember(memberId).name)
+                        .map(memberId => getDisplayMember(memberId, sessionUserId).name)
                         .join(', ')}
                     </Text>
                   </View>
@@ -334,16 +376,20 @@ export function ComposeScreen() {
             </View>
 
             <PrimaryButton
-              disabled={!selectedReceiverId || !selectedGroupId}
+              disabled={!selectedReceiverId || !selectedGroupId || isGiving}
               onPress={confirmRecipient}
             >
-              선택 완료
+              {isGiving ? '보내는 중...' : '선택 완료'}
             </PrimaryButton>
           </Pressable>
         </Pressable>
       </Modal>
     </ScrollView>
   );
+}
+
+function toApiGroupId(groupId: string) {
+  return groupId.startsWith('g:') ? groupId.slice(2) : groupId;
 }
 
 const styles = StyleSheet.create({
@@ -564,6 +610,12 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textSecondary,
     fontSize: 13,
+    lineHeight: 19,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '700',
     lineHeight: 19,
   },
 });

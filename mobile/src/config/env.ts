@@ -1,2 +1,4 @@
 export const API_BASE_URL = 'http://10.0.2.2:8000/api/v1';
-export const GOOGLE_WEB_CLIENT_ID = '';
+export const GOOGLE_WEB_CLIENT_ID =
+  '833051002058-apn41b796hp66d66g3c94m95dd78il9h.apps.googleusercontent.com';
+export const GOOGLE_IOS_CLIENT_ID = '';

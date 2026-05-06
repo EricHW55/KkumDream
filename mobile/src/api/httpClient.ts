@@ -24,9 +24,35 @@ export async function requestJson<T>(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(body || `Request failed: ${response.status}`);
+    throw new Error(getErrorMessage(response.status, body));
   }
 
   return response.json() as Promise<T>;
 }
 
+function getErrorMessage(status: number, body: string) {
+  if (!body) {
+    return `Request failed: ${status}`;
+  }
+
+  try {
+    const data = JSON.parse(body) as { detail?: unknown };
+    if (typeof data.detail === 'string') {
+      return data.detail;
+    }
+    if (Array.isArray(data.detail)) {
+      return data.detail
+        .map(item => {
+          if (item && typeof item === 'object' && 'msg' in item) {
+            return String(item.msg);
+          }
+          return JSON.stringify(item);
+        })
+        .join('\n');
+    }
+  } catch {
+    // Fall through to the raw response body.
+  }
+
+  return body;
+}
