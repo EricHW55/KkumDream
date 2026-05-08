@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { DreamLibraryView } from '../components/DreamLibraryView';
 import { Screen } from '../components/Screen';
@@ -8,12 +10,23 @@ import { useSessionStore } from '../store/sessionStore';
 export function InboxScreen() {
   const token = useSessionStore(state => state.token);
   const userId = useSessionStore(state => state.userId);
-  const { data: inbox = getCachedInbox(userId) } = useQuery({
+  const {
+    data: inbox = getCachedInbox(userId),
+    refetch: refetchInbox,
+  } = useQuery({
     queryKey: ['dreams', 'inbox', userId, token],
     queryFn: () => loadInbox(token, userId),
     initialData: () => getCachedInbox(userId),
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 15 * 1000,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchInbox().catch(() => undefined);
+    }, [refetchInbox]),
+  );
 
   return (
     <Screen>
