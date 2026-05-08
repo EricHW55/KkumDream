@@ -4,7 +4,7 @@ from secrets import choice
 from string import ascii_uppercase, digits
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
@@ -51,6 +51,8 @@ async def create_room(session: AsyncSession, user_id: UUID, name: str) -> DreamR
 
 async def join_room(session: AsyncSession, user_id: UUID, invite_code: str) -> DreamRoom:
     normalized_code = _normalize_invite_code(invite_code)
+    if normalized_code.startswith("CLOSED-"):
+        raise NotFoundError("Room invite code was not found")
     group = await session.scalar(select(Group).where(Group.invite_code == normalized_code))
     if group is None:
         raise NotFoundError("Room invite code was not found")
@@ -90,15 +92,21 @@ async def leave_room(session: AsyncSession, user_id: UUID, room_id: str) -> None
 
     was_owner = member.role == "owner"
     await session.delete(member)
+    await session.flush()
+
+    next_owner = await session.scalar(
+        select(GroupMember)
+        .where(GroupMember.group_id == group_id)
+        .order_by(GroupMember.joined_at.asc())
+    )
+    if next_owner is None:
+        await _cleanup_memberless_room(session, group)
+        await session.commit()
+        return
+
     if was_owner:
-        next_owner = await session.scalar(
-            select(GroupMember)
-            .where(GroupMember.group_id == group_id, GroupMember.user_id != user_id)
-            .order_by(GroupMember.joined_at.asc())
-        )
-        if next_owner is not None:
-            next_owner.role = "owner"
-            group.owner_id = next_owner.user_id
+        next_owner.role = "owner"
+        group.owner_id = next_owner.user_id
     await session.commit()
 
 
@@ -242,9 +250,33 @@ async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: 
         raise ForbiddenError("You are not a member of this room")
 
 
-async def _build_unique_invite_code(session: AsyncSession) -> str:
+async def _cleanup_memberless_room(session: AsyncSession, group: Group) -> None:
+    receiverless_shared_dream_count = await session.scalar(
+        select(func.count(Dream.id)).where(
+            Dream.group_id == group.id,
+            Dream.receiver_id.is_(None),
+            Dream.status != "draft",
+        )
+    )
+    if receiverless_shared_dream_count:
+        group.invite_code = await _build_unique_invite_code(
+            session,
+            prefix="CLOSED-",
+            random_length=9,
+        )
+        return
+
+    await session.execute(update(Dream).where(Dream.group_id == group.id).values(group_id=None))
+    await session.delete(group)
+
+
+async def _build_unique_invite_code(
+    session: AsyncSession,
+    prefix: str = "DREAM-",
+    random_length: int = 6,
+) -> str:
     for _ in range(20):
-        code = "DREAM-" + "".join(choice(ascii_uppercase + digits) for _ in range(6))
+        code = prefix + "".join(choice(ascii_uppercase + digits) for _ in range(random_length))
         exists = await session.scalar(select(Group.id).where(Group.invite_code == code))
         if exists is None:
             return code
