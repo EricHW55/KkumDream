@@ -8,24 +8,29 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Check, PencilLine, X } from 'lucide-react-native';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { createDreamDraft, giveDream } from '../api/dreams';
 import { DreamCard } from '../components/DreamCard';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { getCachedRooms } from '../data/dreamRepository';
+import { getCachedRooms, loadRooms } from '../data/dreamRepository';
 import { LOCAL_MOCK_USER_ID } from '../data/currentUser';
 import { getDisplayMember, getSeedFriends } from '../data/members';
 import { buildMockDraft } from '../mocks/dreams';
+import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
-export function ComposeScreen() {
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
+
+export function ComposeScreen({ navigation }: Props) {
   const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
@@ -44,7 +49,14 @@ export function ComposeScreen() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isGiving, setIsGiving] = useState(false);
-  const rooms = useMemo(() => getCachedRooms(sessionUserId), [sessionUserId]);
+  const roomsQueryKey = ['rooms', sessionUserId, token] as const;
+  const { data: rooms = getCachedRooms(sessionUserId) } = useQuery({
+    queryKey: roomsQueryKey,
+    queryFn: () => loadRooms(token, sessionUserId),
+    initialData: () => getCachedRooms(sessionUserId),
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
 
   const friends = useMemo(() => {
     const membersById = new Map<string, ReturnType<typeof getDisplayMember>>();
@@ -92,6 +104,14 @@ export function ComposeScreen() {
   const selectedGroup = selectedGroupId
     ? rooms.find(room => room.id === selectedGroupId) ?? null
     : null;
+  const previewDream =
+    draft && selectedReceiverId
+      ? {
+          ...draft,
+          receiverId: selectedReceiverId,
+          groupId: selectedGroupId ?? draft.groupId,
+        }
+      : draft;
 
   const createPreview = async () => {
     const input = rawInput.trim();
@@ -156,8 +176,18 @@ export function ComposeScreen() {
     setSelectedGroupId(firstAvailableGroup?.id ?? null);
   };
 
-  const confirmRecipient = async () => {
+  const confirmRecipient = () => {
+    if (!selectedReceiverId || !selectedGroupId) {
+      return;
+    }
+
+    setActionError(null);
+    setIsRecipientModalVisible(false);
+  };
+
+  const sendDream = async () => {
     if (!draft || !selectedReceiverId || !selectedGroupId) {
+      setActionError('받는 사람과 공유할 그룹방을 먼저 선택하세요.');
       return;
     }
 
@@ -171,12 +201,15 @@ export function ComposeScreen() {
     try {
       const result = await giveDream(
         draft.id,
-        { groupId: toApiGroupId(selectedGroupId) },
+        {
+          receiverId: selectedReceiverId,
+          groupId: toApiGroupId(selectedGroupId),
+        },
         token,
       );
       const nextDraft: Dream = {
         ...draft,
-        receiverId: null,
+        receiverId: selectedReceiverId,
         groupId: selectedGroupId,
         status: result.status,
         imageStatus: result.imageStatus,
@@ -197,6 +230,11 @@ export function ComposeScreen() {
       });
       queryClient.invalidateQueries({
         queryKey: ['dreams', 'outbox', sessionUserId],
+      });
+      navigation.replace('GroupRoom', {
+        groupId: selectedGroupId,
+        groupName: selectedGroup?.name,
+        description: selectedGroup?.description,
       });
     } catch (error) {
       setActionError(error instanceof Error ? error.message : '꿈카드를 보내지 못했어요.');
@@ -295,9 +333,15 @@ export function ComposeScreen() {
             </View>
           ) : null}
 
-          <DreamCard dream={draft} />
+          {previewDream ? <DreamCard dream={previewDream} /> : null}
           <PrimaryButton onPress={() => setIsRecipientModalVisible(true)}>
-            받는 사람 선택하기
+            {selectedReceiver && selectedGroup ? '받는 사람 변경' : '받는 사람 선택하기'}
+          </PrimaryButton>
+          <PrimaryButton
+            disabled={!selectedReceiverId || !selectedGroupId || isGiving}
+            onPress={sendDream}
+          >
+            {isGiving ? '보내는 중...' : '보내기'}
           </PrimaryButton>
         </View>
       ) : null}
@@ -403,10 +447,10 @@ export function ComposeScreen() {
             </View>
 
             <PrimaryButton
-              disabled={!selectedReceiverId || !selectedGroupId || isGiving}
+              disabled={!selectedReceiverId || !selectedGroupId}
               onPress={confirmRecipient}
             >
-              {isGiving ? '보내는 중...' : '선택 완료'}
+              선택 완료
             </PrimaryButton>
           </Pressable>
         </Pressable>

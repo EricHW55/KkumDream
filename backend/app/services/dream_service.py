@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.ai_generation import AiGenerationJob, AiGenerationLog
 from app.models.dream import DailyGiveLimit, Dream, DreamComment
@@ -98,8 +99,11 @@ async def give_dream(
         raise BadRequestError("Dream has already been given")
     if payload.group_id is not None:
         await _require_group_member(session, payload.group_id, user_id)
+        if payload.receiver_id is not None:
+            await _require_group_member(session, payload.group_id, payload.receiver_id)
 
-    await _consume_daily_give_limit(session, user_id)
+    if settings.environment == "production":
+        await _consume_daily_give_limit(session, user_id)
     dream.receiver_id = payload.receiver_id
     dream.group_id = payload.group_id
     dream.status = "given"

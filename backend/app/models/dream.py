@@ -29,10 +29,6 @@ class Dream(Base):
             name="dreams_must_have_receiver_when_given",
         ),
         CheckConstraint(
-            "NOT (receiver_id IS NOT NULL AND group_id IS NOT NULL)",
-            name="dreams_receiver_group_xor",
-        ),
-        CheckConstraint(
             "status IN ('draft', 'given', 'opened', 'replied')",
             name="dreams_status_check",
         ),

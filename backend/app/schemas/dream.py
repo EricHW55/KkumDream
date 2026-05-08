@@ -26,8 +26,8 @@ class DreamGiveRequest(ApiModel):
 
     @model_validator(mode="after")
     def validate_target(self) -> "DreamGiveRequest":
-        if bool(self.receiver_id) == bool(self.group_id):
-            raise ValueError("Exactly one of receiverId or groupId is required")
+        if self.receiver_id is None and self.group_id is None:
+            raise ValueError("receiverId or groupId is required")
         return self
 
 

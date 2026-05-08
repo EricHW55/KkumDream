@@ -17,7 +17,9 @@ import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
 import { radius } from '../theme/spacing';
 import type { Dream } from '../types/dream';
+import { getCachedRooms } from '../data/dreamRepository';
 import { getDisplayMember } from '../data/members';
+import { useSessionStore } from '../store/sessionStore';
 import { TagChip } from './TagChip';
 
 type Props = {
@@ -27,13 +29,19 @@ type Props = {
 };
 
 export function DreamCard({ dream, size = 'feed', onPress }: Props) {
+  const sessionUserId = useSessionStore(state => state.userId);
   const [isBackVisible, setIsBackVisible] = useState(false);
   const rotation = useSharedValue(0);
   const cardHeight = size === 'full' ? 560 : 430;
   const imageHeight = size === 'full' ? 300 : 250;
-  const giverName = getDisplayMember(dream.giverId).name;
+  const rooms = getCachedRooms(sessionUserId);
+  const roomMembers = rooms.flatMap(room => room.members ?? []);
+  const giverName =
+    roomMembers.find(member => member.id === dream.giverId)?.name ??
+    getDisplayMember(dream.giverId, sessionUserId).name;
   const receiverName = dream.receiverId
-    ? getDisplayMember(dream.receiverId).name
+    ? roomMembers.find(member => member.id === dream.receiverId)?.name ??
+      getDisplayMember(dream.receiverId, sessionUserId).name
     : '받는 사람 미정';
 
   const frontStyle = useAnimatedStyle(() => ({
