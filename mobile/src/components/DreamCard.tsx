@@ -42,7 +42,7 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
   const receiverName = dream.receiverId
     ? roomMembers.find(member => member.id === dream.receiverId)?.name ??
       getDisplayMember(dream.receiverId, sessionUserId).name
-    : '받는 사람 미정';
+    : dream.receiverLabel ?? '받는 사람 미정';
 
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],

@@ -7,6 +7,7 @@ import type {
   DreamReactionSummary,
   DreamReactionToggleResult,
   DreamReactionType,
+  DreamShareResult,
 } from '../types/dream';
 
 export function createDreamDraft(payload: DreamDraftPayload, token?: string | null) {
@@ -18,7 +19,7 @@ export function createDreamDraft(payload: DreamDraftPayload, token?: string | nu
 }
 
 export function giveDream(dreamId: string, payload: DreamGivePayload, token?: string | null) {
-  return requestJson<Pick<Dream, 'id' | 'status' | 'givenAt' | 'imageStatus'>>(
+  return requestJson<Dream>(
     `/dreams/${dreamId}/give`,
     {
       method: 'POST',
@@ -26,6 +27,26 @@ export function giveDream(dreamId: string, payload: DreamGivePayload, token?: st
       body: JSON.stringify(payload),
     },
   );
+}
+
+export function shareDream(
+  dreamId: string,
+  token?: string | null,
+  expiresInHours?: number,
+) {
+  return requestJson<DreamShareResult>(`/dreams/${dreamId}/share`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(expiresInHours ? { expiresInHours } : {}),
+  });
+}
+
+export function claimDream(claimToken: string, token?: string | null) {
+  return requestJson<Dream>('/dreams/claim', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ token: claimToken }),
+  });
 }
 
 export function fetchInbox(token?: string | null) {

@@ -1,17 +1,23 @@
-from datetime import UTC, datetime
+import secrets
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, and_, func, or_, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.ai_generation import AiGenerationJob, AiGenerationLog
-from app.models.dream import DailyGiveLimit, Dream, DreamComment, DreamReaction
-from app.models.friendship import Friendship
+from app.models.dream import (
+    DailyGiveLimit,
+    Dream,
+    DreamClaimToken,
+    DreamComment,
+    DreamGroup,
+    DreamReaction,
+)
 from app.models.group import GroupMember
 from app.models.user import User
 from app.schemas.dream import (
@@ -71,7 +77,7 @@ async def create_dream_draft(
     )
     await session.commit()
     await session.refresh(dream)
-    return dream
+    return await _attach_group_ids(session, dream)
 
 
 async def update_dream_text(
@@ -91,7 +97,7 @@ async def update_dream_text(
         setattr(dream, key, value)
     await session.commit()
     await session.refresh(dream)
-    return dream
+    return await _attach_group_ids(session, dream)
 
 
 async def give_dream(
@@ -107,20 +113,29 @@ async def give_dream(
         raise BadRequestError("Dream has already been given")
     if payload.receiver_id is not None and payload.receiver_id == user_id:
         raise BadRequestError("Cannot give a dream to yourself")
-    if payload.group_id is not None:
-        await _require_group_member(session, payload.group_id, user_id)
+
+    label = payload.receiver_label.strip() if payload.receiver_label else None
+
+    if payload.receiver_id is not None:
+        await _require_shared_group_member(session, user_id, payload.receiver_id)
+
+    group_ids = list(dict.fromkeys(payload.group_ids))
+    for group_id in group_ids:
+        await _require_group_member(session, group_id, user_id)
         if payload.receiver_id is not None:
-            await _require_group_member(session, payload.group_id, payload.receiver_id)
-    elif payload.receiver_id is not None:
-        await _require_friend_or_shared_group(session, user_id, payload.receiver_id)
+            await _require_group_member(session, group_id, payload.receiver_id)
 
     if settings.environment == "production":
         await _consume_daily_give_limit(session, user_id)
+
     dream.receiver_id = payload.receiver_id
-    dream.group_id = payload.group_id
+    dream.receiver_label = label
     dream.status = "given"
     dream.image_status = "queued"
     dream.given_at = datetime.now(UTC)
+
+    for group_id in group_ids:
+        session.add(DreamGroup(dream_id=dream.id, group_id=group_id))
 
     session.add(
         AiGenerationJob(
@@ -131,18 +146,9 @@ async def give_dream(
             payload={"imagePrompt": dream.image_prompt},
         )
     )
-    try:
-        await session.commit()
-    except IntegrityError as exc:
-        await session.rollback()
-        if "dreams_receiver_group_xor" in str(exc):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Database migration required. Run alembic upgrade head.",
-            ) from exc
-        raise
+    await session.commit()
     await session.refresh(dream)
-    return dream
+    return await _attach_group_ids(session, dream)
 
 
 async def list_inbox(session: AsyncSession, user_id: UUID, limit: int) -> list[Dream]:
@@ -152,7 +158,8 @@ async def list_inbox(session: AsyncSession, user_id: UUID, limit: int) -> list[D
         .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
         .limit(limit)
     )
-    return list((await session.scalars(stmt)).all())
+    dreams = list((await session.scalars(stmt)).all())
+    return await _attach_group_ids_batch(session, dreams)
 
 
 async def list_outbox(session: AsyncSession, user_id: UUID, limit: int) -> list[Dream]:
@@ -162,14 +169,15 @@ async def list_outbox(session: AsyncSession, user_id: UUID, limit: int) -> list[
         .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
         .limit(limit)
     )
-    return list((await session.scalars(stmt)).all())
+    dreams = list((await session.scalars(stmt)).all())
+    return await _attach_group_ids_batch(session, dreams)
 
 
 async def get_dream_for_user(session: AsyncSession, user_id: UUID, dream_id: UUID) -> Dream:
     dream = await _get_dream(session, dream_id)
     if not await _can_access_dream(session, dream, user_id):
         raise ForbiddenError("You cannot access this dream")
-    return dream
+    return await _attach_group_ids(session, dream)
 
 
 async def list_dream_comments(
@@ -285,6 +293,89 @@ async def toggle_dream_reaction(
     }
 
 
+async def issue_dream_share_token(
+    session: AsyncSession,
+    user_id: UUID,
+    dream_id: UUID,
+    expires_in_hours: int | None = None,
+) -> dict[str, object]:
+    dream = await _get_dream(session, dream_id)
+    if dream.giver_id != user_id:
+        raise ForbiddenError("Only the giver can share this dream")
+    if dream.status == "draft":
+        raise BadRequestError("Cannot share a draft dream")
+
+    expires_at: datetime | None
+    if expires_in_hours is None:
+        expires_at = datetime.now(UTC) + timedelta(
+            days=settings.share_token_default_expire_days
+        )
+    elif expires_in_hours <= 0:
+        expires_at = None
+    else:
+        expires_at = datetime.now(UTC) + timedelta(hours=expires_in_hours)
+
+    token = secrets.token_urlsafe(32)
+    record = DreamClaimToken(
+        dream_id=dream.id,
+        token=token,
+        expires_at=expires_at,
+    )
+    session.add(record)
+    await session.commit()
+    await session.refresh(record)
+
+    base = settings.share_base_url.rstrip("/")
+    return {
+        "token": token,
+        "dream_id": dream.id,
+        "expires_at": expires_at,
+        "share_url": f"{base}/d/{dream.id}?claim={token}",
+    }
+
+
+async def claim_dream_via_token(
+    session: AsyncSession,
+    user_id: UUID,
+    token: str,
+) -> Dream:
+    record = await session.scalar(
+        select(DreamClaimToken).where(DreamClaimToken.token == token)
+    )
+    if record is None:
+        raise NotFoundError("Invalid claim token")
+
+    now = datetime.now(UTC)
+    if record.expires_at is not None and record.expires_at < now:
+        raise BadRequestError("Claim token has expired")
+
+    dream = await _get_dream(session, record.dream_id)
+    if dream.giver_id == user_id:
+        raise BadRequestError("Cannot claim your own dream")
+
+    if record.claimed_by_id == user_id and dream.receiver_id == user_id:
+        return await _attach_group_ids(session, dream)
+
+    if record.claimed_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This dream has already been claimed",
+        )
+
+    if dream.receiver_id is not None and dream.receiver_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This dream has already been received",
+        )
+
+    dream.receiver_id = user_id
+    record.claimed_at = now
+    record.claimed_by_id = user_id
+    await session.commit()
+    await session.refresh(dream)
+    return await _attach_group_ids(session, dream)
+
+
 async def _build_reaction_summary(
     session: AsyncSession,
     dream_id: UUID,
@@ -330,7 +421,7 @@ async def mark_read(session: AsyncSession, user_id: UUID, dream_id: UUID) -> Dre
             dream.status = "opened"
     await session.commit()
     await session.refresh(dream)
-    return dream
+    return await _attach_group_ids(session, dream)
 
 
 async def mark_opened_back(session: AsyncSession, user_id: UUID, dream_id: UUID) -> Dream:
@@ -340,7 +431,7 @@ async def mark_opened_back(session: AsyncSession, user_id: UUID, dream_id: UUID)
         dream.status = "replied"
     await session.commit()
     await session.refresh(dream)
-    return dream
+    return await _attach_group_ids(session, dream)
 
 
 async def _get_dream(session: AsyncSession, dream_id: UUID) -> Dream:
@@ -361,28 +452,11 @@ async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: 
         raise ForbiddenError("You cannot give a dream to this room")
 
 
-async def _require_friend_or_shared_group(
+async def _require_shared_group_member(
     session: AsyncSession,
     user_id: UUID,
     receiver_id: UUID,
 ) -> None:
-    friendship_id = await session.scalar(
-        select(Friendship.id).where(
-            Friendship.status == "accepted",
-            or_(
-                and_(
-                    Friendship.requester_id == user_id,
-                    Friendship.receiver_id == receiver_id,
-                ),
-                and_(
-                    Friendship.requester_id == receiver_id,
-                    Friendship.receiver_id == user_id,
-                ),
-            ),
-        )
-    )
-    if friendship_id is not None:
-        return
     shared_group_id = await session.scalar(
         select(GroupMember.group_id)
         .where(GroupMember.user_id == user_id)
@@ -394,21 +468,56 @@ async def _require_friend_or_shared_group(
         .limit(1)
     )
     if shared_group_id is None:
-        raise ForbiddenError("You can only send dreams to friends or shared room members")
+        raise ForbiddenError("You can only send dreams to people in your dream rooms")
 
 
 async def _can_access_dream(session: AsyncSession, dream: Dream, user_id: UUID) -> bool:
     if dream.giver_id == user_id or dream.receiver_id == user_id:
         return True
-    if dream.group_id is None:
-        return False
     member_id = await session.scalar(
-        select(GroupMember.id).where(
-            GroupMember.group_id == dream.group_id,
+        select(GroupMember.id)
+        .join(DreamGroup, DreamGroup.group_id == GroupMember.group_id)
+        .where(
+            DreamGroup.dream_id == dream.id,
             GroupMember.user_id == user_id,
         )
+        .limit(1)
     )
     return member_id is not None
+
+
+async def _attach_group_ids(session: AsyncSession, dream: Dream) -> Dream:
+    group_ids = list(
+        (
+            await session.scalars(
+                select(DreamGroup.group_id).where(DreamGroup.dream_id == dream.id)
+            )
+        ).all()
+    )
+    dream.group_ids = group_ids  # type: ignore[attr-defined]
+    return dream
+
+
+async def _attach_group_ids_batch(
+    session: AsyncSession,
+    dreams: list[Dream],
+) -> list[Dream]:
+    if not dreams:
+        return dreams
+    dream_ids = [dream.id for dream in dreams]
+    rows = (
+        await session.execute(
+            select(DreamGroup.dream_id, DreamGroup.group_id).where(
+                DreamGroup.dream_id.in_(dream_ids)
+            )
+        )
+    ).all()
+    bucket: dict[UUID, list[UUID]] = {dream_id: [] for dream_id in dream_ids}
+    for dream_id, group_id in rows:
+        bucket[dream_id].append(group_id)
+    for dream in dreams:
+        dream.group_ids = bucket.get(dream.id, [])  # type: ignore[attr-defined]
+    return dreams
 
 
 async def _consume_daily_give_limit(session: AsyncSession, user_id: UUID) -> None:

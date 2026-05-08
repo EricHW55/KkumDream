@@ -4,11 +4,11 @@ from secrets import choice
 from string import ascii_uppercase, digits
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
-from app.models.dream import Dream
+from app.models.dream import Dream, DreamGroup
 from app.models.group import Group, GroupMember
 from app.models.user import User
 
@@ -136,12 +136,13 @@ async def update_room(session: AsyncSession, user_id: UUID, room_id: str, name: 
 async def list_rooms(session: AsyncSession, user_id: UUID) -> list[DreamRoom]:
     stats_subquery = (
         select(
-            Dream.group_id.label("group_id"),
+            DreamGroup.group_id.label("group_id"),
             func.max(Dream.given_at).label("last_given_at"),
             func.count(Dream.id).label("dream_count"),
         )
-        .where(Dream.group_id.is_not(None), Dream.status != "draft")
-        .group_by(Dream.group_id)
+        .join(Dream, Dream.id == DreamGroup.dream_id)
+        .where(Dream.status != "draft")
+        .group_by(DreamGroup.group_id)
         .subquery()
     )
     stmt = (
@@ -175,15 +176,19 @@ async def list_room_dreams(
     room_id: str,
     limit: int,
 ) -> list[Dream]:
+    from app.services.dream_service import _attach_group_ids_batch
+
     group_id = _parse_room_id(room_id)
     await _require_group_member(session, group_id, user_id)
     stmt = (
         select(Dream)
-        .where(Dream.group_id == group_id, Dream.status != "draft")
+        .join(DreamGroup, DreamGroup.dream_id == Dream.id)
+        .where(DreamGroup.group_id == group_id, Dream.status != "draft")
         .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
         .limit(limit)
     )
-    return list((await session.scalars(stmt)).all())
+    dreams = list((await session.scalars(stmt)).all())
+    return await _attach_group_ids_batch(session, dreams)
 
 
 async def _build_room(
@@ -194,7 +199,9 @@ async def _build_room(
 ) -> DreamRoom:
     if dream_count is None:
         dream_count = await session.scalar(
-            select(func.count(Dream.id)).where(Dream.group_id == group.id, Dream.status != "draft")
+            select(func.count(Dream.id))
+            .join(DreamGroup, DreamGroup.dream_id == Dream.id)
+            .where(DreamGroup.group_id == group.id, Dream.status != "draft")
         )
     member_rows = (
         await session.execute(
@@ -252,9 +259,12 @@ async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: 
 
 async def _cleanup_memberless_room(session: AsyncSession, group: Group) -> None:
     receiverless_shared_dream_count = await session.scalar(
-        select(func.count(Dream.id)).where(
-            Dream.group_id == group.id,
+        select(func.count(Dream.id))
+        .join(DreamGroup, DreamGroup.dream_id == Dream.id)
+        .where(
+            DreamGroup.group_id == group.id,
             Dream.receiver_id.is_(None),
+            Dream.receiver_label.is_(None),
             Dream.status != "draft",
         )
     )
@@ -266,7 +276,7 @@ async def _cleanup_memberless_room(session: AsyncSession, group: Group) -> None:
         )
         return
 
-    await session.execute(update(Dream).where(Dream.group_id == group.id).values(group_id=None))
+    await session.execute(delete(DreamGroup).where(DreamGroup.group_id == group.id))
     await session.delete(group)
 
 

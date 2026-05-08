@@ -5,23 +5,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
 from app.schemas.dream import (
+    DreamClaimRequest,
     DreamCommentCreate,
     DreamCommentOut,
     DreamDraftCreate,
     DreamGiveRequest,
-    DreamGiveResponse,
     DreamOut,
     DreamReactionSummary,
     DreamReactionToggle,
     DreamReactionToggleResponse,
+    DreamShareRequest,
+    DreamShareResponse,
     DreamUpdate,
 )
 from app.services.dream_service import (
+    claim_dream_via_token,
     create_dream_draft,
     create_dream_comment,
     delete_dream_comment,
     get_dream_for_user,
     give_dream,
+    issue_dream_share_token,
     list_dream_comments,
     list_dream_reactions,
     list_inbox,
@@ -56,15 +60,15 @@ async def update_dream(
     return DreamOut.model_validate(dream)
 
 
-@router.post("/{dream_id}/give", response_model=DreamGiveResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post("/{dream_id}/give", response_model=DreamOut, status_code=status.HTTP_202_ACCEPTED)
 async def give(
     dream_id: UUID,
     payload: DreamGiveRequest,
     user_id: UUID = Depends(current_user_id),
     session: AsyncSession = Depends(db_session),
-) -> DreamGiveResponse:
+) -> DreamOut:
     dream = await give_dream(session, user_id, dream_id, payload)
-    return DreamGiveResponse.model_validate(dream)
+    return DreamOut.model_validate(dream)
 
 
 @router.get("/inbox", response_model=list[DreamOut])
@@ -138,6 +142,32 @@ async def toggle_reaction(
 ) -> DreamReactionToggleResponse:
     result = await toggle_dream_reaction(session, user_id, dream_id, payload.reaction_type)
     return DreamReactionToggleResponse.model_validate(result)
+
+
+@router.post("/{dream_id}/share", response_model=DreamShareResponse)
+async def share(
+    dream_id: UUID,
+    payload: DreamShareRequest,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> DreamShareResponse:
+    result = await issue_dream_share_token(
+        session,
+        user_id,
+        dream_id,
+        expires_in_hours=payload.expires_in_hours,
+    )
+    return DreamShareResponse.model_validate(result)
+
+
+@router.post("/claim", response_model=DreamOut)
+async def claim(
+    payload: DreamClaimRequest,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> DreamOut:
+    dream = await claim_dream_via_token(session, user_id, payload.token)
+    return DreamOut.model_validate(dream)
 
 
 @router.get("/{dream_id}", response_model=DreamOut)

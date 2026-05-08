@@ -28,6 +28,8 @@ import type { Dream } from '../types/dream';
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
 
+type RecipientMode = 'friend' | 'external';
+
 type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
 export function ComposeScreen({ navigation }: Props) {
@@ -43,10 +45,12 @@ export function ComposeScreen({ navigation }: Props) {
   const [editTitle, setEditTitle] = useState('');
   const [editStory, setEditStory] = useState('');
   const [isRecipientModalVisible, setIsRecipientModalVisible] = useState(false);
+  const [recipientMode, setRecipientMode] = useState<RecipientMode>('friend');
   const [selectedReceiverId, setSelectedReceiverId] = useState<string | null>(
     null,
   );
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [externalLabel, setExternalLabel] = useState('');
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isGiving, setIsGiving] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
@@ -85,33 +89,44 @@ export function ComposeScreen({ navigation }: Props) {
     return getSeedFriends();
   }, [currentUserId, rooms, sessionUserId]);
 
-  const availableGroups = useMemo(() => {
-    if (!selectedReceiverId) {
-      return [];
-    }
-
-    return rooms.filter(
-      room =>
-        room.memberIds.includes(currentUserId) &&
-        room.memberIds.includes(selectedReceiverId),
-    );
-  }, [currentUserId, rooms, selectedReceiverId]);
+  const myRooms = useMemo(
+    () => rooms.filter(room => room.memberIds.includes(currentUserId)),
+    [rooms, currentUserId],
+  );
 
   const canGenerate = rawInput.trim().length > 0 && !isGenerating;
+  const trimmedLabel = externalLabel.trim();
+  const recipientReady =
+    recipientMode === 'friend'
+      ? Boolean(selectedReceiverId)
+      : trimmedLabel.length > 0;
   const selectedReceiver = selectedReceiverId
     ? getDisplayMember(selectedReceiverId, sessionUserId)
     : null;
-  const selectedGroup = selectedGroupId
-    ? rooms.find(room => room.id === selectedGroupId) ?? null
-    : null;
+
+  const recipientSummary = (() => {
+    if (recipientMode === 'friend') {
+      return selectedReceiver ? `${selectedReceiver.name}에게` : null;
+    }
+    return trimmedLabel ? `${trimmedLabel}에게 (외부)` : null;
+  })();
+
+  const groupSummary =
+    selectedGroupIds.length > 0
+      ? selectedGroupIds
+          .map(id => myRooms.find(room => room.id === id)?.name ?? '꿈방')
+          .join(', ')
+      : '꿈방 공유 없음';
+
   const previewDream =
-    draft && selectedReceiverId
+    draft
       ? {
           ...draft,
-          receiverId: selectedReceiverId,
-          groupId: selectedGroupId ?? draft.groupId,
+          receiverId: recipientMode === 'friend' ? selectedReceiverId : null,
+          receiverLabel: recipientMode === 'external' ? trimmedLabel || null : null,
+          groupIds: selectedGroupIds,
         }
-      : draft;
+      : null;
 
   const createPreview = async () => {
     const input = rawInput.trim();
@@ -146,7 +161,6 @@ export function ComposeScreen({ navigation }: Props) {
     if (!draft) {
       return;
     }
-
     setEditTitle(draft.title);
     setEditStory(draft.story);
     setIsEditOpen(true);
@@ -166,31 +180,35 @@ export function ComposeScreen({ navigation }: Props) {
     setIsEditOpen(false);
   };
 
-  const chooseReceiver = (memberId: string) => {
-    setSelectedReceiverId(memberId);
-    const firstAvailableGroup = rooms.find(
-      room =>
-        room.memberIds.includes(currentUserId) &&
-        room.memberIds.includes(memberId),
+  const toggleRoomSelection = (roomId: string) => {
+    setSelectedGroupIds(currentIds =>
+      currentIds.includes(roomId)
+        ? currentIds.filter(id => id !== roomId)
+        : [...currentIds, roomId],
     );
-    setSelectedGroupId(firstAvailableGroup?.id ?? null);
   };
 
   const confirmRecipient = () => {
-    if (!selectedReceiverId || !selectedGroupId) {
+    if (!recipientReady) {
+      setActionError(
+        recipientMode === 'friend'
+          ? '받는 친구를 선택해주세요.'
+          : '받는 사람 이름을 입력해주세요.',
+      );
       return;
     }
-
     setActionError(null);
     setIsRecipientModalVisible(false);
   };
 
   const sendDream = async () => {
-    if (!draft || !selectedReceiverId || !selectedGroupId) {
-      setActionError('받는 사람과 공유할 그룹방을 먼저 선택하세요.');
+    if (!draft) {
       return;
     }
-
+    if (!recipientReady) {
+      setActionError('받는 사람을 먼저 선택하세요.');
+      return;
+    }
     if (!token) {
       setActionError('로그인이 필요합니다.');
       return;
@@ -202,40 +220,45 @@ export function ComposeScreen({ navigation }: Props) {
       const result = await giveDream(
         draft.id,
         {
-          receiverId: selectedReceiverId,
-          groupId: toApiGroupId(selectedGroupId),
+          receiverId:
+            recipientMode === 'friend' && selectedReceiverId
+              ? selectedReceiverId
+              : undefined,
+          receiverLabel:
+            recipientMode === 'external' ? trimmedLabel : undefined,
+          groupIds: selectedGroupIds.map(toApiGroupId),
         },
         token,
       );
-      const nextDraft: Dream = {
-        ...draft,
-        receiverId: selectedReceiverId,
-        groupId: selectedGroupId,
-        status: result.status,
-        imageStatus: result.imageStatus,
-        givenAt: result.givenAt ?? new Date().toISOString(),
-      };
-      setDraft(nextDraft);
+      setDraft(result);
       setIsRecipientModalVisible(false);
       queryClient.setQueryData<Dream[]>(
         ['dreams', 'outbox', sessionUserId, token],
         currentDreams => [
-          nextDraft,
-          ...(currentDreams ?? []).filter(item => item.id !== nextDraft.id),
+          result,
+          ...(currentDreams ?? []).filter(item => item.id !== result.id),
         ],
       );
       queryClient.invalidateQueries({ queryKey: ['rooms', sessionUserId] });
-      queryClient.invalidateQueries({
-        queryKey: ['rooms', selectedGroupId, 'dreams', sessionUserId],
+      selectedGroupIds.forEach(roomId => {
+        queryClient.invalidateQueries({
+          queryKey: ['rooms', roomId, 'dreams', sessionUserId],
+        });
       });
       queryClient.invalidateQueries({
         queryKey: ['dreams', 'outbox', sessionUserId],
       });
-      navigation.replace('GroupRoom', {
-        groupId: selectedGroupId,
-        groupName: selectedGroup?.name,
-        description: selectedGroup?.description,
-      });
+      const firstRoomId = selectedGroupIds[0];
+      if (firstRoomId) {
+        const firstRoom = myRooms.find(room => room.id === firstRoomId);
+        navigation.replace('GroupRoom', {
+          groupId: firstRoomId,
+          groupName: firstRoom?.name,
+          description: firstRoom?.description,
+        });
+      } else {
+        navigation.navigate('MainTabs');
+      }
     } catch (error) {
       setActionError(error instanceof Error ? error.message : '꿈카드를 보내지 못했어요.');
     } finally {
@@ -284,12 +307,12 @@ export function ComposeScreen({ navigation }: Props) {
       {draft ? (
         <View style={styles.preview}>
           <View style={styles.previewHeader}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.previewTitle}>미리보기</Text>
               <Text style={styles.previewMeta}>
-                {selectedReceiver && selectedGroup
-                  ? `${selectedReceiver.name}에게, ${selectedGroup.name}에 공유`
-                  : '받는 사람과 공유할 그룹방을 선택하세요.'}
+                {recipientSummary
+                  ? `${recipientSummary} · ${groupSummary}`
+                  : '받는 사람을 선택하세요'}
               </Text>
             </View>
             <Pressable
@@ -335,10 +358,10 @@ export function ComposeScreen({ navigation }: Props) {
 
           {previewDream ? <DreamCard dream={previewDream} /> : null}
           <PrimaryButton onPress={() => setIsRecipientModalVisible(true)}>
-            {selectedReceiver && selectedGroup ? '받는 사람 변경' : '받는 사람 선택하기'}
+            {recipientReady ? '받는 사람 변경' : '받는 사람 선택하기'}
           </PrimaryButton>
           <PrimaryButton
-            disabled={!selectedReceiverId || !selectedGroupId || isGiving}
+            disabled={!recipientReady || isGiving}
             onPress={sendDream}
           >
             {isGiving ? '보내는 중...' : '보내기'}
@@ -361,10 +384,10 @@ export function ComposeScreen({ navigation }: Props) {
             onPress={event => event.stopPropagation()}
           >
             <View style={styles.sheetHeader}>
-              <View>
-                <Text style={styles.sheetTitle}>받는 사람 선택</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetTitle}>받는 사람과 공유 방</Text>
                 <Text style={styles.sheetSubtitle}>
-                  친구 한 명을 고른 뒤, 그 친구가 포함된 그룹방에 공유합니다.
+                  꿈카드는 한 사람에게 보내고, 원하는 꿈방에 함께 공유할 수 있어요.
                 </Text>
               </View>
               <Pressable
@@ -379,77 +402,144 @@ export function ComposeScreen({ navigation }: Props) {
                 <X color={colors.textSecondary} size={20} />
               </Pressable>
             </View>
-            {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
 
-            <Text style={styles.sectionTitle}>친구</Text>
-            <View style={styles.friendList}>
-              {friends.map(friend => (
-                <Pressable
-                  key={friend.id}
-                  accessibilityRole="button"
-                  onPress={() => chooseReceiver(friend.id)}
-                  style={({ pressed }) => [
-                    styles.friendItem,
-                    selectedReceiverId === friend.id && styles.selectedItem,
-                    pressed && interactionStyles.pressedSoft,
+            <View style={styles.modeRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setRecipientMode('friend')}
+                style={({ pressed }) => [
+                  styles.modeChip,
+                  recipientMode === 'friend' && styles.modeChipActive,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    recipientMode === 'friend' && styles.modeChipTextActive,
                   ]}
                 >
-                  <MoonAvatar size={38} color={friend.avatarColor} />
-                  <Text style={styles.friendName}>{friend.name}</Text>
-                  {selectedReceiverId === friend.id ? (
-                    <Check color={colors.primary} size={20} />
-                  ) : null}
-                </Pressable>
-              ))}
-              {friends.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  함께 속한 꿈방 멤버가 아직 없습니다.
+                  앱 친구
                 </Text>
-              ) : null}
-            </View>
-
-            <Text style={styles.sectionTitle}>공유할 그룹방</Text>
-            <View style={styles.groupList}>
-              {availableGroups.map(room => (
-                <Pressable
-                  key={room.id}
-                  accessibilityRole="button"
-                  onPress={() => setSelectedGroupId(room.id)}
-                  style={({ pressed }) => [
-                    styles.groupItem,
-                    selectedGroupId === room.id && styles.selectedItem,
-                    pressed && interactionStyles.pressedSoft,
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setRecipientMode('external')}
+                style={({ pressed }) => [
+                  styles.modeChip,
+                  recipientMode === 'external' && styles.modeChipActive,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    recipientMode === 'external' && styles.modeChipTextActive,
                   ]}
                 >
-                  <View style={styles.groupText}>
-                    <Text style={styles.groupName}>{room.name}</Text>
-                    <Text style={styles.groupMeta} numberOfLines={1}>
-                      {((room.members ?? []).length > 0
-                        ? room.members
-                        : room.memberIds.map(memberId =>
-                            getDisplayMember(memberId, sessionUserId),
-                          )
-                      )
-                        .map(member => member.name)
-                        .join(', ')}
-                    </Text>
-                  </View>
-                  {selectedGroupId === room.id ? (
-                    <Check color={colors.primary} size={20} />
-                  ) : null}
-                </Pressable>
-              ))}
-              {selectedReceiverId && availableGroups.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  선택한 친구가 포함된 그룹방이 없습니다.
+                  외부 (이름으로)
                 </Text>
-              ) : null}
+              </Pressable>
             </View>
 
-            <PrimaryButton
-              disabled={!selectedReceiverId || !selectedGroupId}
-              onPress={confirmRecipient}
+            <ScrollView
+              style={styles.sheetScroll}
+              contentContainerStyle={styles.sheetScrollContent}
+              showsVerticalScrollIndicator={false}
             >
+              {recipientMode === 'friend' ? (
+                <View style={styles.sectionBlock}>
+                  <Text style={styles.sectionTitle}>친구</Text>
+                  <View style={styles.friendList}>
+                    {friends.map(friend => (
+                      <Pressable
+                        key={friend.id}
+                        accessibilityRole="button"
+                        onPress={() => setSelectedReceiverId(friend.id)}
+                        style={({ pressed }) => [
+                          styles.friendItem,
+                          selectedReceiverId === friend.id && styles.selectedItem,
+                          pressed && interactionStyles.pressedSoft,
+                        ]}
+                      >
+                        <MoonAvatar size={38} color={friend.avatarColor} />
+                        <Text style={styles.friendName}>{friend.name}</Text>
+                        {selectedReceiverId === friend.id ? (
+                          <Check color={colors.primary} size={20} />
+                        ) : null}
+                      </Pressable>
+                    ))}
+                    {friends.length === 0 ? (
+                      <Text style={styles.emptyText}>
+                        아직 함께 속한 꿈방 멤버가 없어요. 외부 모드로 보내보세요.
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.sectionBlock}>
+                  <Text style={styles.sectionTitle}>받는 사람 이름</Text>
+                  <TextInput
+                    autoCorrect={false}
+                    spellCheck={false}
+                    value={externalLabel}
+                    onChangeText={setExternalLabel}
+                    placeholder="예: 엄마, 지영"
+                    placeholderTextColor={colors.textMuted}
+                    maxLength={50}
+                    style={styles.labelInput}
+                  />
+                  <Text style={styles.hintText}>
+                    링크로 카드를 받게 되는 사람에게 보여줄 호칭이에요. 카톡 등 외부에 공유한 링크로 그 사람이 들어와 카드를 받으면, 받는 사람이 자동으로 연결됩니다.
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionTitle}>공유할 꿈방 (다중 선택, 선택사항)</Text>
+                <View style={styles.groupList}>
+                  {myRooms.map(room => {
+                    const isSelected = selectedGroupIds.includes(room.id);
+                    return (
+                      <Pressable
+                        key={room.id}
+                        accessibilityRole="button"
+                        onPress={() => toggleRoomSelection(room.id)}
+                        style={({ pressed }) => [
+                          styles.groupItem,
+                          isSelected && styles.selectedItem,
+                          pressed && interactionStyles.pressedSoft,
+                        ]}
+                      >
+                        <View style={styles.groupText}>
+                          <Text style={styles.groupName}>{room.name}</Text>
+                          <Text style={styles.groupMeta} numberOfLines={1}>
+                            {((room.members ?? []).length > 0
+                              ? room.members
+                              : room.memberIds.map(memberId =>
+                                  getDisplayMember(memberId, sessionUserId),
+                                )
+                            )
+                              .map(member => member.name)
+                              .join(', ')}
+                          </Text>
+                        </View>
+                        {isSelected ? (
+                          <Check color={colors.primary} size={20} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
+                  {myRooms.length === 0 ? (
+                    <Text style={styles.emptyText}>
+                      아직 가입한 꿈방이 없어요. 친구에게 1:1로 보내거나 새 방을 만들어보세요.
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            </ScrollView>
+
+            <PrimaryButton disabled={!recipientReady} onPress={confirmRecipient}>
               선택 완료
             </PrimaryButton>
           </Pressable>
@@ -583,11 +673,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.32)',
   },
   recipientSheet: {
-    maxHeight: '86%',
+    maxHeight: '90%',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 22,
-    paddingBottom: 34,
+    paddingBottom: 28,
     gap: 14,
     backgroundColor: colors.cardBase,
   },
@@ -618,11 +708,64 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F3F3F4',
   },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  modeChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 16,
+    alignItems: 'center',
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  modeChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#F7F3FF',
+  },
+  modeChipText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  modeChipTextActive: {
+    color: colors.primaryDark,
+  },
+  sheetScroll: {
+    maxHeight: 460,
+  },
+  sheetScrollContent: {
+    gap: 18,
+    paddingBottom: 8,
+  },
+  sectionBlock: {
+    gap: 10,
+  },
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '700',
     includeFontPadding: false,
+  },
+  labelInput: {
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  hintText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   friendList: {
     gap: 10,

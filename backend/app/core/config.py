@@ -33,6 +33,9 @@ class Settings(BaseSettings):
 
     firebase_credentials_json: str | None = Field(default=None)
 
+    share_base_url: str = "https://kkumdream.app"
+    share_token_default_expire_days: int = 30
+
     @computed_field
     @property
     def is_local(self) -> bool:

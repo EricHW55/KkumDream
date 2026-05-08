@@ -25,8 +25,8 @@ class Dream(Base):
     __tablename__ = "dreams"
     __table_args__ = (
         CheckConstraint(
-            "status = 'draft' OR receiver_id IS NOT NULL OR group_id IS NOT NULL",
-            name="dreams_must_have_receiver_when_given",
+            "status = 'draft' OR receiver_id IS NOT NULL OR receiver_label IS NOT NULL",
+            name="dreams_must_have_recipient_when_given",
         ),
         CheckConstraint(
             "status IN ('draft', 'given', 'opened', 'replied')",
@@ -38,16 +38,12 @@ class Dream(Base):
         ),
         Index("ix_dreams_giver_status_given_at", "giver_id", "status", "given_at"),
         Index("ix_dreams_receiver_status_given_at", "receiver_id", "status", "given_at"),
-        Index("ix_dreams_group_given_at", "group_id", "given_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     giver_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     receiver_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    group_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("groups.id", ondelete="SET NULL"),
-        nullable=True,
-    )
+    receiver_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     raw_input: Mapped[str] = mapped_column(String(500), nullable=False)
     title: Mapped[str] = mapped_column(String(80), nullable=False)
@@ -99,6 +95,45 @@ class DreamComment(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DreamGroup(Base):
+    __tablename__ = "dream_groups"
+    __table_args__ = (
+        Index("ix_dream_groups_group_id", "group_id"),
+    )
+
+    dream_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("dreams.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DreamClaimToken(Base):
+    __tablename__ = "dream_claim_tokens"
+    __table_args__ = (
+        UniqueConstraint("token", name="dream_claim_tokens_token_key"),
+        Index("ix_dream_claim_tokens_dream_id", "dream_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    dream_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("dreams.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    token: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    claimed_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
 
 class DreamReaction(Base):

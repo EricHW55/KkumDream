@@ -26,12 +26,13 @@ class DreamUpdate(ApiModel):
 
 class DreamGiveRequest(ApiModel):
     receiver_id: UUID | None = None
-    group_id: UUID | None = None
+    receiver_label: str | None = Field(default=None, max_length=50)
+    group_ids: list[UUID] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_target(self) -> "DreamGiveRequest":
-        if self.receiver_id is None and self.group_id is None:
-            raise ValueError("receiverId or groupId is required")
+        if self.receiver_id is None and not self.receiver_label:
+            raise ValueError("receiverId or receiverLabel is required")
         return self
 
 
@@ -39,7 +40,8 @@ class DreamOut(ApiModel):
     id: UUID
     giver_id: UUID
     receiver_id: UUID | None = None
-    group_id: UUID | None = None
+    receiver_label: str | None = None
+    group_ids: list[UUID] = Field(default_factory=list)
     raw_input: str
     title: str
     title_visible: bool
@@ -58,13 +60,6 @@ class DreamOut(ApiModel):
     read_at: datetime | None = None
     opened_back_at: datetime | None = None
     owner_main_comment_id: UUID | None = None
-
-
-class DreamGiveResponse(ApiModel):
-    id: UUID
-    status: str
-    given_at: datetime | None
-    image_status: str
 
 
 class DreamCommentCreate(ApiModel):
@@ -97,3 +92,18 @@ class DreamReactionToggleResponse(ApiModel):
     reacted: bool
     count: int
     summary: list[DreamReactionSummary]
+
+
+class DreamShareRequest(ApiModel):
+    expires_in_hours: int | None = Field(default=None, ge=1, le=24 * 365)
+
+
+class DreamShareResponse(ApiModel):
+    token: str
+    dream_id: UUID
+    expires_at: datetime | None = None
+    share_url: str
+
+
+class DreamClaimRequest(ApiModel):
+    token: str = Field(min_length=1, max_length=64)

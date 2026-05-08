@@ -7,8 +7,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { updateProfile } from '../api/auth';
+import { claimDream } from '../api/dreams';
 import { signOutGoogle } from '../auth/googleSignIn';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { Screen } from '../components/Screen';
@@ -17,7 +19,9 @@ import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
 
 export function ProfileScreen() {
+  const queryClient = useQueryClient();
   const user = useSessionStore(state => state.user);
+  const userId = useSessionStore(state => state.userId);
   const token = useSessionStore(state => state.token);
   const updateUser = useSessionStore(state => state.updateUser);
   const clearSession = useSessionStore(state => state.clearSession);
@@ -27,6 +31,40 @@ export function ProfileScreen() {
   );
   const [statusText, setStatusText] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [claimToken, setClaimToken] = useState('');
+  const [claimStatus, setClaimStatus] = useState<string | null>(null);
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  const submitClaim = async () => {
+    if (!token) {
+      setClaimStatus('로그인이 필요합니다.');
+      return;
+    }
+    const trimmed = claimToken.trim();
+    if (!trimmed) {
+      setClaimStatus('받은 링크의 토큰을 입력하세요.');
+      return;
+    }
+
+    let parsed = trimmed;
+    const claimMatch = trimmed.match(/[?&]claim=([^&\s]+)/);
+    if (claimMatch) {
+      parsed = decodeURIComponent(claimMatch[1]);
+    }
+
+    setClaimStatus(null);
+    setIsClaiming(true);
+    try {
+      const dream = await claimDream(parsed, token);
+      queryClient.invalidateQueries({ queryKey: ['dreams', 'inbox', userId] });
+      setClaimToken('');
+      setClaimStatus(`"${dream.title}" 카드를 받은 카드함에 담았어요.`);
+    } catch (error) {
+      setClaimStatus(error instanceof Error ? error.message : '카드를 받지 못했어요.');
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   const logout = async () => {
     await signOutGoogle();
@@ -124,6 +162,36 @@ export function ProfileScreen() {
           <Text style={styles.saveText}>{isSaving ? '저장 중...' : '저장'}</Text>
         </Pressable>
       </View>
+      <View style={styles.panel}>
+        <Text style={styles.sectionHeading}>꿈카드 받기</Text>
+        <Text style={styles.sectionDescription}>
+          누군가 카톡 등으로 보낸 꿈카드 링크를 여기에 붙여넣으면 받은 카드함에 담을 수 있어요.
+        </Text>
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          value={claimToken}
+          onChangeText={setClaimToken}
+          placeholder="https://kkumdream.app/d/...?claim=... 또는 토큰"
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+        />
+        {claimStatus ? <Text style={styles.statusText}>{claimStatus}</Text> : null}
+        <Pressable
+          accessibilityRole="button"
+          disabled={isClaiming}
+          onPress={submitClaim}
+          style={({ pressed }) => [
+            styles.saveButton,
+            isClaiming && styles.disabledButton,
+            pressed && !isClaiming && interactionStyles.pressed,
+          ]}
+        >
+          <Text style={styles.saveText}>{isClaiming ? '받는 중...' : '카드 받기'}</Text>
+        </Pressable>
+      </View>
+
       <Pressable
         accessibilityRole="button"
         onPress={logout}
@@ -152,6 +220,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
     gap: 12,
+    marginBottom: 14,
+  },
+  sectionHeading: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  sectionDescription: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
   },
   profileHeader: {
     flexDirection: 'row',

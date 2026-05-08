@@ -6,7 +6,8 @@ export interface Dream {
   id: string;
   giverId: string;
   receiverId: string | null;
-  groupId: string | null;
+  receiverLabel: string | null;
+  groupIds: string[];
   rawInput: string;
   title: string;
   titleVisible: boolean;
@@ -34,7 +35,15 @@ export interface DreamDraftPayload {
 
 export interface DreamGivePayload {
   receiverId?: string;
-  groupId?: string;
+  receiverLabel?: string;
+  groupIds?: string[];
+}
+
+export interface DreamShareResult {
+  token: string;
+  dreamId: string;
+  expiresAt: string | null;
+  shareUrl: string;
 }
 
 export interface DreamComment {
