@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '700',
     marginBottom: 18,
   },
   panel: {
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   name: {
     color: colors.textPrimary,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   meta: {
     marginTop: 6,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     color: colors.textPrimary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   input: {
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   saveText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   logoutButton: {
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
 });

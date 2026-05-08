@@ -9,6 +9,7 @@ from app.schemas.room import DreamRoomOut, RoomCreate, RoomJoin, RoomUpdate
 from app.services.room_service import (
     create_room,
     join_room,
+    leave_room,
     list_room_dreams,
     list_rooms,
     update_room,
@@ -55,6 +56,16 @@ async def update(
 ) -> DreamRoomOut:
     room = await update_room(session, user_id, room_id, payload.name)
     return DreamRoomOut.model_validate(room)
+
+
+@router.delete("/{room_id}")
+async def leave(
+    room_id: str,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> dict[str, bool]:
+    await leave_room(session, user_id, room_id)
+    return {"ok": True}
 
 
 @router.get("/{room_id}/dreams", response_model=list[DreamOut])

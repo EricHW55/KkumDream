@@ -48,6 +48,13 @@ export function updateRoom(
   });
 }
 
+export function leaveRoom(roomId: string, token?: string | null) {
+  return requestJson<{ ok: boolean }>(`/rooms/${encodeURIComponent(roomId)}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
 export function fetchRoomDreams(
   roomId: string,
   token?: string | null,

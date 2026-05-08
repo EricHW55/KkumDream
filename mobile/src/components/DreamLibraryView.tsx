@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   description: {
@@ -361,10 +361,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.cardBase,
     shadowColor: colors.primary,
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   miniImage: {
     height: 94,
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   miniMood: {
     color: colors.primaryDark,
     fontSize: 19,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   miniBody: {
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   miniTitle: {
     color: colors.textPrimary,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     lineHeight: 18,
   },
   miniMeta: {
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   dateTitle: {
     color: colors.textPrimary,
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   dateCards: {
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   calendarMood: {
     color: colors.primaryDark,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   calendarText: {
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   calendarCardTitle: {
     color: colors.textPrimary,
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   calendarSummary: {
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
   previewMood: {
     color: colors.primaryDark,
     fontSize: 34,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   previewBody: {
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   previewTitle: {
     color: colors.textPrimary,
     fontSize: 25,
-    fontWeight: '800',
+    fontWeight: '700',
     lineHeight: 31,
   },
   previewSummary: {
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   previewHint: {
     color: colors.primary,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
 });

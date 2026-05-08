@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { DreamLibraryView } from '../components/DreamLibraryView';
 import { Screen } from '../components/Screen';
@@ -8,12 +10,22 @@ import { useSessionStore } from '../store/sessionStore';
 export function OutboxScreen() {
   const token = useSessionStore(state => state.token);
   const userId = useSessionStore(state => state.userId);
-  const { data: outbox = getCachedOutbox(userId) } = useQuery({
+  const {
+    data: outbox = getCachedOutbox(userId),
+    refetch: refetchOutbox,
+  } = useQuery({
     queryKey: ['dreams', 'outbox', userId, token],
     queryFn: () => loadOutbox(token, userId),
     initialData: () => getCachedOutbox(userId),
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchOutbox().catch(() => undefined);
+    }, [refetchOutbox]),
+  );
 
   return (
     <Screen>

@@ -1,5 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowUp,
@@ -27,7 +28,9 @@ import { TagChip } from '../components/TagChip';
 import {
   getCachedRoomDreams,
   getCachedRooms,
+  leaveGroupRoom,
   loadRoomDreams,
+  loadRooms,
   updateGroupRoom,
 } from '../data/dreamRepository';
 import { isCurrentUserId } from '../data/currentUser';
@@ -52,22 +55,36 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [roomNameDraft, setRoomNameDraft] = useState('');
   const [roomError, setRoomError] = useState<string | null>(null);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
+  const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
   const [messageInputKey, setMessageInputKey] = useState(0);
-  const cachedRoom = getCachedRooms(sessionUserId).find(
-    item => item.id === route.params.groupId,
-  );
+  const roomsQueryKey = ['rooms', sessionUserId, token] as const;
+  const {
+    data: rooms = getCachedRooms(sessionUserId),
+    refetch: refetchRooms,
+  } = useQuery({
+    queryKey: roomsQueryKey,
+    queryFn: () => loadRooms(token, sessionUserId),
+    initialData: () => getCachedRooms(sessionUserId),
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+  const cachedRoom = rooms.find(item => item.id === route.params.groupId);
   const room = roomOverride ?? cachedRoom;
   const title = room?.name ?? route.params.groupName ?? '꿈방';
   const description =
     room?.description ??
     route.params.description ??
     '아직 주고받은 꿈카드가 없습니다';
-  const { data: dreams = getCachedRoomDreams(route.params.groupId, sessionUserId) } = useQuery({
+  const {
+    data: dreams = getCachedRoomDreams(route.params.groupId, sessionUserId),
+    refetch: refetchDreams,
+  } = useQuery({
     queryKey: ['rooms', route.params.groupId, 'dreams', sessionUserId, token],
     queryFn: () => loadRoomDreams(route.params.groupId, token, sessionUserId),
     initialData: () => getCachedRoomDreams(route.params.groupId, sessionUserId),
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
   const members =
     (room?.members ?? []).length > 0
@@ -75,6 +92,13 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       : (room?.memberIds ?? []).map(memberId =>
           getDisplayMember(memberId, sessionUserId),
         );
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchRooms().catch(() => undefined);
+      refetchDreams().catch(() => undefined);
+    }, [refetchDreams, refetchRooms]),
+  );
 
   const openSettings = () => {
     setRoomNameDraft(title);
@@ -100,7 +124,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       );
       setRoomOverride(updatedRoom);
       queryClient.setQueryData<ReturnType<typeof getCachedRooms>>(
-        ['rooms', sessionUserId, token],
+        roomsQueryKey,
         currentRooms =>
           currentRooms?.map(item =>
             item.id === updatedRoom.id ? updatedRoom : item,
@@ -117,6 +141,31 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const clearMessageDraft = () => {
     setMessageDraft('');
     setMessageInputKey(key => key + 1);
+  };
+
+  const leaveCurrentRoom = async () => {
+    if (!token) {
+      setRoomError('로그인이 필요합니다.');
+      return;
+    }
+
+    setRoomError(null);
+    setIsLeavingRoom(true);
+    try {
+      const nextRooms = await leaveGroupRoom(
+        route.params.groupId,
+        token,
+        sessionUserId,
+      );
+      queryClient.setQueryData(roomsQueryKey, nextRooms);
+      queryClient.invalidateQueries({ queryKey: ['rooms', sessionUserId] });
+      setIsSettingsVisible(false);
+      navigation.goBack();
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : '꿈방을 나가지 못했어요.');
+    } finally {
+      setIsLeavingRoom(false);
+    }
   };
 
   return (
@@ -281,6 +330,20 @@ export function GroupRoomScreen({ navigation, route }: Props) {
                 {isSavingRoom ? '저장 중...' : '저장'}
               </Text>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isLeavingRoom}
+              onPress={leaveCurrentRoom}
+              style={({ pressed }) => [
+                styles.dangerAction,
+                isLeavingRoom && styles.disabledAction,
+                pressed && !isLeavingRoom && interactionStyles.pressed,
+              ]}
+            >
+              <Text style={styles.dangerActionText}>
+                {isLeavingRoom ? '나가는 중...' : '꿈방 나가기'}
+              </Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
@@ -300,7 +363,10 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             onPress={event => event.stopPropagation()}
           >
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>멤버</Text>
+              <View>
+                <Text style={styles.sheetTitle}>멤버</Text>
+                <Text style={styles.sheetSubtitle}>{members.length}명</Text>
+              </View>
               <Pressable
                 accessibilityLabel="닫기"
                 accessibilityRole="button"
@@ -454,7 +520,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   subtitle: {
@@ -494,14 +560,14 @@ const styles = StyleSheet.create({
   infoLabel: {
     color: colors.textMuted,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   inviteCode: {
     marginTop: 5,
     color: colors.primaryDark,
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   messages: {
@@ -561,10 +627,10 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: colors.cardBase,
     shadowColor: colors.primary,
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   myDreamBubble: {
     backgroundColor: colors.lavenderMist,
@@ -586,7 +652,7 @@ const styles = StyleSheet.create({
   previewMood: {
     color: colors.primaryDark,
     fontSize: 30,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   bubbleText: {
@@ -602,7 +668,7 @@ const styles = StyleSheet.create({
   bubbleTitle: {
     color: colors.textPrimary,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     lineHeight: 26,
     includeFontPadding: false,
   },
@@ -624,7 +690,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: colors.textPrimary,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   emptyText: {
@@ -687,7 +753,14 @@ const styles = StyleSheet.create({
   sheetTitle: {
     color: colors.textPrimary,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  sheetSubtitle: {
+    marginTop: 5,
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
     includeFontPadding: false,
   },
   closeButton: {
@@ -701,7 +774,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     color: colors.textPrimary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   sheetInput: {
@@ -728,7 +801,22 @@ const styles = StyleSheet.create({
   primaryActionText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  dangerAction: {
+    minHeight: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF1F1',
+    borderWidth: 1,
+    borderColor: '#F1CACA',
+  },
+  dangerActionText: {
+    color: '#B84A4A',
+    fontSize: 15,
+    fontWeight: '700',
     includeFontPadding: false,
   },
   errorText: {
@@ -755,7 +843,7 @@ const styles = StyleSheet.create({
   memberName: {
     color: colors.textPrimary,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   memberRole: {

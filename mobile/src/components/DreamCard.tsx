@@ -139,10 +139,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardIvory,
     overflow: 'hidden',
     shadowColor: colors.primary,
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   face: {
     width: '100%',
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: colors.primaryDark,
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   content: {
@@ -189,13 +189,13 @@ const styles = StyleSheet.create({
   senderLine: {
     color: colors.primary,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   title: {
     color: colors.textPrimary,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     lineHeight: 28,
     includeFontPadding: false,
   },
@@ -215,13 +215,13 @@ const styles = StyleSheet.create({
   backTitle: {
     color: colors.textPrimary,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   backSenderLine: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   story: {

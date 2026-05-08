@@ -62,9 +62,44 @@ async def join_room(session: AsyncSession, user_id: UUID, invite_code: str) -> D
         )
     )
     if existing_member is None:
-        session.add(GroupMember(group_id=group.id, user_id=user_id, role="member"))
+        member_count = await session.scalar(
+            select(func.count(GroupMember.id)).where(GroupMember.group_id == group.id)
+        )
+        role = "owner" if not member_count else "member"
+        if role == "owner":
+            group.owner_id = user_id
+        session.add(GroupMember(group_id=group.id, user_id=user_id, role=role))
         await session.commit()
     return await _build_room(session, group)
+
+
+async def leave_room(session: AsyncSession, user_id: UUID, room_id: str) -> None:
+    group_id = _parse_room_id(room_id)
+    member = await session.scalar(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == user_id,
+        )
+    )
+    if member is None:
+        raise ForbiddenError("You are not a member of this room")
+
+    group = await session.get(Group, group_id)
+    if group is None:
+        raise NotFoundError("Room not found")
+
+    was_owner = member.role == "owner"
+    await session.delete(member)
+    if was_owner:
+        next_owner = await session.scalar(
+            select(GroupMember)
+            .where(GroupMember.group_id == group_id, GroupMember.user_id != user_id)
+            .order_by(GroupMember.joined_at.asc())
+        )
+        if next_owner is not None:
+            next_owner.role = "owner"
+            group.owner_id = next_owner.user_id
+    await session.commit()
 
 
 async def update_room(session: AsyncSession, user_id: UUID, room_id: str, name: str) -> DreamRoom:

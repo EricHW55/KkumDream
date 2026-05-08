@@ -4,6 +4,7 @@ import {
   fetchRoomDreams,
   fetchRooms,
   joinRoom,
+  leaveRoom,
   updateRoom,
   type ApiDreamRoom,
 } from '../api/rooms';
@@ -70,6 +71,17 @@ export async function updateGroupRoom(
   const rooms = [room, ...getCachedRooms(userId).filter(item => item.id !== room.id)];
   writeCache(CACHE_KEYS.rooms(userId), rooms);
   return room;
+}
+
+export async function leaveGroupRoom(
+  roomId: string,
+  token?: string | null,
+  userId?: string | null,
+) {
+  await leaveRoom(roomId, token);
+  const rooms = getCachedRooms(userId).filter(item => item.id !== roomId);
+  writeCache(CACHE_KEYS.rooms(userId), rooms);
+  return rooms;
 }
 
 export function getCachedInbox(userId?: string | null) {

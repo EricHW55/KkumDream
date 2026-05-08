@@ -60,6 +60,10 @@ function MainTabs() {
           paddingBottom: 8,
           borderTopColor: colors.divider,
         },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
         headerShown: false,
       }}
     >

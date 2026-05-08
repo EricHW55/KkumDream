@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   commentTitle: {
     color: colors.textPrimary,
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   commentItem: {
     borderRadius: 16,
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   commentAuthor: {
     color: colors.textPrimary,
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   ownerBadge: {
     borderRadius: 999,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     backgroundColor: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   commentText: {
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   commentSubmitText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   commentNotice: {

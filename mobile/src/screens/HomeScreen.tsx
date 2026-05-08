@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   FlatList,
   Modal,
@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -58,12 +58,22 @@ export function HomeScreen() {
   const [roomError, setRoomError] = useState<string | null>(null);
   const [isRoomActionPending, setIsRoomActionPending] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
-  const { data: rooms = getCachedRooms(sessionUserId) } = useQuery({
+  const {
+    data: rooms = getCachedRooms(sessionUserId),
+    refetch: refetchRooms,
+  } = useQuery({
     queryKey: roomsQueryKey,
     queryFn: () => loadRooms(token, sessionUserId),
     initialData: () => getCachedRooms(sessionUserId),
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchRooms().catch(() => undefined);
+    }, [refetchRooms]),
+  );
 
   const openRoom = (room: GroupRoom) => {
     navigation.navigate('GroupRoom', {
@@ -463,7 +473,7 @@ const styles = StyleSheet.create({
   wordmark: {
     color: colors.textPrimary,
     fontSize: 34,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   subtitle: {
@@ -519,7 +529,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: colors.textPrimary,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   emptyText: {
@@ -544,7 +554,7 @@ const styles = StyleSheet.create({
   roomName: {
     color: '#000000',
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   roomMeta: {
@@ -593,7 +603,7 @@ const styles = StyleSheet.create({
   latestMood: {
     color: colors.primaryDark,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   emptyDreamBadge: {
@@ -626,7 +636,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     color: colors.textPrimary,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   closeButton: {
@@ -659,7 +669,7 @@ const styles = StyleSheet.create({
   actionTitle: {
     color: colors.textPrimary,
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   actionSubtitle: {
@@ -675,7 +685,7 @@ const styles = StyleSheet.create({
   codeLabel: {
     color: colors.textPrimary,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   inviteCodeRow: {
@@ -690,7 +700,7 @@ const styles = StyleSheet.create({
   inviteCode: {
     color: colors.primaryDark,
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 1,
     includeFontPadding: false,
   },
@@ -723,7 +733,7 @@ const styles = StyleSheet.create({
   primaryActionText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   errorText: {

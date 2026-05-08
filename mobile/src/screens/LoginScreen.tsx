@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontSize: 42,
-    fontWeight: '900',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   subtitle: {
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   panelTitle: {
     color: colors.textPrimary,
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   panelText: {
@@ -138,13 +138,13 @@ const styles = StyleSheet.create({
   googleMark: {
     color: '#4285F4',
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   googleButtonText: {
     color: colors.textPrimary,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   setupText: {

@@ -184,11 +184,20 @@ export function ComposeScreen() {
       };
       setDraft(nextDraft);
       setIsRecipientModalVisible(false);
+      queryClient.setQueryData<Dream[]>(
+        ['dreams', 'outbox', sessionUserId, token],
+        currentDreams => [
+          nextDraft,
+          ...(currentDreams ?? []).filter(item => item.id !== nextDraft.id),
+        ],
+      );
       queryClient.invalidateQueries({ queryKey: ['rooms', sessionUserId] });
       queryClient.invalidateQueries({
         queryKey: ['rooms', selectedGroupId, 'dreams', sessionUserId],
       });
-      queryClient.invalidateQueries({ queryKey: ['dreams', 'outbox', sessionUserId] });
+      queryClient.invalidateQueries({
+        queryKey: ['dreams', 'outbox', sessionUserId],
+      });
     } catch (error) {
       setActionError(error instanceof Error ? error.message : '꿈카드를 보내지 못했어요.');
     } finally {
@@ -422,7 +431,7 @@ const styles = StyleSheet.create({
   label: {
     color: colors.textPrimary,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   input: {
@@ -469,7 +478,7 @@ const styles = StyleSheet.create({
   previewTitle: {
     color: colors.textPrimary,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   previewMeta: {
@@ -491,7 +500,7 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   editPanel: {
@@ -505,7 +514,7 @@ const styles = StyleSheet.create({
   editLabel: {
     color: colors.textPrimary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   editInput: {
@@ -547,7 +556,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     color: colors.textPrimary,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   sheetSubtitle: {
@@ -568,7 +577,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   friendList: {
@@ -593,7 +602,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textPrimary,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   groupList: {
@@ -616,7 +625,7 @@ const styles = StyleSheet.create({
   groupName: {
     color: colors.textPrimary,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     includeFontPadding: false,
   },
   groupMeta: {
