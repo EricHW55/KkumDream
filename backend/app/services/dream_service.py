@@ -3,7 +3,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.ai_generation import AiGenerationJob, AiGenerationLog
 from app.models.dream import DailyGiveLimit, Dream, DreamComment, DreamReaction
+from app.models.friendship import Friendship
 from app.models.group import GroupMember
 from app.models.user import User
 from app.schemas.dream import (
@@ -104,10 +105,14 @@ async def give_dream(
         raise ForbiddenError("Only the giver can give this dream")
     if dream.status != "draft":
         raise BadRequestError("Dream has already been given")
+    if payload.receiver_id is not None and payload.receiver_id == user_id:
+        raise BadRequestError("Cannot give a dream to yourself")
     if payload.group_id is not None:
         await _require_group_member(session, payload.group_id, user_id)
         if payload.receiver_id is not None:
             await _require_group_member(session, payload.group_id, payload.receiver_id)
+    elif payload.receiver_id is not None:
+        await _require_friend_or_shared_group(session, user_id, payload.receiver_id)
 
     if settings.environment == "production":
         await _consume_daily_give_limit(session, user_id)
@@ -354,6 +359,42 @@ async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: 
     )
     if member_id is None:
         raise ForbiddenError("You cannot give a dream to this room")
+
+
+async def _require_friend_or_shared_group(
+    session: AsyncSession,
+    user_id: UUID,
+    receiver_id: UUID,
+) -> None:
+    friendship_id = await session.scalar(
+        select(Friendship.id).where(
+            Friendship.status == "accepted",
+            or_(
+                and_(
+                    Friendship.requester_id == user_id,
+                    Friendship.receiver_id == receiver_id,
+                ),
+                and_(
+                    Friendship.requester_id == receiver_id,
+                    Friendship.receiver_id == user_id,
+                ),
+            ),
+        )
+    )
+    if friendship_id is not None:
+        return
+    shared_group_id = await session.scalar(
+        select(GroupMember.group_id)
+        .where(GroupMember.user_id == user_id)
+        .where(
+            GroupMember.group_id.in_(
+                select(GroupMember.group_id).where(GroupMember.user_id == receiver_id)
+            )
+        )
+        .limit(1)
+    )
+    if shared_group_id is None:
+        raise ForbiddenError("You can only send dreams to friends or shared room members")
 
 
 async def _can_access_dream(session: AsyncSession, dream: Dream, user_id: UUID) -> bool:
