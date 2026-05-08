@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
 from sqlalchemy import Select, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -119,7 +120,16 @@ async def give_dream(
             payload={"imagePrompt": dream.image_prompt},
         )
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        if "dreams_receiver_group_xor" in str(exc):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Database migration required. Run alembic upgrade head.",
+            ) from exc
+        raise
     await session.refresh(dream)
     return dream
 
