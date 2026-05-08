@@ -5,8 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
 from app.schemas.dream import DreamOut
-from app.schemas.room import DreamRoomOut, RoomCreate, RoomJoin
-from app.services.room_service import create_room, join_room, list_room_dreams, list_rooms
+from app.schemas.room import DreamRoomOut, RoomCreate, RoomJoin, RoomUpdate
+from app.services.room_service import (
+    create_room,
+    join_room,
+    list_room_dreams,
+    list_rooms,
+    update_room,
+)
 
 router = APIRouter()
 
@@ -37,6 +43,17 @@ async def join(
     session: AsyncSession = Depends(db_session),
 ) -> DreamRoomOut:
     room = await join_room(session, user_id, payload.invite_code)
+    return DreamRoomOut.model_validate(room)
+
+
+@router.patch("/{room_id}", response_model=DreamRoomOut)
+async def update(
+    room_id: str,
+    payload: RoomUpdate,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> DreamRoomOut:
+    room = await update_room(session, user_id, room_id, payload.name)
     return DreamRoomOut.model_validate(room)
 
 

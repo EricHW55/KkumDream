@@ -1,5 +1,10 @@
 import { requestJson } from './httpClient';
-import type { Dream, DreamDraftPayload, DreamGivePayload } from '../types/dream';
+import type {
+  Dream,
+  DreamComment,
+  DreamDraftPayload,
+  DreamGivePayload,
+} from '../types/dream';
 
 export function createDreamDraft(payload: DreamDraftPayload, token?: string | null) {
   return requestJson<Dream>('/dreams/draft', {
@@ -28,3 +33,24 @@ export function fetchOutbox(token?: string | null) {
   return requestJson<Dream[]>('/dreams/outbox', { token });
 }
 
+export function fetchDreamComments(dreamId: string, token?: string | null) {
+  return requestJson<DreamComment[]>(
+    `/dreams/${encodeURIComponent(dreamId)}/comments`,
+    { token },
+  );
+}
+
+export function addDreamComment(
+  dreamId: string,
+  content: string,
+  token?: string | null,
+) {
+  return requestJson<DreamComment>(
+    `/dreams/${encodeURIComponent(dreamId)}/comments`,
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ content }),
+    },
+  );
+}

@@ -47,19 +47,26 @@ export function ComposeScreen() {
   const rooms = useMemo(() => getCachedRooms(sessionUserId), [sessionUserId]);
 
   const friends = useMemo(() => {
-    const memberIds = new Set<string>();
+    const membersById = new Map<string, ReturnType<typeof getDisplayMember>>();
 
     rooms.forEach(room => {
+      (room.members ?? []).forEach(member => {
+        if (member.id !== currentUserId) {
+          membersById.set(member.id, member);
+        }
+      });
       room.memberIds.forEach(memberId => {
         if (memberId !== currentUserId) {
-          memberIds.add(memberId);
+          membersById.set(
+            memberId,
+            membersById.get(memberId) ??
+              getDisplayMember(memberId, sessionUserId),
+          );
         }
       });
     });
 
-    const availableFriends = Array.from(memberIds).map(memberId =>
-      getDisplayMember(memberId, sessionUserId),
-    );
+    const availableFriends = Array.from(membersById.values());
     if (availableFriends.length > 0 || sessionUserId) {
       return availableFriends;
     }
@@ -197,7 +204,9 @@ export function ComposeScreen() {
     >
       <Text style={styles.label}>오늘 꾼 꿈</Text>
       <TextInput
-        value={rawInput}
+        autoCorrect={false}
+        spellCheck={false}
+        defaultValue={rawInput}
         onChangeText={setRawInput}
         multiline
         maxLength={500}
@@ -253,7 +262,9 @@ export function ComposeScreen() {
             <View style={styles.editPanel}>
               <Text style={styles.editLabel}>카드 제목</Text>
               <TextInput
-                value={editTitle}
+                autoCorrect={false}
+                spellCheck={false}
+                defaultValue={editTitle}
                 onChangeText={setEditTitle}
                 placeholder="카드 제목"
                 placeholderTextColor={colors.textMuted}
@@ -261,7 +272,9 @@ export function ComposeScreen() {
               />
               <Text style={styles.editLabel}>뒷면 내용</Text>
               <TextInput
-                value={editStory}
+                autoCorrect={false}
+                spellCheck={false}
+                defaultValue={editStory}
                 onChangeText={setEditStory}
                 multiline
                 textAlignVertical="top"
@@ -358,8 +371,13 @@ export function ComposeScreen() {
                   <View style={styles.groupText}>
                     <Text style={styles.groupName}>{room.name}</Text>
                     <Text style={styles.groupMeta} numberOfLines={1}>
-                      {room.memberIds
-                        .map(memberId => getDisplayMember(memberId, sessionUserId).name)
+                      {((room.members ?? []).length > 0
+                        ? room.members
+                        : room.memberIds.map(memberId =>
+                            getDisplayMember(memberId, sessionUserId),
+                          )
+                      )
+                        .map(member => member.name)
                         .join(', ')}
                     </Text>
                   </View>

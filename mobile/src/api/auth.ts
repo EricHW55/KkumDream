@@ -3,6 +3,7 @@ import { requestJson } from './httpClient';
 export type AuthUser = {
   id: string;
   nickname: string;
+  email: string | null;
   profileImageUrl: string | null;
   provider: string;
   createdAt: string;
@@ -23,4 +24,15 @@ export function loginWithGoogleIdToken(idToken: string) {
 
 export function fetchMe(token: string) {
   return requestJson<AuthUser>('/auth/me', { token });
+}
+
+export function updateProfile(
+  payload: { nickname: string; profileImageUrl: string | null },
+  token: string,
+) {
+  return requestJson<AuthUser>('/auth/me', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(payload),
+  });
 }

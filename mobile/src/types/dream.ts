@@ -36,3 +36,14 @@ export interface DreamGivePayload {
   receiverId?: string;
   groupId?: string;
 }
+
+export interface DreamComment {
+  id: string;
+  dreamId: string;
+  authorId: string;
+  authorNickname: string;
+  authorProfileImageUrl: string | null;
+  content: string;
+  isOwnerMain: boolean;
+  createdAt: string;
+}

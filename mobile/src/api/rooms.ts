@@ -8,6 +8,12 @@ export type ApiDreamRoom = {
   lastGivenAt: string | null;
   dreamCount: number;
   memberIds: string[];
+  members: {
+    id: string;
+    nickname: string;
+    profileImageUrl: string | null;
+    role: string;
+  }[];
 };
 
 export function fetchRooms(token?: string | null) {
@@ -27,6 +33,18 @@ export function joinRoom(inviteCode: string, token?: string | null) {
     method: 'POST',
     token,
     body: JSON.stringify({ inviteCode }),
+  });
+}
+
+export function updateRoom(
+  roomId: string,
+  payload: { name: string },
+  token?: string | null,
+) {
+  return requestJson<ApiDreamRoom>(`/rooms/${encodeURIComponent(roomId)}`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(payload),
   });
 }
 

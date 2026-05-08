@@ -7,8 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import current_user_id, db_session
 from app.core.config import settings
 from app.core.security import create_app_access_token
-from app.schemas.user import AuthSessionOut, GoogleLoginRequest, UserOut
-from app.services.user_service import get_or_create_google_user, get_or_create_mock_user, get_user
+from app.schemas.user import AuthSessionOut, GoogleLoginRequest, UserOut, UserUpdate
+from app.services.user_service import (
+    get_or_create_google_user,
+    get_or_create_mock_user,
+    get_user,
+    update_user_profile,
+)
 
 router = APIRouter()
 
@@ -52,6 +57,21 @@ async def me(
     user = await get_user(session, user_id)
     if user is None:
         user = await get_or_create_mock_user(session, user_id)
+    return UserOut.model_validate(user)
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(
+    payload: UserUpdate,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> UserOut:
+    user = await update_user_profile(
+        session,
+        user_id,
+        payload.nickname,
+        payload.profile_image_url,
+    )
     return UserOut.model_validate(user)
 
 

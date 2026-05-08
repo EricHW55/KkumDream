@@ -8,10 +8,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.ai_generation import AiGenerationJob, AiGenerationLog
-from app.models.dream import DailyGiveLimit, Dream
+from app.models.dream import DailyGiveLimit, Dream, DreamComment
 from app.models.group import GroupMember
+from app.models.user import User
 from app.schemas.dream import DreamDraftCreate, DreamGiveRequest, DreamUpdate
 from app.services.ai_text_service import generate_dream_text
+
+
+class DreamCommentView:
+    def __init__(self, comment: DreamComment, author: User) -> None:
+        self.id = comment.id
+        self.dream_id = comment.dream_id
+        self.author_id = comment.user_id
+        self.author_nickname = author.nickname
+        self.author_profile_image_url = author.profile_image_url
+        self.content = comment.content
+        self.is_owner_main = comment.is_owner_main
+        self.created_at = comment.created_at
 
 
 async def create_dream_draft(
@@ -129,9 +142,56 @@ async def list_outbox(session: AsyncSession, user_id: UUID, limit: int) -> list[
 
 async def get_dream_for_user(session: AsyncSession, user_id: UUID, dream_id: UUID) -> Dream:
     dream = await _get_dream(session, dream_id)
-    if dream.giver_id != user_id and dream.receiver_id != user_id:
+    if not await _can_access_dream(session, dream, user_id):
         raise ForbiddenError("You cannot access this dream")
     return dream
+
+
+async def list_dream_comments(
+    session: AsyncSession,
+    user_id: UUID,
+    dream_id: UUID,
+) -> list[DreamCommentView]:
+    dream = await get_dream_for_user(session, user_id, dream_id)
+    stmt = (
+        select(DreamComment, User)
+        .join(User, User.id == DreamComment.user_id)
+        .where(DreamComment.dream_id == dream.id)
+        .order_by(DreamComment.is_owner_main.desc(), DreamComment.created_at.asc())
+    )
+    rows = (await session.execute(stmt)).all()
+    return [DreamCommentView(comment, author) for comment, author in rows]
+
+
+async def create_dream_comment(
+    session: AsyncSession,
+    user_id: UUID,
+    dream_id: UUID,
+    content: str,
+) -> DreamCommentView:
+    dream = await get_dream_for_user(session, user_id, dream_id)
+    if dream.giver_id == user_id:
+        raise ForbiddenError("The giver cannot comment on this dream")
+    normalized_content = content.strip()
+    if not normalized_content:
+        raise BadRequestError("Comment content is required")
+    is_owner_main = dream.receiver_id == user_id and dream.owner_main_comment_id is None
+    comment = DreamComment(
+        dream_id=dream.id,
+        user_id=user_id,
+        content=normalized_content,
+        is_owner_main=is_owner_main,
+    )
+    session.add(comment)
+    await session.flush()
+    if is_owner_main:
+        dream.owner_main_comment_id = comment.id
+    await session.commit()
+    author = await session.get(User, user_id)
+    if author is None:
+        raise NotFoundError("User not found")
+    await session.refresh(comment)
+    return DreamCommentView(comment, author)
 
 
 async def mark_read(session: AsyncSession, user_id: UUID, dream_id: UUID) -> Dream:
@@ -173,6 +233,20 @@ async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: 
     )
     if member_id is None:
         raise ForbiddenError("You cannot give a dream to this room")
+
+
+async def _can_access_dream(session: AsyncSession, dream: Dream, user_id: UUID) -> bool:
+    if dream.giver_id == user_id or dream.receiver_id == user_id:
+        return True
+    if dream.group_id is None:
+        return False
+    member_id = await session.scalar(
+        select(GroupMember.id).where(
+            GroupMember.group_id == dream.group_id,
+            GroupMember.user_id == user_id,
+        )
+    )
+    return member_id is not None
 
 
 async def _consume_daily_give_limit(session: AsyncSession, user_id: UUID) -> None:

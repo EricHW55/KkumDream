@@ -38,6 +38,7 @@ type SessionState = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   setSession: (token: string, user: AuthUser) => void;
+  updateUser: (user: AuthUser) => void;
   clearSession: () => void;
 };
 
@@ -50,6 +51,14 @@ export const useSessionStore = create<SessionState>(set => ({
     writePersistedSession({ token, userId: user.id, user });
     set({ token, userId: user.id, user, isAuthenticated: true });
   },
+  updateUser: user =>
+    set(state => {
+      if (!state.token) {
+        return { user };
+      }
+      writePersistedSession({ token: state.token, userId: user.id, user });
+      return { token: state.token, userId: user.id, user, isAuthenticated: true };
+    }),
   clearSession: () => {
     storage.remove(SESSION_KEY);
     set({ token: null, userId: null, user: null, isAuthenticated: false });

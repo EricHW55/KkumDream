@@ -1,10 +1,19 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowUp, ChevronLeft } from 'lucide-react-native';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowUp,
+  ChevronLeft,
+  Copy,
+  Settings,
+  UsersRound,
+  X,
+} from 'lucide-react-native';
 import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -19,6 +28,7 @@ import {
   getCachedRoomDreams,
   getCachedRooms,
   loadRoomDreams,
+  updateGroupRoom,
 } from '../data/dreamRepository';
 import { isCurrentUserId } from '../data/currentUser';
 import { getDisplayMember } from '../data/members';
@@ -31,11 +41,23 @@ import type { Dream } from '../types/dream';
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupRoom'>;
 
 export function GroupRoomScreen({ navigation, route }: Props) {
+  const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
-  const room = getCachedRooms(sessionUserId).find(
+  const [roomOverride, setRoomOverride] = useState<
+    ReturnType<typeof getCachedRooms>[number] | null
+  >(null);
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [isMembersVisible, setIsMembersVisible] = useState(false);
+  const [roomNameDraft, setRoomNameDraft] = useState('');
+  const [roomError, setRoomError] = useState<string | null>(null);
+  const [isSavingRoom, setIsSavingRoom] = useState(false);
+  const [messageDraft, setMessageDraft] = useState('');
+  const [messageInputKey, setMessageInputKey] = useState(0);
+  const cachedRoom = getCachedRooms(sessionUserId).find(
     item => item.id === route.params.groupId,
   );
+  const room = roomOverride ?? cachedRoom;
   const title = room?.name ?? route.params.groupName ?? '꿈방';
   const description =
     room?.description ??
@@ -47,6 +69,55 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     initialData: () => getCachedRoomDreams(route.params.groupId, sessionUserId),
     staleTime: 60 * 1000,
   });
+  const members =
+    (room?.members ?? []).length > 0
+      ? (room?.members ?? [])
+      : (room?.memberIds ?? []).map(memberId =>
+          getDisplayMember(memberId, sessionUserId),
+        );
+
+  const openSettings = () => {
+    setRoomNameDraft(title);
+    setRoomError(null);
+    setIsSettingsVisible(true);
+  };
+
+  const saveRoomSettings = async () => {
+    const name = roomNameDraft.trim();
+    if (!name || !token) {
+      setRoomError(!token ? '로그인이 필요합니다.' : '꿈방 이름을 입력하세요.');
+      return;
+    }
+
+    setRoomError(null);
+    setIsSavingRoom(true);
+    try {
+      const updatedRoom = await updateGroupRoom(
+        route.params.groupId,
+        name,
+        token,
+        sessionUserId,
+      );
+      setRoomOverride(updatedRoom);
+      queryClient.setQueryData<ReturnType<typeof getCachedRooms>>(
+        ['rooms', sessionUserId, token],
+        currentRooms =>
+          currentRooms?.map(item =>
+            item.id === updatedRoom.id ? updatedRoom : item,
+          ) ?? [updatedRoom],
+      );
+      setIsSettingsVisible(false);
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : '꿈방 설정을 저장하지 못했어요.');
+    } finally {
+      setIsSavingRoom(false);
+    }
+  };
+
+  const clearMessageDraft = () => {
+    setMessageDraft('');
+    setMessageInputKey(key => key + 1);
+  };
 
   return (
     <KeyboardAvoidingView
@@ -69,7 +140,40 @@ export function GroupRoomScreen({ navigation, route }: Props) {
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{description}</Text>
         </View>
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerActions}>
+          <Pressable
+            accessibilityLabel="멤버 보기"
+            accessibilityRole="button"
+            onPress={() => setIsMembersVisible(true)}
+            style={({ pressed }) => [
+              styles.headerIconButton,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            <UsersRound color={colors.textPrimary} size={21} strokeWidth={2.4} />
+          </Pressable>
+          <Pressable
+            accessibilityLabel="방 설정"
+            accessibilityRole="button"
+            onPress={openSettings}
+            style={({ pressed }) => [
+              styles.headerIconButton,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            <Settings color={colors.textPrimary} size={21} strokeWidth={2.4} />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.roomInfo}>
+        <View>
+          <Text style={styles.infoLabel}>초대 코드</Text>
+          <Text selectable style={styles.inviteCode}>
+            {room?.inviteCode ?? '초대 코드 없음'}
+          </Text>
+        </View>
+        <Copy color={colors.primary} size={20} />
       </View>
 
       <FlatList
@@ -101,20 +205,132 @@ export function GroupRoomScreen({ navigation, route }: Props) {
 
       <View style={styles.composer}>
         <TextInput
+          key={messageInputKey}
+          autoCorrect={false}
+          spellCheck={false}
+          defaultValue={messageDraft}
+          onChangeText={setMessageDraft}
           placeholder="메시지"
           placeholderTextColor={colors.textMuted}
           style={styles.messageInput}
         />
         <Pressable
           accessibilityRole="button"
+          disabled={!messageDraft.trim()}
+          onPress={clearMessageDraft}
           style={({ pressed }) => [
             styles.sendButton,
-            pressed && interactionStyles.pressed,
+            !messageDraft.trim() && styles.sendButtonDisabled,
+            pressed && messageDraft.trim() && interactionStyles.pressed,
           ]}
         >
           <ArrowUp color={colors.textSecondary} size={24} strokeWidth={2.8} />
         </Pressable>
       </View>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isSettingsVisible}
+        onRequestClose={() => setIsSettingsVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsSettingsVisible(false)}
+        >
+          <Pressable
+            style={styles.sheet}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>방 설정</Text>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                onPress={() => setIsSettingsVisible(false)}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <X color={colors.textSecondary} size={20} />
+              </Pressable>
+            </View>
+            <Text style={styles.inputLabel}>꿈방 이름</Text>
+            <TextInput
+              autoCorrect={false}
+              spellCheck={false}
+              defaultValue={roomNameDraft}
+              onChangeText={setRoomNameDraft}
+              placeholder="꿈방 이름"
+              placeholderTextColor={colors.textMuted}
+              style={styles.sheetInput}
+            />
+            {roomError ? <Text style={styles.errorText}>{roomError}</Text> : null}
+            <Pressable
+              accessibilityRole="button"
+              disabled={isSavingRoom}
+              onPress={saveRoomSettings}
+              style={({ pressed }) => [
+                styles.primaryAction,
+                isSavingRoom && styles.disabledAction,
+                pressed && !isSavingRoom && interactionStyles.pressed,
+              ]}
+            >
+              <Text style={styles.primaryActionText}>
+                {isSavingRoom ? '저장 중...' : '저장'}
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isMembersVisible}
+        onRequestClose={() => setIsMembersVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsMembersVisible(false)}
+        >
+          <Pressable
+            style={styles.sheet}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>멤버</Text>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                onPress={() => setIsMembersVisible(false)}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <X color={colors.textSecondary} size={20} />
+              </Pressable>
+            </View>
+            <View style={styles.memberList}>
+              {members.map(member => (
+                <View key={member.id} style={styles.memberItem}>
+                  <MoonAvatar size={42} color={member.avatarColor} />
+                  <View style={styles.memberText}>
+                    <Text style={styles.memberName}>
+                      {member.id === sessionUserId ? '나' : member.name}
+                    </Text>
+                    <Text style={styles.memberRole}>
+                      {member.role === 'owner' ? '방장' : '멤버'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -247,8 +463,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  headerSpacer: {
-    width: 56,
+  headerActions: {
+    width: 96,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: '#EFEFF3',
+  },
+  roomInfo: {
+    minHeight: 64,
+    marginHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 2,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.lavenderMist,
+  },
+  infoLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  inviteCode: {
+    marginTop: 5,
+    color: colors.primaryDark,
+    fontSize: 17,
+    fontWeight: '900',
+    includeFontPadding: false,
   },
   messages: {
     paddingHorizontal: 20,
@@ -408,5 +662,107 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#E7E7EA',
+  },
+  sendButtonDisabled: {
+    opacity: 0.45,
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+  },
+  sheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 22,
+    paddingBottom: 34,
+    gap: 14,
+    backgroundColor: colors.cardBase,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetTitle: {
+    color: colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '900',
+    includeFontPadding: false,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F3F4',
+  },
+  inputLabel: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  sheetInput: {
+    minHeight: 56,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
+    paddingHorizontal: 16,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  primaryAction: {
+    minHeight: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  disabledAction: {
+    opacity: 0.45,
+  },
+  primaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+  memberList: {
+    gap: 10,
+  },
+  memberItem: {
+    minHeight: 62,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.lavenderMist,
+  },
+  memberText: {
+    flex: 1,
+  },
+  memberName: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  memberRole: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
   },
 });

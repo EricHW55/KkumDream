@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
 from app.schemas.dream import (
+    DreamCommentCreate,
+    DreamCommentOut,
     DreamDraftCreate,
     DreamGiveRequest,
     DreamGiveResponse,
@@ -13,8 +15,10 @@ from app.schemas.dream import (
 )
 from app.services.dream_service import (
     create_dream_draft,
+    create_dream_comment,
     get_dream_for_user,
     give_dream,
+    list_dream_comments,
     list_inbox,
     list_outbox,
     mark_opened_back,
@@ -77,6 +81,27 @@ async def outbox(
     return [DreamOut.model_validate(dream) for dream in dreams]
 
 
+@router.get("/{dream_id}/comments", response_model=list[DreamCommentOut])
+async def comments(
+    dream_id: UUID,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> list[DreamCommentOut]:
+    result = await list_dream_comments(session, user_id, dream_id)
+    return [DreamCommentOut.model_validate(comment) for comment in result]
+
+
+@router.post("/{dream_id}/comments", response_model=DreamCommentOut)
+async def create_comment(
+    dream_id: UUID,
+    payload: DreamCommentCreate,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> DreamCommentOut:
+    comment = await create_dream_comment(session, user_id, dream_id, payload.content)
+    return DreamCommentOut.model_validate(comment)
+
+
 @router.get("/{dream_id}", response_model=DreamOut)
 async def detail(
     dream_id: UUID,
@@ -105,4 +130,3 @@ async def open_back(
 ) -> DreamOut:
     dream = await mark_opened_back(session, user_id, dream_id)
     return DreamOut.model_validate(dream)
-

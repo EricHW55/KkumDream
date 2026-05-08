@@ -4,6 +4,7 @@ import {
   fetchRoomDreams,
   fetchRooms,
   joinRoom,
+  updateRoom,
   type ApiDreamRoom,
 } from '../api/rooms';
 import { mockDreams } from '../mocks/dreams';
@@ -54,6 +55,18 @@ export async function joinGroupRoom(
   userId?: string | null,
 ) {
   const room = toGroupRoom(await joinRoom(inviteCode, token));
+  const rooms = [room, ...getCachedRooms(userId).filter(item => item.id !== room.id)];
+  writeCache(CACHE_KEYS.rooms(userId), rooms);
+  return room;
+}
+
+export async function updateGroupRoom(
+  roomId: string,
+  name: string,
+  token?: string | null,
+  userId?: string | null,
+) {
+  const room = toGroupRoom(await updateRoom(roomId, { name }, token));
   const rooms = [room, ...getCachedRooms(userId).filter(item => item.id !== room.id)];
   writeCache(CACHE_KEYS.rooms(userId), rooms);
   return room;
@@ -125,6 +138,13 @@ function writeDreamCaches(key: string, dreams: Dream[], userId?: string | null) 
 }
 
 function toGroupRoom(room: ApiDreamRoom): GroupRoom {
+  const members = (room.members ?? []).map(member => ({
+    id: member.id,
+    name: member.nickname,
+    avatarColor: colorForId(member.id),
+    profileImageUrl: member.profileImageUrl,
+    role: member.role,
+  }));
   return {
     id: room.roomId,
     name: room.title || '꿈방',
@@ -134,8 +154,16 @@ function toGroupRoom(room: ApiDreamRoom): GroupRoom {
     lastActivityLabel: room.lastGivenAt ? formatActivityLabel(room.lastGivenAt) : '',
     unreadCount: 0,
     memberIds: room.memberIds,
+    members,
     latestDreamId: null,
   };
+}
+
+const fallbackColors = ['#F56BEF', '#B069FF', '#7FC8D9', '#FFD66B', '#7FC8B5'];
+
+function colorForId(id: string) {
+  const total = Array.from(id).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return fallbackColors[total % fallbackColors.length];
 }
 
 function getMockRooms(userId?: string | null) {

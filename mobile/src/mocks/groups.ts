@@ -33,6 +33,7 @@ export const mockGroupRooms: GroupRoom[] = [
     lastActivityLabel: '새 로그',
     unreadCount: 4,
     memberIds: ['mock-user-1', 'mock-user-2', 'mock-user-3', 'mock-user-4'],
+    members: mockMembers,
     latestDreamId: 'mock-dream-1',
   },
   {
@@ -43,6 +44,9 @@ export const mockGroupRooms: GroupRoom[] = [
     lastActivityLabel: '메시지 보냄',
     unreadCount: 2,
     memberIds: ['mock-user-1', 'mock-user-2'],
+    members: mockMembers.filter(member =>
+      ['mock-user-1', 'mock-user-2'].includes(member.id),
+    ),
     latestDreamId: 'mock-dream-2',
   },
   {
@@ -53,6 +57,7 @@ export const mockGroupRooms: GroupRoom[] = [
     lastActivityLabel: '매일 기록',
     unreadCount: 0,
     memberIds: ['mock-user-1'],
+    members: mockMembers.filter(member => member.id === 'mock-user-1'),
     latestDreamId: null,
   },
 ];

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.dream import Dream
 from app.models.group import Group, GroupMember
+from app.models.user import User
 
 
 @dataclass
@@ -20,6 +21,15 @@ class DreamRoom:
     last_given_at: datetime | None
     dream_count: int
     member_ids: list[UUID]
+    members: list["RoomMember"]
+
+
+@dataclass
+class RoomMember:
+    id: UUID
+    nickname: str
+    profile_image_url: str | None
+    role: str
 
 
 async def create_room(session: AsyncSession, user_id: UUID, name: str) -> DreamRoom:
@@ -54,6 +64,29 @@ async def join_room(session: AsyncSession, user_id: UUID, invite_code: str) -> D
     if existing_member is None:
         session.add(GroupMember(group_id=group.id, user_id=user_id, role="member"))
         await session.commit()
+    return await _build_room(session, group)
+
+
+async def update_room(session: AsyncSession, user_id: UUID, room_id: str, name: str) -> DreamRoom:
+    group_id = _parse_room_id(room_id)
+    group = await session.get(Group, group_id)
+    if group is None:
+        raise NotFoundError("Room not found")
+    owner_id = await session.scalar(
+        select(GroupMember.user_id).where(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == user_id,
+            GroupMember.role == "owner",
+        )
+    )
+    if owner_id is None:
+        raise ForbiddenError("Only the room owner can edit this room")
+    normalized_name = name.strip()
+    if not normalized_name:
+        raise BadRequestError("Room name is required")
+    group.name = normalized_name
+    await session.commit()
+    await session.refresh(group)
     return await _build_room(session, group)
 
 
@@ -120,15 +153,38 @@ async def _build_room(
         dream_count = await session.scalar(
             select(func.count(Dream.id)).where(Dream.group_id == group.id, Dream.status != "draft")
         )
-    member_ids = list(
-        (
-            await session.scalars(
-                select(GroupMember.user_id)
-                .where(GroupMember.group_id == group.id)
-                .order_by(GroupMember.joined_at.asc())
-            )
-        ).all()
-    )
+    member_rows = (
+        await session.execute(
+            select(GroupMember.user_id, GroupMember.role, User.nickname, User.profile_image_url)
+            .join(User, User.id == GroupMember.user_id)
+            .where(GroupMember.group_id == group.id)
+            .order_by(GroupMember.joined_at.asc())
+        )
+    ).all()
+    members = [
+        RoomMember(
+            id=user_id,
+            nickname=nickname,
+            profile_image_url=profile_image_url,
+            role=role,
+        )
+        for user_id, role, nickname, profile_image_url in member_rows
+    ]
+    member_ids = [member.id for member in members]
+    if not member_ids:
+        member_ids = list(
+            (
+                await session.scalars(
+                    select(GroupMember.user_id)
+                    .where(GroupMember.group_id == group.id)
+                    .order_by(GroupMember.joined_at.asc())
+                )
+            ).all()
+        )
+        members = [
+            RoomMember(id=member_id, nickname="꿈친구", profile_image_url=None, role="member")
+            for member_id in member_ids
+        ]
     return DreamRoom(
         room_id=f"g:{group.id}",
         title=group.name,
@@ -136,6 +192,7 @@ async def _build_room(
         last_given_at=last_given_at,
         dream_count=dream_count or 0,
         member_ids=member_ids,
+        members=members,
     )
 
 

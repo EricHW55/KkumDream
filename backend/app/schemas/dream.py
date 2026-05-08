@@ -62,3 +62,17 @@ class DreamGiveResponse(ApiModel):
     given_at: datetime | None
     image_status: str
 
+
+class DreamCommentCreate(ApiModel):
+    content: str = Field(min_length=1, max_length=200)
+
+
+class DreamCommentOut(ApiModel):
+    id: UUID
+    dream_id: UUID
+    author_id: UUID
+    author_nickname: str
+    author_profile_image_url: str | None = None
+    content: str
+    is_owner_main: bool
+    created_at: datetime

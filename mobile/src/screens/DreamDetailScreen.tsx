@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageCircle } from 'lucide-react-native';
 import {
   Pressable,
@@ -11,44 +12,65 @@ import {
 } from 'react-native';
 
 import { DreamCard } from '../components/DreamCard';
+import { addDreamComment, fetchDreamComments } from '../api/dreams';
 import { getCurrentUserId, isCurrentUserId } from '../data/currentUser';
 import { getDisplayMember } from '../data/members';
 import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
+import type { DreamComment } from '../types/dream';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DreamDetail'>;
-
-type DreamComment = {
-  id: string;
-  authorId: string;
-  body: string;
-};
 
 const initialComments: DreamComment[] = [
   {
     id: 'comment-1',
+    dreamId: 'mock-dream',
     authorId: 'mock-user-2',
-    body: '이 꿈은 색감이 너무 선명해서 카드로 보면 더 오래 기억될 것 같아.',
+    authorNickname: '유하람',
+    authorProfileImageUrl: null,
+    content: '이 꿈은 색감이 너무 선명해서 카드로 보면 더 오래 기억될 것 같아.',
+    isOwnerMain: true,
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'comment-2',
+    dreamId: 'mock-dream',
     authorId: 'mock-user-3',
-    body: '다시 읽으니까 장면이 이어지는 느낌이라 좋다.',
+    authorNickname: '권민준',
+    authorProfileImageUrl: null,
+    content: '다시 읽으니까 장면이 이어지는 느낌이라 좋다.',
+    isOwnerMain: false,
+    createdAt: new Date().toISOString(),
   },
 ];
 
 export function DreamDetailScreen({ route }: Props) {
+  const queryClient = useQueryClient();
   const { dream } = route.params;
+  const token = useSessionStore(state => state.token);
+  const user = useSessionStore(state => state.user);
   const sessionUserId = useSessionStore(state => state.userId);
   const currentUserId = getCurrentUserId(sessionUserId);
   const [commentDraft, setCommentDraft] = useState('');
-  const [comments, setComments] = useState(initialComments);
+  const [commentInputKey, setCommentInputKey] = useState(0);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [localComments, setLocalComments] = useState(initialComments);
+  const commentsQueryKey = ['dreams', dream.id, 'comments', token] as const;
+  const { data: remoteComments = [] } = useQuery({
+    queryKey: commentsQueryKey,
+    queryFn: () => fetchDreamComments(dream.id, token).catch(() => []),
+    enabled: Boolean(token),
+    staleTime: 30 * 1000,
+  });
+  const comments = token ? remoteComments : localComments;
   const visibleComments = comments.filter(
     comment => comment.authorId !== dream.giverId,
   );
   const ownerComment =
+    visibleComments.find(comment => comment.isOwnerMain) ??
     visibleComments.find(comment => comment.id === dream.ownerMainCommentId) ??
     visibleComments.find(comment => comment.authorId === dream.receiverId) ??
     null;
@@ -56,22 +78,47 @@ export function DreamDetailScreen({ route }: Props) {
     comment => comment.id !== ownerComment?.id,
   );
   const isSender = isCurrentUserId(dream.giverId, sessionUserId);
-  const canSubmit = !isSender && commentDraft.trim().length > 0;
+  const canSubmit =
+    !isSender && commentDraft.trim().length > 0 && !isSubmittingComment;
 
-  const submitComment = () => {
+  const submitComment = async () => {
     if (!canSubmit) {
       return;
     }
 
-    setComments(currentComments => [
-      ...currentComments,
-      {
-        id: `local-comment-${Date.now()}`,
-        authorId: currentUserId,
-        body: commentDraft.trim(),
-      },
-    ]);
+    const content = commentDraft.trim();
+    setCommentError(null);
+    setIsSubmittingComment(true);
+    try {
+      if (token) {
+        const nextComment = await addDreamComment(dream.id, content, token);
+        queryClient.setQueryData<DreamComment[]>(
+          commentsQueryKey,
+          currentComments => [...(currentComments ?? []), nextComment],
+        );
+      } else {
+        setLocalComments(currentComments => [
+          ...currentComments,
+          {
+            id: `local-comment-${Date.now()}`,
+            dreamId: dream.id,
+            authorId: currentUserId,
+            authorNickname: user?.nickname ?? getDisplayMember(currentUserId).name,
+            authorProfileImageUrl: user?.profileImageUrl ?? null,
+            content,
+            isOwnerMain: dream.receiverId === currentUserId,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+      }
+    } catch (error) {
+      setCommentError(error instanceof Error ? error.message : '댓글을 등록하지 못했어요.');
+      return;
+    } finally {
+      setIsSubmittingComment(false);
+    }
     setCommentDraft('');
+    setCommentInputKey(key => key + 1);
   };
 
   return (
@@ -101,7 +148,10 @@ export function DreamDetailScreen({ route }: Props) {
         ) : (
           <View style={styles.composer}>
             <TextInput
-              value={commentDraft}
+              key={commentInputKey}
+              autoCorrect={false}
+              spellCheck={false}
+              defaultValue={commentDraft}
               onChangeText={setCommentDraft}
               multiline
               placeholder="댓글 쓰기"
@@ -118,10 +168,13 @@ export function DreamDetailScreen({ route }: Props) {
                 pressed && canSubmit && interactionStyles.pressed,
               ]}
             >
-              <Text style={styles.commentSubmitText}>등록</Text>
+              <Text style={styles.commentSubmitText}>
+                {isSubmittingComment ? '등록 중' : '등록'}
+              </Text>
             </Pressable>
           </View>
         )}
+        {commentError ? <Text style={styles.errorText}>{commentError}</Text> : null}
       </View>
     </ScrollView>
   );
@@ -139,10 +192,12 @@ function CommentItem({
   return (
     <View style={[styles.commentItem, isOwner && styles.ownerCommentItem]}>
       <View style={styles.commentAuthorRow}>
-        <Text style={styles.commentAuthor}>{author.name}</Text>
+        <Text style={styles.commentAuthor}>
+          {comment.authorNickname || author.name}
+        </Text>
         {isOwner ? <Text style={styles.ownerBadge}>꿈주인</Text> : null}
       </View>
-      <Text style={styles.commentText}>{comment.body}</Text>
+      <Text style={styles.commentText}>{comment.content}</Text>
     </View>
   );
 }
@@ -256,5 +311,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
   },
 });

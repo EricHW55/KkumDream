@@ -1,6 +1,16 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
+import { updateProfile } from '../api/auth';
 import { signOutGoogle } from '../auth/googleSignIn';
+import { MoonAvatar } from '../components/MoonAvatar';
 import { Screen } from '../components/Screen';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
@@ -8,19 +18,111 @@ import { interactionStyles } from '../theme/interactions';
 
 export function ProfileScreen() {
   const user = useSessionStore(state => state.user);
+  const token = useSessionStore(state => state.token);
+  const updateUser = useSessionStore(state => state.updateUser);
   const clearSession = useSessionStore(state => state.clearSession);
+  const [nicknameDraft, setNicknameDraft] = useState(user?.nickname ?? '');
+  const [profileImageDraft, setProfileImageDraft] = useState(
+    user?.profileImageUrl ?? '',
+  );
+  const [statusText, setStatusText] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const logout = async () => {
     await signOutGoogle();
     clearSession();
   };
 
+  const saveProfile = async () => {
+    if (!token) {
+      setStatusText('로그인이 필요합니다.');
+      return;
+    }
+    const nickname = nicknameDraft.trim();
+    if (!nickname) {
+      setStatusText('이름을 입력하세요.');
+      return;
+    }
+
+    setStatusText(null);
+    setIsSaving(true);
+    try {
+      const nextUser = await updateProfile(
+        {
+          nickname,
+          profileImageUrl: profileImageDraft.trim() || null,
+        },
+        token,
+      );
+      updateUser(nextUser);
+      setStatusText('내 정보를 저장했어요.');
+    } catch (error) {
+      setStatusText(error instanceof Error ? error.message : '내 정보를 저장하지 못했어요.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Screen>
       <Text style={styles.title}>내 정보</Text>
       <View style={styles.panel}>
-        <Text style={styles.name}>{user?.nickname ?? '꿈드림 사용자'}</Text>
-        <Text style={styles.meta}>{user?.provider ?? 'google'}</Text>
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarWrap}>
+            {profileImageDraft.trim() ? (
+              <Image
+                source={{ uri: profileImageDraft.trim() }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <MoonAvatar size={64} color={colors.primary} />
+            )}
+          </View>
+          <View style={styles.profileText}>
+            <Text style={styles.name}>{user?.nickname ?? '꿈드림 사용자'}</Text>
+            <Text style={styles.meta}>
+              {user?.email ?? '구글 계정 이메일 없음'}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.inputLabel}>이름</Text>
+        <TextInput
+          autoCorrect={false}
+          spellCheck={false}
+          defaultValue={nicknameDraft}
+          onChangeText={setNicknameDraft}
+          placeholder="이름"
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+        />
+
+        <Text style={styles.inputLabel}>프로필 사진 URL</Text>
+        <TextInput
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          defaultValue={profileImageDraft}
+          onChangeText={setProfileImageDraft}
+          placeholder="https://..."
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+        />
+
+        {statusText ? <Text style={styles.statusText}>{statusText}</Text> : null}
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={isSaving}
+          onPress={saveProfile}
+          style={({ pressed }) => [
+            styles.saveButton,
+            isSaving && styles.disabledButton,
+            pressed && !isSaving && interactionStyles.pressed,
+          ]}
+        >
+          <Text style={styles.saveText}>{isSaving ? '저장 중...' : '저장'}</Text>
+        </Pressable>
       </View>
       <Pressable
         accessibilityRole="button"
@@ -49,6 +151,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBase,
     borderWidth: 1,
     borderColor: colors.divider,
+    gap: 12,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 4,
+  },
+  avatarWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: colors.lavenderMist,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileText: {
+    flex: 1,
   },
   name: {
     color: colors.textPrimary,
@@ -59,6 +184,45 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  inputLabel: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  input: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
+    paddingHorizontal: 14,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  statusText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+  saveButton: {
+    minHeight: 50,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  disabledButton: {
+    opacity: 0.45,
+  },
+  saveText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    includeFontPadding: false,
   },
   logoutButton: {
     minHeight: 52,

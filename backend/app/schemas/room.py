@@ -14,6 +14,17 @@ class RoomJoin(ApiModel):
     invite_code: str = Field(min_length=4, max_length=16)
 
 
+class RoomUpdate(ApiModel):
+    name: str = Field(min_length=1, max_length=50)
+
+
+class RoomMemberOut(ApiModel):
+    id: UUID
+    nickname: str
+    profile_image_url: str | None = None
+    role: str
+
+
 class DreamRoomOut(ApiModel):
     room_id: str
     title: str
@@ -21,3 +32,4 @@ class DreamRoomOut(ApiModel):
     last_given_at: datetime | None
     dream_count: int
     member_ids: list[UUID]
+    members: list[RoomMemberOut]

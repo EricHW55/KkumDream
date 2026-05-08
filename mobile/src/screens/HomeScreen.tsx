@@ -9,11 +9,11 @@ import {
   View,
 } from 'react-native';
 import {
-  Camera,
   Copy,
   LogIn,
   PenLine,
   Plus,
+  Sparkles,
   UsersRound,
   X,
 } from 'lucide-react-native';
@@ -43,7 +43,7 @@ type Navigation = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Home'>,
   NativeStackNavigationProp<RootStackParamList>
 >;
-type RoomSheetMode = 'menu' | 'created' | 'join';
+type RoomSheetMode = 'menu' | 'create' | 'created' | 'join';
 
 export function HomeScreen() {
   const navigation = useNavigation<Navigation>();
@@ -52,6 +52,7 @@ export function HomeScreen() {
   const sessionUserId = useSessionStore(state => state.userId);
   const [isRoomSheetVisible, setIsRoomSheetVisible] = useState(false);
   const [roomSheetMode, setRoomSheetMode] = useState<RoomSheetMode>('menu');
+  const [roomNameDraft, setRoomNameDraft] = useState('새 꿈방');
   const [joinCode, setJoinCode] = useState('');
   const [createdRoom, setCreatedRoom] = useState<GroupRoom | null>(null);
   const [roomError, setRoomError] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export function HomeScreen() {
   const openRoomSheet = () => {
     setRoomSheetMode('menu');
     setCreatedRoom(null);
+    setRoomNameDraft('새 꿈방');
     setJoinCode('');
     setRoomError(null);
     setIsRoomSheetVisible(true);
@@ -89,7 +91,8 @@ export function HomeScreen() {
     setRoomError(null);
     setIsRoomActionPending(true);
     try {
-      const room = await createGroupRoom('새 꿈방', token, sessionUserId);
+      const roomName = roomNameDraft.trim() || '새 꿈방';
+      const room = await createGroupRoom(roomName, token, sessionUserId);
       queryClient.setQueryData<GroupRoom[]>(roomsQueryKey, currentRooms =>
         upsertRoom(currentRooms ?? [], room),
       );
@@ -251,7 +254,7 @@ export function HomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   disabled={isRoomActionPending}
-                  onPress={createRoom}
+                  onPress={() => setRoomSheetMode('create')}
                   style={({ pressed }) => [
                     styles.sheetAction,
                     isRoomActionPending && styles.disabledAction,
@@ -288,6 +291,35 @@ export function HomeScreen() {
                   </View>
                 </Pressable>
               </>
+            ) : null}
+
+            {roomSheetMode === 'create' ? (
+              <View style={styles.codePanel}>
+                <Text style={styles.codeLabel}>꿈방 이름</Text>
+                <TextInput
+                  autoCorrect={false}
+                  spellCheck={false}
+                  defaultValue={roomNameDraft}
+                  onChangeText={setRoomNameDraft}
+                  placeholder="꿈방 이름"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.codeInput}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={isRoomActionPending}
+                  onPress={createRoom}
+                  style={({ pressed }) => [
+                    styles.primaryAction,
+                    isRoomActionPending && styles.disabledAction,
+                    pressed && !isRoomActionPending && interactionStyles.pressed,
+                  ]}
+                >
+                  <Text style={styles.primaryActionText}>
+                    {isRoomActionPending ? '만드는 중...' : '꿈방 만들기'}
+                  </Text>
+                </Pressable>
+              </View>
             ) : null}
 
             {roomSheetMode === 'created' && createdRoom ? (
@@ -363,9 +395,12 @@ function GroupRoomItem({
   const latestDream = room.latestDreamId
     ? getCachedDream(room.latestDreamId, sessionUserId)
     : null;
-  const members = room.memberIds
-    .map(memberId => getDisplayMember(memberId, sessionUserId))
-    .slice(0, 3);
+  const members =
+    (room.members ?? []).length > 0
+      ? room.members.slice(0, 3)
+      : room.memberIds
+          .map(memberId => getDisplayMember(memberId, sessionUserId))
+          .slice(0, 3);
 
   return (
     <Pressable
@@ -405,7 +440,9 @@ function GroupRoomItem({
             </Text>
           </View>
         ) : (
-          <Camera color="#000000" size={24} fill="#000000" />
+          <View style={styles.emptyDreamBadge}>
+            <Sparkles color={colors.primaryDark} size={22} strokeWidth={2.4} />
+          </View>
         )}
       </View>
     </Pressable>
@@ -558,6 +595,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     includeFontPadding: false,
+  },
+  emptyDreamBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
   },
   sheetBackdrop: {
     flex: 1,

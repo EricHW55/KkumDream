@@ -2,6 +2,8 @@ export interface GroupMember {
   id: string;
   name: string;
   avatarColor: string;
+  profileImageUrl?: string | null;
+  role?: string;
 }
 
 export interface GroupRoom {
@@ -12,6 +14,7 @@ export interface GroupRoom {
   lastActivityLabel: string;
   unreadCount: number;
   memberIds: string[];
+  members: GroupMember[];
   latestDreamId: string | null;
 }
 
