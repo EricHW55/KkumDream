@@ -1,9 +1,12 @@
-import { requestJson } from './httpClient';
+import { requestJson, requestVoid } from './httpClient';
 import type {
   Dream,
   DreamComment,
   DreamDraftPayload,
   DreamGivePayload,
+  DreamReactionSummary,
+  DreamReactionToggleResult,
+  DreamReactionType,
 } from '../types/dream';
 
 export function createDreamDraft(payload: DreamDraftPayload, token?: string | null) {
@@ -51,6 +54,39 @@ export function addDreamComment(
       method: 'POST',
       token,
       body: JSON.stringify({ content }),
+    },
+  );
+}
+
+export function deleteDreamComment(
+  dreamId: string,
+  commentId: string,
+  token?: string | null,
+) {
+  return requestVoid(
+    `/dreams/${encodeURIComponent(dreamId)}/comments/${encodeURIComponent(commentId)}`,
+    { method: 'DELETE', token },
+  );
+}
+
+export function fetchDreamReactions(dreamId: string, token?: string | null) {
+  return requestJson<DreamReactionSummary[]>(
+    `/dreams/${encodeURIComponent(dreamId)}/reactions`,
+    { token },
+  );
+}
+
+export function toggleDreamReaction(
+  dreamId: string,
+  reactionType: DreamReactionType,
+  token?: string | null,
+) {
+  return requestJson<DreamReactionToggleResult>(
+    `/dreams/${encodeURIComponent(dreamId)}/reactions`,
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ reactionType }),
     },
   );
 }

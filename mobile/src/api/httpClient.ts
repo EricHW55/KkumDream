@@ -8,6 +8,18 @@ export async function requestJson<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
+  const response = await sendRequest(path, options);
+  return response.json() as Promise<T>;
+}
+
+export async function requestVoid(
+  path: string,
+  options: RequestOptions = {},
+): Promise<void> {
+  await sendRequest(path, options);
+}
+
+async function sendRequest(path: string, options: RequestOptions): Promise<Response> {
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
   if (!(options.body instanceof FormData)) {
@@ -27,7 +39,7 @@ export async function requestJson<T>(
     throw new Error(getErrorMessage(response.status, body));
   }
 
-  return response.json() as Promise<T>;
+  return response;
 }
 
 function getErrorMessage(status: number, body: string) {

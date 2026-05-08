@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
@@ -11,18 +11,24 @@ from app.schemas.dream import (
     DreamGiveRequest,
     DreamGiveResponse,
     DreamOut,
+    DreamReactionSummary,
+    DreamReactionToggle,
+    DreamReactionToggleResponse,
     DreamUpdate,
 )
 from app.services.dream_service import (
     create_dream_draft,
     create_dream_comment,
+    delete_dream_comment,
     get_dream_for_user,
     give_dream,
     list_dream_comments,
+    list_dream_reactions,
     list_inbox,
     list_outbox,
     mark_opened_back,
     mark_read,
+    toggle_dream_reaction,
     update_dream_text,
 )
 
@@ -100,6 +106,38 @@ async def create_comment(
 ) -> DreamCommentOut:
     comment = await create_dream_comment(session, user_id, dream_id, payload.content)
     return DreamCommentOut.model_validate(comment)
+
+
+@router.delete("/{dream_id}/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_comment(
+    dream_id: UUID,
+    comment_id: UUID,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> Response:
+    await delete_dream_comment(session, user_id, dream_id, comment_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{dream_id}/reactions", response_model=list[DreamReactionSummary])
+async def reactions(
+    dream_id: UUID,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> list[DreamReactionSummary]:
+    summary = await list_dream_reactions(session, user_id, dream_id)
+    return [DreamReactionSummary.model_validate(row) for row in summary]
+
+
+@router.post("/{dream_id}/reactions", response_model=DreamReactionToggleResponse)
+async def toggle_reaction(
+    dream_id: UUID,
+    payload: DreamReactionToggle,
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> DreamReactionToggleResponse:
+    result = await toggle_dream_reaction(session, user_id, dream_id, payload.reaction_type)
+    return DreamReactionToggleResponse.model_validate(result)
 
 
 @router.get("/{dream_id}", response_model=DreamOut)

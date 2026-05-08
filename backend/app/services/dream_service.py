@@ -3,17 +3,23 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.ai_generation import AiGenerationJob, AiGenerationLog
-from app.models.dream import DailyGiveLimit, Dream, DreamComment
+from app.models.dream import DailyGiveLimit, Dream, DreamComment, DreamReaction
 from app.models.group import GroupMember
 from app.models.user import User
-from app.schemas.dream import DreamDraftCreate, DreamGiveRequest, DreamUpdate
+from app.schemas.dream import (
+    REACTION_TYPES,
+    DreamDraftCreate,
+    DreamGiveRequest,
+    DreamUpdate,
+    ReactionType,
+)
 from app.services.ai_text_service import generate_dream_text
 
 
@@ -206,6 +212,107 @@ async def create_dream_comment(
         raise NotFoundError("User not found")
     await session.refresh(comment)
     return DreamCommentView(comment, author)
+
+
+async def delete_dream_comment(
+    session: AsyncSession,
+    user_id: UUID,
+    dream_id: UUID,
+    comment_id: UUID,
+) -> None:
+    dream = await get_dream_for_user(session, user_id, dream_id)
+    comment = await session.get(DreamComment, comment_id)
+    if comment is None or comment.dream_id != dream.id:
+        raise NotFoundError("Comment not found")
+    if comment.user_id != user_id:
+        raise ForbiddenError("Only the author can delete this comment")
+    if dream.owner_main_comment_id == comment.id:
+        dream.owner_main_comment_id = None
+    await session.delete(comment)
+    await session.commit()
+
+
+async def list_dream_reactions(
+    session: AsyncSession,
+    user_id: UUID,
+    dream_id: UUID,
+) -> list[dict[str, object]]:
+    dream = await get_dream_for_user(session, user_id, dream_id)
+    return await _build_reaction_summary(session, dream.id, user_id)
+
+
+async def toggle_dream_reaction(
+    session: AsyncSession,
+    user_id: UUID,
+    dream_id: UUID,
+    reaction_type: ReactionType,
+) -> dict[str, object]:
+    dream = await get_dream_for_user(session, user_id, dream_id)
+    existing = await session.scalar(
+        select(DreamReaction).where(
+            DreamReaction.dream_id == dream.id,
+            DreamReaction.user_id == user_id,
+            DreamReaction.reaction_type == reaction_type,
+        )
+    )
+    if existing is None:
+        session.add(
+            DreamReaction(
+                dream_id=dream.id,
+                user_id=user_id,
+                reaction_type=reaction_type,
+            )
+        )
+        reacted = True
+    else:
+        await session.delete(existing)
+        reacted = False
+    await session.commit()
+
+    summary = await _build_reaction_summary(session, dream.id, user_id)
+    matched = next((row for row in summary if row["reaction_type"] == reaction_type), None)
+    count = int(matched["count"]) if matched else 0
+    return {
+        "reaction_type": reaction_type,
+        "reacted": reacted,
+        "count": count,
+        "summary": summary,
+    }
+
+
+async def _build_reaction_summary(
+    session: AsyncSession,
+    dream_id: UUID,
+    user_id: UUID,
+) -> list[dict[str, object]]:
+    count_rows = (
+        await session.execute(
+            select(DreamReaction.reaction_type, func.count(DreamReaction.id))
+            .where(DreamReaction.dream_id == dream_id)
+            .group_by(DreamReaction.reaction_type)
+        )
+    ).all()
+    counts = {reaction_type: total for reaction_type, total in count_rows}
+    reacted_types = set(
+        (
+            await session.scalars(
+                select(DreamReaction.reaction_type).where(
+                    DreamReaction.dream_id == dream_id,
+                    DreamReaction.user_id == user_id,
+                )
+            )
+        ).all()
+    )
+    summary: list[dict[str, object]] = []
+    for reaction_type in REACTION_TYPES:
+        summary.append(
+            {
+                "reaction_type": reaction_type,
+                "count": int(counts.get(reaction_type, 0)),
+                "reacted": reaction_type in reacted_types,
+            }
+        )
+    return summary
 
 
 async def mark_read(session: AsyncSession, user_id: UUID, dream_id: UUID) -> Dream:

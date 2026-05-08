@@ -1,9 +1,13 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import Field, model_validator
 
 from app.schemas.base import ApiModel
+
+ReactionType = Literal["heart", "sparkle", "moon", "cloud"]
+REACTION_TYPES: tuple[ReactionType, ...] = ("heart", "sparkle", "moon", "cloud")
 
 
 class DreamDraftCreate(ApiModel):
@@ -76,3 +80,20 @@ class DreamCommentOut(ApiModel):
     content: str
     is_owner_main: bool
     created_at: datetime
+
+
+class DreamReactionToggle(ApiModel):
+    reaction_type: ReactionType
+
+
+class DreamReactionSummary(ApiModel):
+    reaction_type: ReactionType
+    count: int
+    reacted: bool
+
+
+class DreamReactionToggleResponse(ApiModel):
+    reaction_type: ReactionType
+    reacted: bool
+    count: int
+    summary: list[DreamReactionSummary]

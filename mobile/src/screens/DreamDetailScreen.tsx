@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle } from 'lucide-react-native';
+import {
+  Cloud,
+  Heart,
+  MessageCircle,
+  Moon,
+  Sparkles,
+  X as XIcon,
+} from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import {
   Pressable,
   ScrollView,
@@ -12,14 +20,39 @@ import {
 } from 'react-native';
 
 import { DreamCard } from '../components/DreamCard';
-import { addDreamComment, fetchDreamComments } from '../api/dreams';
+import {
+  addDreamComment,
+  deleteDreamComment,
+  fetchDreamComments,
+  fetchDreamReactions,
+  toggleDreamReaction,
+} from '../api/dreams';
 import { getCurrentUserId, isCurrentUserId } from '../data/currentUser';
 import { getDisplayMember } from '../data/members';
 import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import type { DreamComment } from '../types/dream';
+import type {
+  DreamComment,
+  DreamReactionSummary,
+  DreamReactionType,
+} from '../types/dream';
+import { DREAM_REACTION_TYPES } from '../types/dream';
+
+const reactionMeta: Record<
+  DreamReactionType,
+  { label: string; Icon: LucideIcon }
+> = {
+  heart: { label: '좋아요', Icon: Heart },
+  sparkle: { label: '반짝', Icon: Sparkles },
+  moon: { label: '꿈같다', Icon: Moon },
+  cloud: { label: '몽글', Icon: Cloud },
+};
+
+const emptyReactionSummary: DreamReactionSummary[] = DREAM_REACTION_TYPES.map(
+  reactionType => ({ reactionType, count: 0, reacted: false }),
+);
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DreamDetail'>;
 
@@ -58,11 +91,24 @@ export function DreamDetailScreen({ route }: Props) {
   const [commentError, setCommentError] = useState<string | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(initialComments);
+  const [reactionError, setReactionError] = useState<string | null>(null);
+  const [pendingReaction, setPendingReaction] = useState<DreamReactionType | null>(
+    null,
+  );
   const commentsQueryKey = ['dreams', dream.id, 'comments', token] as const;
+  const reactionsQueryKey = ['dreams', dream.id, 'reactions', token] as const;
   const { data: remoteComments = [] } = useQuery({
     queryKey: commentsQueryKey,
     queryFn: () => fetchDreamComments(dream.id, token).catch(() => []),
     enabled: Boolean(token),
+    staleTime: 30 * 1000,
+  });
+  const { data: reactionSummary = emptyReactionSummary } = useQuery({
+    queryKey: reactionsQueryKey,
+    queryFn: () =>
+      fetchDreamReactions(dream.id, token).catch(() => emptyReactionSummary),
+    enabled: Boolean(token),
+    initialData: emptyReactionSummary,
     staleTime: 30 * 1000,
   });
   const comments = token ? remoteComments : localComments;
@@ -80,6 +126,48 @@ export function DreamDetailScreen({ route }: Props) {
   const isSender = isCurrentUserId(dream.giverId, sessionUserId);
   const canSubmit =
     !isSender && commentDraft.trim().length > 0 && !isSubmittingComment;
+
+  const onToggleReaction = async (reactionType: DreamReactionType) => {
+    if (!token || pendingReaction) {
+      return;
+    }
+    setReactionError(null);
+    setPendingReaction(reactionType);
+    try {
+      const result = await toggleDreamReaction(dream.id, reactionType, token);
+      queryClient.setQueryData<DreamReactionSummary[]>(
+        reactionsQueryKey,
+        result.summary,
+      );
+    } catch (error) {
+      setReactionError(
+        error instanceof Error ? error.message : '반응을 보낼 수 없어요.',
+      );
+    } finally {
+      setPendingReaction(null);
+    }
+  };
+
+  const onDeleteComment = async (commentId: string) => {
+    if (token) {
+      try {
+        await deleteDreamComment(dream.id, commentId, token);
+        queryClient.setQueryData<DreamComment[]>(
+          commentsQueryKey,
+          currentComments =>
+            (currentComments ?? []).filter(comment => comment.id !== commentId),
+        );
+      } catch (error) {
+        setCommentError(
+          error instanceof Error ? error.message : '댓글을 삭제하지 못했어요.',
+        );
+      }
+      return;
+    }
+    setLocalComments(currentComments =>
+      currentComments.filter(comment => comment.id !== commentId),
+    );
+  };
 
   const submitComment = async () => {
     if (!canSubmit) {
@@ -125,6 +213,60 @@ export function DreamDetailScreen({ route }: Props) {
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <DreamCard dream={dream} size="full" />
 
+      <View style={styles.reactionBox}>
+        <View style={styles.reactionRow}>
+          {DREAM_REACTION_TYPES.map(reactionType => {
+            const summary =
+              reactionSummary.find(item => item.reactionType === reactionType) ??
+              { reactionType, count: 0, reacted: false };
+            const meta = reactionMeta[reactionType];
+            const isPending = pendingReaction === reactionType;
+            const disabled = !token || isPending;
+            const Icon = meta.Icon;
+            return (
+              <Pressable
+                key={reactionType}
+                accessibilityRole="button"
+                accessibilityLabel={meta.label}
+                disabled={disabled}
+                onPress={() => onToggleReaction(reactionType)}
+                style={({ pressed }) => [
+                  styles.reactionChip,
+                  summary.reacted && styles.reactionChipActive,
+                  disabled && styles.reactionChipDisabled,
+                  pressed && !disabled && interactionStyles.pressed,
+                ]}
+              >
+                <Icon
+                  size={16}
+                  color={summary.reacted ? colors.primary : colors.textSecondary}
+                  fill={summary.reacted ? colors.primary : 'transparent'}
+                />
+                <Text
+                  style={[
+                    styles.reactionLabel,
+                    summary.reacted && styles.reactionLabelActive,
+                  ]}
+                >
+                  {meta.label}
+                </Text>
+                <Text
+                  style={[
+                    styles.reactionCount,
+                    summary.reacted && styles.reactionCountActive,
+                  ]}
+                >
+                  {summary.count}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {reactionError ? (
+          <Text style={styles.errorText}>{reactionError}</Text>
+        ) : null}
+      </View>
+
       <View style={styles.commentBox}>
         <View style={styles.commentHeader}>
           <MessageCircle color={colors.primary} size={20} />
@@ -132,11 +274,21 @@ export function DreamDetailScreen({ route }: Props) {
         </View>
 
         {ownerComment ? (
-          <CommentItem comment={ownerComment} isOwner />
+          <CommentItem
+            comment={ownerComment}
+            isOwner
+            canDelete={ownerComment.authorId === currentUserId}
+            onDelete={() => onDeleteComment(ownerComment.id)}
+          />
         ) : null}
 
         {regularComments.map(comment => (
-          <CommentItem key={comment.id} comment={comment} />
+          <CommentItem
+            key={comment.id}
+            comment={comment}
+            canDelete={comment.authorId === currentUserId}
+            onDelete={() => onDeleteComment(comment.id)}
+          />
         ))}
 
         {isSender ? (
@@ -183,9 +335,13 @@ export function DreamDetailScreen({ route }: Props) {
 function CommentItem({
   comment,
   isOwner = false,
+  canDelete = false,
+  onDelete,
 }: {
   comment: DreamComment;
   isOwner?: boolean;
+  canDelete?: boolean;
+  onDelete?: () => void;
 }) {
   const author = getDisplayMember(comment.authorId);
 
@@ -196,6 +352,19 @@ function CommentItem({
           {comment.authorNickname || author.name}
         </Text>
         {isOwner ? <Text style={styles.ownerBadge}>꿈주인</Text> : null}
+        {canDelete && onDelete ? (
+          <Pressable
+            accessibilityLabel="댓글 삭제"
+            accessibilityRole="button"
+            onPress={onDelete}
+            style={({ pressed }) => [
+              styles.deleteButton,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            <XIcon color={colors.textMuted} size={14} />
+          </Pressable>
+        ) : null}
       </View>
       <Text style={styles.commentText}>{comment.content}</Text>
     </View>
@@ -210,6 +379,66 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     gap: 18,
+  },
+  reactionBox: {
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    gap: 12,
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.lavenderMist,
+  },
+  reactionChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.lavenderTint,
+  },
+  reactionChipDisabled: {
+    opacity: 0.6,
+  },
+  reactionLabel: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  reactionLabelActive: {
+    color: colors.primaryDark,
+  },
+  reactionCount: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  reactionCountActive: {
+    color: colors.primaryDark,
+  },
+  deleteButton: {
+    marginLeft: 'auto',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   commentBox: {
     padding: 18,

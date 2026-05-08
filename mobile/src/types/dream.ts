@@ -47,3 +47,25 @@ export interface DreamComment {
   isOwnerMain: boolean;
   createdAt: string;
 }
+
+export type DreamReactionType = 'heart' | 'sparkle' | 'moon' | 'cloud';
+
+export const DREAM_REACTION_TYPES: readonly DreamReactionType[] = [
+  'heart',
+  'sparkle',
+  'moon',
+  'cloud',
+];
+
+export interface DreamReactionSummary {
+  reactionType: DreamReactionType;
+  count: number;
+  reacted: boolean;
+}
+
+export interface DreamReactionToggleResult {
+  reactionType: DreamReactionType;
+  reacted: boolean;
+  count: number;
+  summary: DreamReactionSummary[];
+}
