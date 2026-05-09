@@ -75,3 +75,9 @@ cd /c/dev/KkumDream/KKUMDREAM/mobile
 npm run lint
 npm test -- --runInBand
 ```
+
+Deep link smoke test:
+
+```powershell
+adb shell am start -W -a android.intent.action.VIEW -d "kkumdream://d/test?claim=TOKEN" com.kkumdreammobile
+```

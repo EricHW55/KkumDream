@@ -120,6 +120,37 @@ http://10.0.2.2:8000/api/v1
 
 `10.0.2.2` points from Android Emulator to the host PC.
 
+## Dream Card Share Links
+
+Shared dream cards use this flow:
+
+1. The backend creates a claim token and returns a URL like `https://kkumdream.app/d/<dream_id>?claim=<token>`.
+2. That URL opens a backend landing page.
+3. The landing page tries to open `kkumdream://d/<dream_id>?claim=<token>`.
+4. If the app is installed, React Navigation opens `ClaimDream` and claims the card automatically after login.
+5. If the app is not installed, the page redirects to the configured Play Store or App Store URL.
+
+Local testing from Android Emulator:
+
+```powershell
+adb shell am start -W -a android.intent.action.VIEW -d "kkumdream://d/test?claim=TOKEN" com.kkumdreammobile
+```
+
+Production backend environment:
+
+```env
+SHARE_BASE_URL=https://kkumdream.app
+ANDROID_PACKAGE_NAME=com.kkumdreammobile
+ANDROID_PLAY_STORE_URL=https://play.google.com/store/apps/details?id=com.kkumdreammobile
+ANDROID_APP_LINK_SHA256_FINGERPRINTS=["AA:BB:..."]
+IOS_APP_STORE_URL=https://apps.apple.com/app/<app-id>
+IOS_APP_ID=<APPLE_TEAM_ID>.<BUNDLE_ID>
+```
+
+Android App Links require `/.well-known/assetlinks.json` to be served from the same domain as `SHARE_BASE_URL`. The backend now serves that file from the configured package and SHA-256 certificate fingerprints.
+
+iOS Universal Links additionally require the Associated Domains capability in Xcode with `applinks:kkumdream.app`. The backend serves `/.well-known/apple-app-site-association`, but the final Apple Team ID and App Store URL must be set after the Apple developer account and app record exist.
+
 ## Production Hosting Recommendation
 
 For the cheapest practical production path:

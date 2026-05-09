@@ -184,7 +184,7 @@ async def list_room_dreams(
         select(Dream)
         .join(DreamGroup, DreamGroup.dream_id == Dream.id)
         .where(DreamGroup.group_id == group_id, Dream.status != "draft")
-        .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
+        .order_by(Dream.given_at.asc().nullsfirst(), Dream.created_at.asc())
         .limit(limit)
     )
     dreams = list((await session.scalars(stmt)).all())

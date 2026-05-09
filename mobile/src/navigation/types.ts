@@ -6,6 +6,7 @@ export type RootStackParamList = {
   GroupRoom: { groupId: string; groupName?: string; description?: string };
   Compose: undefined;
   DreamDetail: { dream: Dream };
+  ClaimDream: { dreamId?: string; claim?: string; token?: string } | undefined;
 };
 
 export type MainTabParamList = {

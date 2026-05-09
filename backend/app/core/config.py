@@ -35,6 +35,13 @@ class Settings(BaseSettings):
 
     share_base_url: str = "https://kkumdream.app"
     share_token_default_expire_days: int = 30
+    android_package_name: str = "com.kkumdreammobile"
+    android_play_store_url: str = (
+        "https://play.google.com/store/apps/details?id=com.kkumdreammobile"
+    )
+    android_app_link_sha256_fingerprints: list[str] = []
+    ios_app_store_url: str = "https://apps.apple.com/app/kkumdream"
+    ios_app_id: str | None = None
 
     @computed_field
     @property

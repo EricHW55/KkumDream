@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -27,6 +27,8 @@ import {
   deleteDreamComment,
   fetchDreamComments,
   fetchDreamReactions,
+  markDreamBackOpened,
+  markDreamRead,
   shareDream,
   toggleDreamReaction,
 } from '../api/dreams';
@@ -38,6 +40,7 @@ import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
 import type {
   DreamComment,
+  Dream,
   DreamReactionSummary,
   DreamReactionType,
 } from '../types/dream';
@@ -84,11 +87,16 @@ const initialComments: DreamComment[] = [
 
 export function DreamDetailScreen({ route }: Props) {
   const queryClient = useQueryClient();
-  const { dream } = route.params;
+  const [displayDream, setDisplayDream] = useState(route.params.dream);
+  const dream = displayDream;
   const token = useSessionStore(state => state.token);
   const user = useSessionStore(state => state.user);
   const sessionUserId = useSessionStore(state => state.userId);
   const currentUserId = getCurrentUserId(sessionUserId);
+  const isSender = isCurrentUserId(dream.giverId, sessionUserId);
+  const isReceiver = Boolean(
+    dream.receiverId && isCurrentUserId(dream.receiverId, sessionUserId),
+  );
   const [commentDraft, setCommentDraft] = useState('');
   const [commentInputKey, setCommentInputKey] = useState(0);
   const [commentError, setCommentError] = useState<string | null>(null);
@@ -114,6 +122,58 @@ export function DreamDetailScreen({ route }: Props) {
     initialData: emptyReactionSummary,
     staleTime: 30 * 1000,
   });
+  const mergeDreamUpdate = useCallback(
+    (updatedDream: Dream) => {
+      setDisplayDream(updatedDream);
+      const updateList = (currentDreams?: Dream[]) =>
+        currentDreams?.map(item =>
+          item.id === updatedDream.id ? updatedDream : item,
+        ) ?? currentDreams;
+
+      queryClient.setQueryData<Dream[]>(
+        ['dreams', 'inbox', sessionUserId, token],
+        updateList,
+      );
+      queryClient.setQueryData<Dream[]>(
+        ['dreams', 'outbox', sessionUserId, token],
+        updateList,
+      );
+    },
+    [queryClient, sessionUserId, token],
+  );
+
+  useEffect(() => {
+    if (!token || !isReceiver || dream.readAt) {
+      return;
+    }
+
+    let cancelled = false;
+    markDreamRead(dream.id, token)
+      .then(updatedDream => {
+        if (!cancelled) {
+          mergeDreamUpdate(updatedDream);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dream.id, dream.readAt, isReceiver, mergeDreamUpdate, token]);
+
+  const onBackOpen = useCallback(async () => {
+    if (!token || !isReceiver || dream.openedBackAt) {
+      return;
+    }
+
+    try {
+      const updatedDream = await markDreamBackOpened(dream.id, token);
+      mergeDreamUpdate(updatedDream);
+    } catch {
+      // Opening the card should not be blocked by analytics state updates.
+    }
+  }, [dream.id, dream.openedBackAt, isReceiver, mergeDreamUpdate, token]);
+
   const comments = token ? remoteComments : localComments;
   const visibleComments = comments.filter(
     comment => comment.authorId !== dream.giverId,
@@ -126,7 +186,6 @@ export function DreamDetailScreen({ route }: Props) {
   const regularComments = visibleComments.filter(
     comment => comment.id !== ownerComment?.id,
   );
-  const isSender = isCurrentUserId(dream.giverId, sessionUserId);
   const canSubmit =
     !isSender && commentDraft.trim().length > 0 && !isSubmittingComment;
   const [shareError, setShareError] = useState<string | null>(null);
@@ -237,7 +296,7 @@ export function DreamDetailScreen({ route }: Props) {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <DreamCard dream={dream} size="full" />
+      <DreamCard dream={dream} size="full" onBackOpen={onBackOpen} />
 
       {isSender ? (
         <View style={styles.shareBox}>

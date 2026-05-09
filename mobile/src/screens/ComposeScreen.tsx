@@ -3,16 +3,17 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Check, PencilLine, X } from 'lucide-react-native';
+import { Check, PencilLine, Share2, X } from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createDreamDraft, giveDream } from '../api/dreams';
+import { createDreamDraft, giveDream, shareDream, updateDream } from '../api/dreams';
 import { DreamCard } from '../components/DreamCard';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -44,6 +45,7 @@ export function ComposeScreen({ navigation }: Props) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editStory, setEditStory] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isRecipientModalVisible, setIsRecipientModalVisible] = useState(false);
   const [recipientMode, setRecipientMode] = useState<RecipientMode>('friend');
   const [selectedReceiverId, setSelectedReceiverId] = useState<string | null>(
@@ -100,6 +102,8 @@ export function ComposeScreen({ navigation }: Props) {
     recipientMode === 'friend'
       ? Boolean(selectedReceiverId)
       : trimmedLabel.length > 0;
+  const isExternalRecipientReady =
+    recipientMode === 'external' && recipientReady;
   const selectedReceiver = selectedReceiverId
     ? getDisplayMember(selectedReceiverId, sessionUserId)
     : null;
@@ -166,18 +170,33 @@ export function ComposeScreen({ navigation }: Props) {
     setIsEditOpen(true);
   };
 
-  const saveEdit = () => {
-    setDraft(currentDraft =>
-      currentDraft
-        ? {
-            ...currentDraft,
-            title: editTitle.trim() || currentDraft.title,
-            story: editStory.trim() || currentDraft.story,
-            summary: editStory.trim().slice(0, 48) || currentDraft.summary,
-          }
-        : currentDraft,
-    );
-    setIsEditOpen(false);
+  const saveEdit = async () => {
+    if (!draft) {
+      return;
+    }
+
+    const title = editTitle.trim() || draft.title;
+    const story = editStory.trim() || draft.story;
+    const summary = story.slice(0, 48) || draft.summary;
+    const nextDraft = { ...draft, title, story, summary };
+
+    if (!token) {
+      setDraft(nextDraft);
+      setIsEditOpen(false);
+      return;
+    }
+
+    setActionError(null);
+    setIsSavingEdit(true);
+    try {
+      const updatedDream = await updateDream(draft.id, { title, story, summary }, token);
+      setDraft(updatedDream);
+      setIsEditOpen(false);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : '카드 수정을 저장하지 못했어요.');
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const toggleRoomSelection = (roomId: string) => {
@@ -248,6 +267,29 @@ export function ComposeScreen({ navigation }: Props) {
       queryClient.invalidateQueries({
         queryKey: ['dreams', 'outbox', sessionUserId],
       });
+      if (recipientMode === 'external') {
+        try {
+          const shareResult = await shareDream(result.id, token);
+          await Share.share({
+            title: result.title,
+            url: shareResult.shareUrl,
+            message: buildExternalShareMessage(
+              result,
+              shareResult.shareUrl,
+              trimmedLabel,
+            ),
+          });
+          navigation.navigate('MainTabs');
+        } catch (shareError) {
+          setActionError(
+            shareError instanceof Error
+              ? shareError.message
+              : '카드는 보냈지만 공유 링크를 만들지 못했어요. 상세 화면에서 다시 공유해 주세요.',
+          );
+          navigation.replace('DreamDetail', { dream: result });
+        }
+        return;
+      }
       const firstRoomId = selectedGroupIds[0];
       if (firstRoomId) {
         const firstRoom = myRooms.find(room => room.id === firstRoomId);
@@ -307,7 +349,7 @@ export function ComposeScreen({ navigation }: Props) {
       {draft ? (
         <View style={styles.preview}>
           <View style={styles.previewHeader}>
-            <View style={{ flex: 1 }}>
+            <View style={styles.flex}>
               <Text style={styles.previewTitle}>미리보기</Text>
               <Text style={styles.previewMeta}>
                 {recipientSummary
@@ -352,7 +394,9 @@ export function ComposeScreen({ navigation }: Props) {
                 placeholderTextColor={colors.textMuted}
                 style={[styles.editInput, styles.storyInput]}
               />
-              <PrimaryButton onPress={saveEdit}>수정 저장</PrimaryButton>
+              <PrimaryButton disabled={isSavingEdit} onPress={saveEdit}>
+                {isSavingEdit ? '저장 중...' : '수정 저장'}
+              </PrimaryButton>
             </View>
           ) : null}
 
@@ -360,12 +404,31 @@ export function ComposeScreen({ navigation }: Props) {
           <PrimaryButton onPress={() => setIsRecipientModalVisible(true)}>
             {recipientReady ? '받는 사람 변경' : '받는 사람 선택하기'}
           </PrimaryButton>
-          <PrimaryButton
-            disabled={!recipientReady || isGiving}
-            onPress={sendDream}
-          >
-            {isGiving ? '보내는 중...' : '보내기'}
-          </PrimaryButton>
+          {isExternalRecipientReady ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="카톡 등으로 공유하기"
+              disabled={isGiving}
+              onPress={sendDream}
+              style={({ pressed }) => [
+                styles.externalShareButton,
+                isGiving && styles.externalShareButtonDisabled,
+                pressed && !isGiving && interactionStyles.pressed,
+              ]}
+            >
+              <Share2 color={colors.primary} size={20} strokeWidth={2.5} />
+              <Text style={styles.externalShareButtonText}>
+                {isGiving ? '공유 준비 중...' : '카톡 등으로 공유하기'}
+              </Text>
+            </Pressable>
+          ) : (
+            <PrimaryButton
+              disabled={!recipientReady || isGiving}
+              onPress={sendDream}
+            >
+              {isGiving ? '보내는 중...' : '보내기'}
+            </PrimaryButton>
+          )}
         </View>
       ) : null}
 
@@ -384,7 +447,7 @@ export function ComposeScreen({ navigation }: Props) {
             onPress={event => event.stopPropagation()}
           >
             <View style={styles.sheetHeader}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.flex}>
                 <Text style={styles.sheetTitle}>받는 사람과 공유 방</Text>
                 <Text style={styles.sheetSubtitle}>
                   꿈카드는 한 사람에게 보내고, 원하는 꿈방에 함께 공유할 수 있어요.
@@ -419,7 +482,7 @@ export function ComposeScreen({ navigation }: Props) {
                     recipientMode === 'friend' && styles.modeChipTextActive,
                   ]}
                 >
-                  앱 친구
+                  꿈친구
                 </Text>
               </Pressable>
               <Pressable
@@ -553,7 +616,19 @@ function toApiGroupId(groupId: string) {
   return groupId.startsWith('g:') ? groupId.slice(2) : groupId;
 }
 
+function buildExternalShareMessage(
+  dream: Dream,
+  shareUrl: string,
+  recipientLabel: string,
+) {
+  const recipientText = recipientLabel || dream.receiverLabel || '친구';
+  return `${recipientText}에게 보낸 꿈카드\n"${dream.shortMessage}"\n\n${shareUrl}\n\n링크를 열면 꿈드림 앱에서 바로 카드를 받을 수 있어요.`;
+}
+
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   root: {
     flex: 1,
     backgroundColor: colors.background,
@@ -666,6 +741,27 @@ const styles = StyleSheet.create({
     minHeight: 140,
     paddingTop: 14,
     lineHeight: 22,
+  },
+  externalShareButton: {
+    minHeight: 56,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.lavenderMist,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 18,
+  },
+  externalShareButtonDisabled: {
+    opacity: 0.5,
+  },
+  externalShareButtonText: {
+    color: colors.primaryDark,
+    fontSize: 16,
+    fontWeight: '700',
+    includeFontPadding: false,
   },
   modalBackdrop: {
     flex: 1,

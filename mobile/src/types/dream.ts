@@ -39,6 +39,15 @@ export interface DreamGivePayload {
   groupIds?: string[];
 }
 
+export interface DreamUpdatePayload {
+  title?: string;
+  titleVisible?: boolean;
+  shortMessage?: string;
+  summary?: string;
+  story?: string;
+  tags?: string[];
+}
+
 export interface DreamShareResult {
   token: string;
   dreamId: string;

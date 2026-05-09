@@ -26,9 +26,10 @@ type Props = {
   dream: Dream;
   size?: 'feed' | 'full';
   onPress?: () => void;
+  onBackOpen?: () => void;
 };
 
-export function DreamCard({ dream, size = 'feed', onPress }: Props) {
+export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) {
   const sessionUserId = useSessionStore(state => state.userId);
   const [isBackVisible, setIsBackVisible] = useState(false);
   const rotation = useSharedValue(0);
@@ -58,6 +59,9 @@ export function DreamCard({ dream, size = 'feed', onPress }: Props) {
   const flip = () => {
     const next = !isBackVisible;
     setIsBackVisible(next);
+    if (next) {
+      onBackOpen?.();
+    }
     rotation.value = withSpring(next ? 180 : 0, {
       stiffness: 180,
       damping: 22,

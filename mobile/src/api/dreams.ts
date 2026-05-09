@@ -4,6 +4,7 @@ import type {
   DreamComment,
   DreamDraftPayload,
   DreamGivePayload,
+  DreamUpdatePayload,
   DreamReactionSummary,
   DreamReactionToggleResult,
   DreamReactionType,
@@ -29,6 +30,21 @@ export function giveDream(dreamId: string, payload: DreamGivePayload, token?: st
   );
 }
 
+export function updateDream(
+  dreamId: string,
+  payload: DreamUpdatePayload,
+  token?: string | null,
+) {
+  return requestJson<Dream>(
+    `/dreams/${encodeURIComponent(dreamId)}`,
+    {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
 export function shareDream(
   dreamId: string,
   token?: string | null,
@@ -47,6 +63,20 @@ export function claimDream(claimToken: string, token?: string | null) {
     token,
     body: JSON.stringify({ token: claimToken }),
   });
+}
+
+export function markDreamRead(dreamId: string, token?: string | null) {
+  return requestJson<Dream>(
+    `/dreams/${encodeURIComponent(dreamId)}/read`,
+    { method: 'POST', token },
+  );
+}
+
+export function markDreamBackOpened(dreamId: string, token?: string | null) {
+  return requestJson<Dream>(
+    `/dreams/${encodeURIComponent(dreamId)}/open-back`,
+    { method: 'POST', token },
+  );
 }
 
 export function fetchInbox(token?: string | null) {

@@ -3,7 +3,6 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowUp,
   ChevronLeft,
   Copy,
   Settings,
@@ -13,9 +12,7 @@ import {
 import {
   FlatList,
   Image,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -56,8 +53,6 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [roomError, setRoomError] = useState<string | null>(null);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
-  const [messageDraft, setMessageDraft] = useState('');
-  const [messageInputKey, setMessageInputKey] = useState(0);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
   const {
     data: rooms = getCachedRooms(sessionUserId),
@@ -138,11 +133,6 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     }
   };
 
-  const clearMessageDraft = () => {
-    setMessageDraft('');
-    setMessageInputKey(key => key + 1);
-  };
-
   const leaveCurrentRoom = async () => {
     if (!token) {
       setRoomError('로그인이 필요합니다.');
@@ -169,10 +159,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.root}
-    >
+    <View style={styles.root}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로가기"
@@ -251,31 +238,6 @@ export function GroupRoomScreen({ navigation, route }: Props) {
           />
         )}
       />
-
-      <View style={styles.composer}>
-        <TextInput
-          key={messageInputKey}
-          autoCorrect={false}
-          spellCheck={false}
-          defaultValue={messageDraft}
-          onChangeText={setMessageDraft}
-          placeholder="메시지"
-          placeholderTextColor={colors.textMuted}
-          style={styles.messageInput}
-        />
-        <Pressable
-          accessibilityRole="button"
-          disabled={!messageDraft.trim()}
-          onPress={clearMessageDraft}
-          style={({ pressed }) => [
-            styles.sendButton,
-            !messageDraft.trim() && styles.sendButtonDisabled,
-            pressed && messageDraft.trim() && interactionStyles.pressed,
-          ]}
-        >
-          <ArrowUp color={colors.textSecondary} size={24} strokeWidth={2.8} />
-        </Pressable>
-      </View>
 
       <Modal
         animationType="fade"
@@ -397,7 +359,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
           </Pressable>
         </Pressable>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -698,39 +660,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
-  },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 24,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: '#EFEFF3',
-  },
-  messageInput: {
-    flex: 1,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: '#E7E7ED',
-    backgroundColor: colors.cardBase,
-    paddingHorizontal: 20,
-    color: colors.textPrimary,
-    fontSize: 18,
-  },
-  sendButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E7E7EA',
-  },
-  sendButtonDisabled: {
-    opacity: 0.45,
   },
   modalBackdrop: {
     flex: 1,

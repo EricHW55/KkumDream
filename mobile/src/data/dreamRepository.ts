@@ -113,9 +113,9 @@ export async function loadOutbox(token?: string | null, userId?: string | null) 
 }
 
 export function getCachedRoomDreams(roomId: string, userId?: string | null) {
-  return (
+  return sortDreamsOldestFirst(
     readCache<Dream[]>(CACHE_KEYS.roomDreams(roomId, userId)) ??
-    getSeedRoomDreams(roomId, userId)
+      getSeedRoomDreams(roomId, userId),
   );
 }
 
@@ -125,7 +125,7 @@ export async function loadRoomDreams(
   userId?: string | null,
 ) {
   try {
-    const dreams = await fetchRoomDreams(roomId, token);
+    const dreams = sortDreamsOldestFirst(await fetchRoomDreams(roomId, token));
     writeDreamCaches(CACHE_KEYS.roomDreams(roomId, userId), dreams, userId);
     return dreams;
   } catch {
@@ -147,6 +147,14 @@ function writeDreamCaches(key: string, dreams: Dream[], userId?: string | null) 
   const merged = new Map(cachedDreams.map(dream => [dream.id, dream]));
   dreams.forEach(dream => merged.set(dream.id, dream));
   writeCache(CACHE_KEYS.allDreams(userId), Array.from(merged.values()));
+}
+
+function sortDreamsOldestFirst(dreams: Dream[]) {
+  return [...dreams].sort((left, right) => {
+    const leftTime = new Date(left.givenAt ?? left.createdAt).getTime();
+    const rightTime = new Date(right.givenAt ?? right.createdAt).getTime();
+    return leftTime - rightTime;
+  });
 }
 
 function toGroupRoom(room: ApiDreamRoom): GroupRoom {
