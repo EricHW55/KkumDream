@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
 import {
+  Clipboard,
   FlatList,
   Modal,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +15,7 @@ import {
   LogIn,
   PenLine,
   Plus,
+  Share2,
   Sparkles,
   UsersRound,
   X,
@@ -56,6 +59,7 @@ export function HomeScreen() {
   const [joinCode, setJoinCode] = useState('');
   const [createdRoom, setCreatedRoom] = useState<GroupRoom | null>(null);
   const [roomError, setRoomError] = useState<string | null>(null);
+  const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [isRoomActionPending, setIsRoomActionPending] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
   const {
@@ -89,6 +93,7 @@ export function HomeScreen() {
     setRoomNameDraft('새 꿈방');
     setJoinCode('');
     setRoomError(null);
+    setInviteStatus(null);
     setIsRoomSheetVisible(true);
   };
 
@@ -156,6 +161,24 @@ export function HomeScreen() {
 
     setIsRoomSheetVisible(false);
     openRoom(createdRoom);
+  };
+
+  const copyInviteCode = (room: GroupRoom) => {
+    Clipboard.setString(room.inviteCode);
+    setInviteStatus('초대 코드를 복사했어요.');
+  };
+
+  const shareInviteCode = async (room: GroupRoom) => {
+    try {
+      await Share.share({
+        title: `${room.name} 초대`,
+        message: buildInviteMessage(room),
+      });
+    } catch (error) {
+      setInviteStatus(
+        error instanceof Error ? error.message : '초대 코드를 공유하지 못했어요.',
+      );
+    }
   };
 
   return (
@@ -339,11 +362,48 @@ export function HomeScreen() {
                   <Text selectable style={styles.inviteCode}>
                     {createdRoom.inviteCode}
                   </Text>
-                  <Copy color={colors.primary} size={22} />
+                  <Pressable
+                    accessibilityLabel="초대 코드 복사"
+                    accessibilityRole="button"
+                    onPress={() => copyInviteCode(createdRoom)}
+                    style={({ pressed }) => [
+                      styles.codeIconButton,
+                      pressed && interactionStyles.pressed,
+                    ]}
+                  >
+                    <Copy color={colors.primary} size={21} />
+                  </Pressable>
                 </View>
                 <Text style={styles.codeHelp}>
                   친구에게 이 코드를 보내면 같은 꿈방에 참가할 수 있어요.
                 </Text>
+                {inviteStatus ? (
+                  <Text style={styles.statusText}>{inviteStatus}</Text>
+                ) : null}
+                <View style={styles.inviteActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => copyInviteCode(createdRoom)}
+                    style={({ pressed }) => [
+                      styles.secondaryAction,
+                      pressed && interactionStyles.pressed,
+                    ]}
+                  >
+                    <Copy color={colors.primary} size={18} />
+                    <Text style={styles.secondaryActionText}>복사</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => shareInviteCode(createdRoom)}
+                    style={({ pressed }) => [
+                      styles.secondaryAction,
+                      pressed && interactionStyles.pressed,
+                    ]}
+                  >
+                    <Share2 color={colors.primary} size={18} />
+                    <Text style={styles.secondaryActionText}>공유</Text>
+                  </Pressable>
+                </View>
                 <Pressable
                   accessibilityRole="button"
                   onPress={enterCreatedRoom}
@@ -461,6 +521,10 @@ function GroupRoomItem({
 
 function upsertRoom(rooms: GroupRoom[], room: GroupRoom) {
   return [room, ...rooms.filter(item => item.id !== room.id)];
+}
+
+function buildInviteMessage(room: GroupRoom) {
+  return `꿈드림 꿈방 "${room.name}"에 초대합니다.\n초대 코드: ${room.inviteCode}\n\n꿈드림 앱에서 초대코드로 참가해 주세요.`;
 }
 
 const styles = StyleSheet.create({
@@ -697,6 +761,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 18,
   },
+  codeIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
   inviteCode: {
     color: colors.primaryDark,
     fontSize: 24,
@@ -708,6 +780,34 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+  },
+  statusText: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+  inviteActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  secondaryAction: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.lavenderMist,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  secondaryActionText: {
+    color: colors.primaryDark,
+    fontSize: 14,
+    fontWeight: '700',
+    includeFontPadding: false,
   },
   codeInput: {
     height: 58,

@@ -6,14 +6,17 @@ import {
   ChevronLeft,
   Copy,
   Settings,
+  Share2,
   UsersRound,
   X,
 } from 'lucide-react-native';
 import {
+  Clipboard,
   FlatList,
   Image,
   Modal,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -51,6 +54,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [isMembersVisible, setIsMembersVisible] = useState(false);
   const [roomNameDraft, setRoomNameDraft] = useState('');
   const [roomError, setRoomError] = useState<string | null>(null);
+  const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
@@ -158,6 +162,33 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     }
   };
 
+  const copyInviteCode = () => {
+    if (!room?.inviteCode) {
+      setInviteStatus('복사할 초대 코드가 없어요.');
+      return;
+    }
+    Clipboard.setString(room.inviteCode);
+    setInviteStatus('초대 코드를 복사했어요.');
+  };
+
+  const shareInviteCode = async () => {
+    if (!room?.inviteCode) {
+      setInviteStatus('공유할 초대 코드가 없어요.');
+      return;
+    }
+
+    try {
+      await Share.share({
+        title: `${title} 초대`,
+        message: buildInviteMessage(title, room.inviteCode),
+      });
+    } catch (error) {
+      setInviteStatus(
+        error instanceof Error ? error.message : '초대 코드를 공유하지 못했어요.',
+      );
+    }
+  };
+
   return (
     <View style={styles.root}>
       <View style={styles.header}>
@@ -203,14 +234,40 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.roomInfo}>
-        <View>
+        <View style={styles.inviteTextWrap}>
           <Text style={styles.infoLabel}>초대 코드</Text>
           <Text selectable style={styles.inviteCode}>
             {room?.inviteCode ?? '초대 코드 없음'}
           </Text>
         </View>
-        <Copy color={colors.primary} size={20} />
+        <View style={styles.inviteActions}>
+          <Pressable
+            accessibilityLabel="초대 코드 복사"
+            accessibilityRole="button"
+            onPress={copyInviteCode}
+            style={({ pressed }) => [
+              styles.inviteActionButton,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            <Copy color={colors.primary} size={19} />
+          </Pressable>
+          <Pressable
+            accessibilityLabel="초대 코드 공유"
+            accessibilityRole="button"
+            onPress={shareInviteCode}
+            style={({ pressed }) => [
+              styles.inviteActionButton,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            <Share2 color={colors.primary} size={19} />
+          </Pressable>
+        </View>
       </View>
+      {inviteStatus ? (
+        <Text style={styles.inviteStatus}>{inviteStatus}</Text>
+      ) : null}
 
       <FlatList
         data={dreams}
@@ -452,6 +509,10 @@ function formatSentAt(value: string | null) {
   }).format(date);
 }
 
+function buildInviteMessage(roomName: string, inviteCode: string) {
+  return `꿈드림 꿈방 "${roomName}"에 초대합니다.\n초대 코드: ${inviteCode}\n\n꿈드림 앱에서 초대코드로 참가해 주세요.`;
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -518,6 +579,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.lavenderMist,
+  },
+  inviteTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  inviteActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  inviteActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  inviteStatus: {
+    marginHorizontal: 24,
+    marginTop: 8,
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
   },
   infoLabel: {
     color: colors.textMuted,
