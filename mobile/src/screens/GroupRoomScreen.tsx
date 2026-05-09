@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -47,6 +47,8 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
+  const dreamListRef = useRef<FlatList<Dream>>(null);
+  const shouldScrollToLatestRef = useRef(false);
   const [roomOverride, setRoomOverride] = useState<
     ReturnType<typeof getCachedRooms>[number] | null
   >(null);
@@ -91,6 +93,20 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       : (room?.memberIds ?? []).map(memberId =>
           getDisplayMember(memberId, sessionUserId),
         );
+  const scrollToLatestDream = useCallback(() => {
+    if (dreams.length === 0) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      dreamListRef.current?.scrollToEnd({ animated: false });
+    });
+  }, [dreams.length]);
+
+  useEffect(() => {
+    shouldScrollToLatestRef.current = dreams.length > 0;
+    scrollToLatestDream();
+  }, [dreams.length, route.params.groupId, scrollToLatestDream]);
 
   useFocusEffect(
     useCallback(() => {
@@ -270,9 +286,22 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       ) : null}
 
       <FlatList
+        ref={dreamListRef}
         data={dreams}
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => {
+          if (!shouldScrollToLatestRef.current) {
+            return;
+          }
+          scrollToLatestDream();
+          shouldScrollToLatestRef.current = false;
+        }}
+        onLayout={() => {
+          if (shouldScrollToLatestRef.current) {
+            scrollToLatestDream();
+          }
+        }}
         contentContainerStyle={[
           styles.messages,
           dreams.length === 0 && styles.emptyMessages,
