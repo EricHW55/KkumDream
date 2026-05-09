@@ -28,6 +28,12 @@ from app.schemas.dream import (
     ReactionType,
 )
 from app.services.ai_text_service import generate_dream_text
+from app.services.push_service import (
+    send_dream_claimed_push,
+    send_dream_comment_push,
+    send_dream_given_push,
+    send_owner_comment_push,
+)
 
 
 class DreamCommentView:
@@ -148,6 +154,13 @@ async def give_dream(
     )
     await session.commit()
     await session.refresh(dream)
+    if dream.receiver_id is not None:
+        await send_dream_given_push(
+            session,
+            dream.receiver_id,
+            str(dream.id),
+            dream.title,
+        )
     return await _attach_group_ids(session, dream)
 
 
@@ -224,6 +237,15 @@ async def create_dream_comment(
     if author is None:
         raise NotFoundError("User not found")
     await session.refresh(comment)
+    if is_owner_main:
+        await send_owner_comment_push(session, dream.giver_id, str(dream.id), dream.title)
+    else:
+        recipient_ids = [
+            recipient_id
+            for recipient_id in (dream.giver_id, dream.receiver_id)
+            if recipient_id is not None and recipient_id != user_id
+        ]
+        await send_dream_comment_push(session, recipient_ids, str(dream.id), dream.title)
     return DreamCommentView(comment, author)
 
 
@@ -373,6 +395,7 @@ async def claim_dream_via_token(
     record.claimed_by_id = user_id
     await session.commit()
     await session.refresh(dream)
+    await send_dream_claimed_push(session, dream.giver_id, str(dream.id), dream.title)
     return await _attach_group_ids(session, dream)
 
 

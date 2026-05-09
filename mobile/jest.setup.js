@@ -33,6 +33,20 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
+jest.mock('@react-native-firebase/messaging', () => {
+  const messaging = jest.fn(() => ({
+    getToken: jest.fn(() => Promise.resolve('mock-fcm-token')),
+    onTokenRefresh: jest.fn(() => jest.fn()),
+    registerDeviceForRemoteMessages: jest.fn(() => Promise.resolve()),
+    requestPermission: jest.fn(() => Promise.resolve(1)),
+  }));
+  messaging.AuthorizationStatus = {
+    AUTHORIZED: 1,
+    PROVISIONAL: 2,
+  };
+  return messaging;
+});
+
 jest.mock('react-native-reanimated', () => {
   const ReactNative = require('react-native');
 

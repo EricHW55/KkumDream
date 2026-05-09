@@ -17,6 +17,7 @@ import { Screen } from '../components/Screen';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
+import { unregisterPushToken } from '../services/pushNotifications';
 
 export function ProfileScreen() {
   const queryClient = useQueryClient();
@@ -67,6 +68,9 @@ export function ProfileScreen() {
   };
 
   const logout = async () => {
+    if (token) {
+      await unregisterPushToken(token);
+    }
     await signOutGoogle();
     clearSession();
   };
