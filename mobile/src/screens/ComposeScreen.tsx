@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Check, PencilLine, Share2, X } from 'lucide-react-native';
+import { Check, PencilLine, Search, Share2, X } from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { createDreamDraft, giveDream, shareDream, updateDream } from '../api/dreams';
@@ -47,6 +47,8 @@ export function ComposeScreen({ navigation }: Props) {
   const [editStory, setEditStory] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isRecipientModalVisible, setIsRecipientModalVisible] = useState(false);
+  const [isFriendPickerVisible, setIsFriendPickerVisible] = useState(false);
+  const [friendSearch, setFriendSearch] = useState('');
   const [recipientMode, setRecipientMode] = useState<RecipientMode>('friend');
   const [selectedReceiverId, setSelectedReceiverId] = useState<string | null>(
     null,
@@ -90,6 +92,14 @@ export function ComposeScreen({ navigation }: Props) {
     }
     return getSeedFriends();
   }, [currentUserId, rooms, sessionUserId]);
+  const filteredFriends = useMemo(() => {
+    const keyword = friendSearch.trim().toLowerCase();
+    if (!keyword) {
+      return friends;
+    }
+
+    return friends.filter(friend => friend.name.toLowerCase().includes(keyword));
+  }, [friendSearch, friends]);
 
   const myRooms = useMemo(
     () => rooms.filter(room => room.memberIds.includes(currentUserId)),
@@ -482,7 +492,7 @@ export function ComposeScreen({ navigation }: Props) {
                     recipientMode === 'friend' && styles.modeChipTextActive,
                   ]}
                 >
-                  꿈친구
+                  꿈방 멤버
                 </Text>
               </Pressable>
               <Pressable
@@ -512,32 +522,43 @@ export function ComposeScreen({ navigation }: Props) {
             >
               {recipientMode === 'friend' ? (
                 <View style={styles.sectionBlock}>
-                  <Text style={styles.sectionTitle}>친구</Text>
-                  <View style={styles.friendList}>
-                    {friends.map(friend => (
-                      <Pressable
-                        key={friend.id}
-                        accessibilityRole="button"
-                        onPress={() => setSelectedReceiverId(friend.id)}
-                        style={({ pressed }) => [
-                          styles.friendItem,
-                          selectedReceiverId === friend.id && styles.selectedItem,
-                          pressed && interactionStyles.pressedSoft,
-                        ]}
-                      >
-                        <MoonAvatar size={38} color={friend.avatarColor} />
-                        <Text style={styles.friendName}>{friend.name}</Text>
-                        {selectedReceiverId === friend.id ? (
-                          <Check color={colors.primary} size={20} />
-                        ) : null}
-                      </Pressable>
-                    ))}
-                    {friends.length === 0 ? (
-                      <Text style={styles.emptyText}>
-                        아직 함께 속한 꿈방 멤버가 없어요. 외부 모드로 보내보세요.
+                  <Text style={styles.sectionTitle}>받는 꿈방 멤버</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setIsFriendPickerVisible(true)}
+                    style={({ pressed }) => [
+                      styles.friendPickerButton,
+                      selectedReceiver && styles.selectedItem,
+                      pressed && interactionStyles.pressedSoft,
+                    ]}
+                  >
+                    {selectedReceiver ? (
+                      <MoonAvatar
+                        size={42}
+                        color={selectedReceiver.avatarColor}
+                      />
+                    ) : (
+                      <View style={styles.searchIconWrap}>
+                        <Search color={colors.primary} size={20} />
+                      </View>
+                    )}
+                    <View style={styles.friendPickerText}>
+                      <Text style={styles.friendName}>
+                        {selectedReceiver?.name ?? '꿈방 멤버 검색'}
                       </Text>
+                      <Text style={styles.friendPickerHint}>
+                        이름으로 검색해서 받는 사람을 선택해요.
+                      </Text>
+                    </View>
+                    {selectedReceiver ? (
+                      <Check color={colors.primary} size={20} />
                     ) : null}
-                  </View>
+                  </Pressable>
+                  {friends.length === 0 ? (
+                    <Text style={styles.emptyText}>
+                      아직 함께 속한 꿈방 멤버가 없어요. 외부 모드로 보내보세요.
+                    </Text>
+                  ) : null}
                 </View>
               ) : (
                 <View style={styles.sectionBlock}>
@@ -605,6 +626,88 @@ export function ComposeScreen({ navigation }: Props) {
             <PrimaryButton disabled={!recipientReady} onPress={confirmRecipient}>
               선택 완료
             </PrimaryButton>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isFriendPickerVisible}
+        onRequestClose={() => setIsFriendPickerVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsFriendPickerVisible(false)}
+        >
+          <Pressable
+            style={styles.friendPickerSheet}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.sheetHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.sheetTitle}>꿈방 멤버 선택</Text>
+                <Text style={styles.sheetSubtitle}>
+                  함께 가입된 꿈방 멤버 중 받을 사람을 검색해요.
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                onPress={() => setIsFriendPickerVisible(false)}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <X color={colors.textSecondary} size={20} />
+              </Pressable>
+            </View>
+            <View style={styles.searchInputWrap}>
+              <Search color={colors.textMuted} size={19} />
+              <TextInput
+                autoCorrect={false}
+                spellCheck={false}
+                value={friendSearch}
+                onChangeText={setFriendSearch}
+                placeholder="이름 검색"
+                placeholderTextColor={colors.textMuted}
+                style={styles.searchInput}
+              />
+            </View>
+            <ScrollView
+              style={styles.friendPickerList}
+              contentContainerStyle={styles.friendPickerListContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {filteredFriends.map(friend => (
+                <Pressable
+                  key={friend.id}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setSelectedReceiverId(friend.id);
+                    setIsFriendPickerVisible(false);
+                  }}
+                  style={({ pressed }) => [
+                    styles.friendItem,
+                    selectedReceiverId === friend.id && styles.selectedItem,
+                    pressed && interactionStyles.pressedSoft,
+                  ]}
+                >
+                  <MoonAvatar size={38} color={friend.avatarColor} />
+                  <Text style={styles.friendName}>{friend.name}</Text>
+                  {selectedReceiverId === friend.id ? (
+                    <Check color={colors.primary} size={20} />
+                  ) : null}
+                </Pressable>
+              ))}
+              {filteredFriends.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  검색 결과가 없어요. 같은 꿈방에 있는 멤버만 선택할 수 있어요.
+                </Text>
+              ) : null}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -862,6 +965,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontWeight: '600',
+  },
+  friendPickerButton: {
+    minHeight: 68,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  searchIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
+  },
+  friendPickerText: {
+    flex: 1,
+  },
+  friendPickerHint: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    includeFontPadding: false,
+  },
+  friendPickerSheet: {
+    maxHeight: '82%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 22,
+    paddingBottom: 28,
+    gap: 14,
+    backgroundColor: colors.cardBase,
+  },
+  searchInputWrap: {
+    minHeight: 50,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  friendPickerList: {
+    maxHeight: 380,
+  },
+  friendPickerListContent: {
+    gap: 10,
+    paddingBottom: 8,
   },
   friendList: {
     gap: 10,

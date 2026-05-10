@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import {
+  Alert,
+  type GestureResponderEvent,
   Image,
   Pressable,
   ScrollView,
@@ -7,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Download, Share2 } from 'lucide-react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -15,6 +18,7 @@ import Animated, {
 
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
+import { saveDreamImage, shareDreamImage } from '../native/dreamImageActions';
 import { radius } from '../theme/spacing';
 import type { Dream } from '../types/dream';
 import { getCachedRooms } from '../data/dreamRepository';
@@ -32,6 +36,7 @@ type Props = {
 export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) {
   const sessionUserId = useSessionStore(state => state.userId);
   const [isBackVisible, setIsBackVisible] = useState(false);
+  const [isImageActionPending, setIsImageActionPending] = useState(false);
   const rotation = useSharedValue(0);
   const cardHeight = size === 'full' ? 560 : 430;
   const imageHeight = size === 'full' ? 300 : 250;
@@ -44,6 +49,8 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
     ? roomMembers.find(member => member.id === dream.receiverId)?.name ??
       getDisplayMember(dream.receiverId, sessionUserId).name
     : dream.receiverLabel ?? '받는 사람 미정';
+
+  const imageUrl = dream.imageUrl ?? dream.thumbnailUrl;
 
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
@@ -67,6 +74,72 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
       damping: 22,
     });
   };
+
+  const runImageAction = async (
+    event: GestureResponderEvent,
+    action: 'share' | 'save',
+  ) => {
+    event.stopPropagation();
+    if (!imageUrl) {
+      Alert.alert(
+        '이미지가 아직 없어요',
+        '이미지가 완성된 꿈카드만 저장하거나 공유할 수 있어요.',
+      );
+      return;
+    }
+    if (isImageActionPending) {
+      return;
+    }
+
+    setIsImageActionPending(true);
+    try {
+      const fileName = `kkumdream_${dream.id}`;
+      if (action === 'share') {
+        await shareDreamImage(imageUrl, fileName);
+      } else {
+        await saveDreamImage(imageUrl, fileName);
+        Alert.alert('저장 완료', '꿈카드 이미지를 갤러리에 저장했어요.');
+      }
+    } catch {
+      Alert.alert(
+        action === 'share' ? '공유 실패' : '저장 실패',
+        '이미지를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.',
+      );
+    } finally {
+      setIsImageActionPending(false);
+    }
+  };
+
+  const renderImageActions = () => (
+    <View style={styles.imageActions}>
+      <Pressable
+        accessibilityLabel="꿈카드 이미지 공유"
+        accessibilityRole="button"
+        disabled={isImageActionPending}
+        onPress={event => runImageAction(event, 'share')}
+        style={({ pressed }) => [
+          styles.imageActionButton,
+          isImageActionPending && styles.imageActionButtonDisabled,
+          pressed && !isImageActionPending && interactionStyles.pressed,
+        ]}
+      >
+        <Share2 color={colors.primaryDark} size={17} strokeWidth={2.4} />
+      </Pressable>
+      <Pressable
+        accessibilityLabel="꿈카드 이미지 저장"
+        accessibilityRole="button"
+        disabled={isImageActionPending}
+        onPress={event => runImageAction(event, 'save')}
+        style={({ pressed }) => [
+          styles.imageActionButton,
+          isImageActionPending && styles.imageActionButtonDisabled,
+          pressed && !isImageActionPending && interactionStyles.pressed,
+        ]}
+      >
+        <Download color={colors.primaryDark} size={17} strokeWidth={2.4} />
+      </Pressable>
+    </View>
+  );
 
   return (
     <Pressable
@@ -109,6 +182,7 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
               ))}
             </View>
           </View>
+          {renderImageActions()}
         </Animated.View>
 
         <Animated.View
@@ -133,6 +207,7 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
             </Text>
             <Text style={styles.story}>{dream.story}</Text>
           </ScrollView>
+          {renderImageActions()}
         </Animated.View>
       </View>
     </Pressable>
@@ -240,5 +315,25 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 26,
+  },
+  imageActions: {
+    position: 'absolute',
+    right: 14,
+    bottom: 14,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  imageActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  imageActionButtonDisabled: {
+    opacity: 0.5,
   },
 });

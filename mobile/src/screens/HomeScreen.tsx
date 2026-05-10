@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import {
   Clipboard,
   FlatList,
+  Image,
   Modal,
   Pressable,
   Share,
@@ -31,6 +32,7 @@ import { Screen } from '../components/Screen';
 import {
   createGroupRoom,
   getCachedDream,
+  getCachedRoomDreams,
   getCachedRooms,
   joinGroupRoom,
   loadRooms,
@@ -201,17 +203,6 @@ export function HomeScreen() {
             <PenLine color={colors.textPrimary} size={26} strokeWidth={2.5} />
           </Pressable>
           <Pressable
-            accessibilityLabel="꿈방 추가"
-            accessibilityRole="button"
-            onPress={openRoomSheet}
-            style={({ pressed }) => [
-              styles.circleButton,
-              pressed && interactionStyles.pressed,
-            ]}
-          >
-            <Plus color={colors.textPrimary} size={28} strokeWidth={2.6} />
-          </Pressable>
-          <Pressable
             accessibilityLabel="내 정보"
             accessibilityRole="button"
             hitSlop={8}
@@ -239,8 +230,29 @@ export function HomeScreen() {
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Text style={styles.emptyTitle}>아직 꿈방이 없어요</Text>
-            <Text style={styles.emptyText}>오른쪽 위 + 버튼으로 새 꿈방을 만들 수 있어요.</Text>
+            <Text style={styles.emptyText}>아래 버튼으로 새 꿈방을 만들거나 초대코드로 참가할 수 있어요.</Text>
           </View>
+        }
+        ListFooterComponent={
+          <Pressable
+            accessibilityLabel="꿈방 참가 또는 생성"
+            accessibilityRole="button"
+            onPress={openRoomSheet}
+            style={({ pressed }) => [
+              styles.addRoomFooter,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            <View style={styles.addRoomIcon}>
+              <Plus color={colors.primaryDark} size={24} strokeWidth={2.6} />
+            </View>
+            <View style={styles.addRoomText}>
+              <Text style={styles.addRoomTitle}>꿈방 참가 또는 생성</Text>
+              <Text style={styles.addRoomSubtitle}>
+                초대코드로 들어가거나 새 꿈방을 만들 수 있어요.
+              </Text>
+            </View>
+          </Pressable>
         }
         renderItem={({ item }) => (
           <GroupRoomItem
@@ -465,12 +477,28 @@ function GroupRoomItem({
   const latestDream = room.latestDreamId
     ? getCachedDream(room.latestDreamId, sessionUserId)
     : null;
-  const members =
-    (room.members ?? []).length > 0
-      ? room.members.slice(0, 3)
-      : room.memberIds
-          .map(memberId => getDisplayMember(memberId, sessionUserId))
-          .slice(0, 3);
+  const roomDreams = getCachedRoomDreams(room.id, sessionUserId);
+  const recentGiverIds = Array.from(
+    new Set(
+      roomDreams
+        .slice()
+        .reverse()
+        .map(dream => dream.giverId),
+    ),
+  );
+  const uploaders =
+    recentGiverIds.length > 0
+      ? recentGiverIds.slice(0, 3).map(giverId =>
+          resolveRoomMember(room, giverId, sessionUserId),
+        )
+      : (room.members ?? []).length > 0
+        ? room.members.slice(0, 3)
+        : room.memberIds
+            .map(memberId => getDisplayMember(memberId, sessionUserId))
+            .slice(0, 3);
+  const latestUploader = latestDream
+    ? resolveRoomMember(room, latestDream.giverId, sessionUserId)
+    : null;
 
   return (
     <Pressable
@@ -490,7 +518,7 @@ function GroupRoomItem({
       </View>
       <View style={styles.roomSide}>
         <View style={styles.memberStack}>
-          {members.map((member, index) => (
+          {uploaders.map((member, index) => (
             <View
               key={member.id}
               style={[
@@ -498,16 +526,14 @@ function GroupRoomItem({
                 index > 0 && styles.stackedMemberDot,
               ]}
             >
-              <MoonAvatar size={27} color={member.avatarColor} />
+              <ProfileAvatar member={member} size={27} />
             </View>
           ))}
         </View>
         <View style={styles.roomDivider} />
-        {latestDream ? (
+        {latestUploader ? (
           <View style={styles.latestBadge}>
-            <Text style={styles.latestMood}>
-              {latestDream.mainMood.slice(0, 1)}
-            </Text>
+            <ProfileAvatar member={latestUploader} size={36} />
           </View>
         ) : (
           <View style={styles.emptyDreamBadge}>
@@ -517,6 +543,36 @@ function GroupRoomItem({
       </View>
     </Pressable>
   );
+}
+
+function resolveRoomMember(
+  room: GroupRoom,
+  memberId: string,
+  sessionUserId?: string | null,
+) {
+  return (
+    (room.members ?? []).find(member => member.id === memberId) ??
+    getDisplayMember(memberId, sessionUserId)
+  );
+}
+
+function ProfileAvatar({
+  member,
+  size,
+}: {
+  member: { avatarColor: string; profileImageUrl?: string | null };
+  size: number;
+}) {
+  if (member.profileImageUrl) {
+    return (
+      <Image
+        source={{ uri: member.profileImageUrl }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      />
+    );
+  }
+
+  return <MoonAvatar size={size} color={member.avatarColor} />;
 }
 
 function upsertRoom(rooms: GroupRoom[], room: GroupRoom) {
@@ -602,6 +658,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
   },
+  addRoomFooter: {
+    minHeight: 82,
+    borderRadius: 24,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  addRoomIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
+  },
+  addRoomText: {
+    flex: 1,
+  },
+  addRoomTitle: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  addRoomSubtitle: {
+    marginTop: 5,
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
   roomItem: {
     minHeight: 96,
     borderRadius: 28,
@@ -663,6 +754,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardBase,
+    overflow: 'hidden',
   },
   latestMood: {
     color: colors.primaryDark,
