@@ -6,6 +6,7 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Home, Inbox, Send, UserRound } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ClaimDreamScreen } from '../screens/ClaimDreamScreen';
 import { ComposeScreen } from '../screens/ComposeScreen';
@@ -22,6 +23,8 @@ import type { MainTabParamList, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const TAB_BAR_BASE_HEIGHT = 64;
+const TAB_BAR_BASE_PADDING_BOTTOM = 8;
 
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['kkumdream://', 'https://kkumdream.app'],
@@ -71,15 +74,17 @@ const theme = {
 };
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          height: 64,
+          height: TAB_BAR_BASE_HEIGHT + insets.bottom,
           paddingTop: 6,
-          paddingBottom: 8,
+          paddingBottom: TAB_BAR_BASE_PADDING_BOTTOM + insets.bottom,
           borderTopColor: colors.divider,
         },
         tabBarLabelStyle: {
