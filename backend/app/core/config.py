@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     ai_mock_mode: bool = True
     anthropic_api_key: str | None = None
+    anthropic_text_model: str = "claude-haiku-4-5"
     openai_api_key: str | None = None
     replicate_api_token: str | None = None
     replicate_flux_model: str = "black-forest-labs/flux-schnell"

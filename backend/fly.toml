@@ -4,9 +4,14 @@ primary_region = "nrt"
 [env]
   ENVIRONMENT = "production"
   API_V1_PREFIX = "/api/v1"
-  AI_MOCK_MODE = "true"
+  AI_MOCK_MODE = "false"
+
+[processes]
+  web = "sh -c 'alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}'"
+  worker = "python -m app.workers.image_worker"
 
 [http_service]
+  processes = ["web"]
   internal_port = 8080
   force_https = true
   auto_stop_machines = true
