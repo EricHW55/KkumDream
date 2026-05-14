@@ -6,6 +6,7 @@ import { DreamLibraryView } from '../components/DreamLibraryView';
 import { Screen } from '../components/Screen';
 import { getCachedOutbox, loadOutbox } from '../data/dreamRepository';
 import { useSessionStore } from '../store/sessionStore';
+import type { Dream } from '../types/dream';
 
 export function OutboxScreen() {
   const token = useSessionStore(state => state.token);
@@ -19,6 +20,8 @@ export function OutboxScreen() {
     initialData: () => getCachedOutbox(userId),
     staleTime: 0,
     refetchOnMount: 'always',
+    refetchInterval: query =>
+      hasPendingImage(query.state.data) ? 5000 : false,
   });
 
   useFocusEffect(
@@ -36,5 +39,13 @@ export function OutboxScreen() {
         dreams={outbox}
       />
     </Screen>
+  );
+}
+
+function hasPendingImage(dreams?: Dream[]) {
+  return (
+    dreams?.some(
+      dream => dream.imageStatus === 'queued' || dream.imageStatus === 'generating',
+    ) ?? false
   );
 }

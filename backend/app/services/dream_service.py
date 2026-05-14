@@ -53,7 +53,7 @@ async def create_dream_draft(
     giver_id: UUID,
     payload: DreamDraftCreate,
 ) -> Dream:
-    result = await generate_dream_text(payload.raw_input, payload.mood)
+    result = await generate_dream_text(payload.raw_input, payload.mood, payload.tone)
     dream = Dream(
         giver_id=giver_id,
         raw_input=payload.raw_input,

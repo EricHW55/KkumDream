@@ -23,6 +23,7 @@ import type { Dream } from '../types/dream';
 import { getCachedRooms } from '../data/dreamRepository';
 import { getDisplayMember } from '../data/members';
 import { useSessionStore } from '../store/sessionStore';
+import { DreamGenerationAnimation } from './DreamGenerationAnimation';
 import { TagChip } from './TagChip';
 
 type Props = {
@@ -50,6 +51,9 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
     : dream.receiverLabel ?? '받는 사람 미정';
 
   const imageUrl = dream.imageUrl ?? dream.thumbnailUrl;
+  const hasImage = Boolean(dream.thumbnailUrl || dream.imageUrl);
+  const isImageGenerating =
+    dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
 
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
@@ -76,9 +80,13 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
 
   const runImageAction = async (action: 'share' | 'save') => {
     if (!imageUrl) {
+      const message =
+        dream.imageStatus === 'failed'
+          ? '이미지 생성에 실패했어요. 잠시 후 새 카드로 다시 시도해 주세요.'
+          : '이미지가 완성되면 저장하거나 공유할 수 있어요.';
       Alert.alert(
-        '이미지가 아직 없어요',
-        '이미지가 완성된 꿈카드만 저장하거나 공유할 수 있어요.',
+        isImageGenerating ? '이미지 생성 중이에요' : '이미지가 아직 없어요',
+        message,
       );
       return;
     }
@@ -155,13 +163,26 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
             ]}
           >
             <View style={[styles.imageWrap, { height: imageHeight }]}>
-              {dream.thumbnailUrl || dream.imageUrl ? (
+              {hasImage ? (
                 <Image
                   source={{
                     uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
                   }}
                   style={styles.image}
                 />
+              ) : isImageGenerating ? (
+                <DreamGenerationAnimation
+                  compact
+                  title="이미지 생성 중"
+                  subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
+                />
+              ) : dream.imageStatus === 'failed' ? (
+                <View style={styles.placeholder}>
+                  <Text style={styles.failureText}>이미지 준비 실패</Text>
+                  <Text style={styles.placeholderHint}>
+                    다시 보내거나 새 카드로 시도해 주세요.
+                  </Text>
+                </View>
               ) : (
                 <View style={styles.placeholder}>
                   <Text style={styles.placeholderText}>{dream.mainMood}</Text>
@@ -274,6 +295,22 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     includeFontPadding: false,
+    textAlign: 'center',
+  },
+  failureText: {
+    color: colors.primaryDark,
+    fontSize: 20,
+    fontWeight: '800',
+    includeFontPadding: false,
+    textAlign: 'center',
+  },
+  placeholderHint: {
+    marginTop: 10,
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlign: 'center',
   },
   content: {
     flex: 1,

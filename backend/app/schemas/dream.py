@@ -13,6 +13,7 @@ REACTION_TYPES: tuple[ReactionType, ...] = ("heart", "sparkle", "moon", "cloud")
 class DreamDraftCreate(ApiModel):
     raw_input: str = Field(min_length=1, max_length=500)
     mood: str | None = Field(default=None, max_length=20)
+    tone: str | None = Field(default=None, max_length=30)
 
 
 class DreamUpdate(ApiModel):

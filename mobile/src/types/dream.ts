@@ -31,6 +31,7 @@ export interface Dream {
 export interface DreamDraftPayload {
   rawInput: string;
   mood?: string;
+  tone?: string;
 }
 
 export interface DreamGivePayload {

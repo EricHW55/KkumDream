@@ -33,6 +33,7 @@ import {
   loadRooms,
   updateGroupRoom,
 } from '../data/dreamRepository';
+import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
 import { isCurrentUserId } from '../data/currentUser';
 import { getDisplayMember } from '../data/members';
 import type { RootStackParamList } from '../navigation/types';
@@ -86,6 +87,8 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     initialData: () => getCachedRoomDreams(route.params.groupId, sessionUserId),
     staleTime: 0,
     refetchOnMount: 'always',
+    refetchInterval: query =>
+      hasPendingImage(query.state.data) ? 5000 : false,
   });
   const members =
     (room?.members ?? []).length > 0
@@ -485,6 +488,8 @@ function DreamMessage({
                 }}
                 style={styles.previewImage}
               />
+            ) : isImagePending(dream) ? (
+              <DreamGenerationAnimation compact title="이미지 생성 중" />
             ) : (
               <View style={styles.previewPlaceholder}>
                 <Text style={styles.previewMood}>{dream.mainMood}</Text>
@@ -510,6 +515,14 @@ function DreamMessage({
       {isMine ? <Avatar color={sender.avatarColor} /> : null}
     </View>
   );
+}
+
+function hasPendingImage(dreams?: Dream[]) {
+  return dreams?.some(dream => isImagePending(dream)) ?? false;
+}
+
+function isImagePending(dream: Dream) {
+  return dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
 }
 
 function Avatar({ color }: { color: string }) {

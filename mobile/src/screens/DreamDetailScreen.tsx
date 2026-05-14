@@ -23,6 +23,7 @@ import { DreamCard } from '../components/DreamCard';
 import {
   addDreamComment,
   deleteDreamComment,
+  fetchDream,
   fetchDreamComments,
   fetchDreamReactions,
   markDreamBackOpened,
@@ -138,6 +139,21 @@ export function DreamDetailScreen({ route }: Props) {
     },
     [queryClient, sessionUserId, token],
   );
+  const { data: refreshedDream } = useQuery({
+    queryKey: ['dreams', dream.id, 'detail', token],
+    queryFn: () => fetchDream(dream.id, token),
+    enabled: Boolean(token),
+    initialData: dream,
+    staleTime: 0,
+    refetchInterval: query =>
+      isImagePending(query.state.data) ? 3000 : false,
+  });
+
+  useEffect(() => {
+    if (refreshedDream.id === dream.id) {
+      mergeDreamUpdate(refreshedDream);
+    }
+  }, [dream.id, mergeDreamUpdate, refreshedDream]);
 
   useEffect(() => {
     if (!token || !isReceiver || dream.readAt) {
@@ -389,6 +405,10 @@ export function DreamDetailScreen({ route }: Props) {
       </View>
     </ScrollView>
   );
+}
+
+function isImagePending(dream?: Dream) {
+  return dream?.imageStatus === 'queued' || dream?.imageStatus === 'generating';
 }
 
 function CommentItem({

@@ -45,6 +45,13 @@ export function updateDream(
   );
 }
 
+export function fetchDream(dreamId: string, token?: string | null) {
+  return requestJson<Dream>(
+    `/dreams/${encodeURIComponent(dreamId)}`,
+    { token },
+  );
+}
+
 export function shareDream(
   dreamId: string,
   token?: string | null,

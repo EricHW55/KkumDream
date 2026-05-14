@@ -15,6 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { createDreamDraft, giveDream, shareDream, updateDream } from '../api/dreams';
 import { DreamCard } from '../components/DreamCard';
+import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { getCachedRooms, loadRooms } from '../data/dreamRepository';
@@ -28,8 +29,31 @@ import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
+const toneOptions = [
+  {
+    value: 'warm',
+    label: '다정한 편지체',
+    description: '부드럽고 친근하게 마음을 전해요.',
+  },
+  {
+    value: 'polite',
+    label: '공손한 말투',
+    description: '차분한 존댓말로 정돈해서 써요.',
+  },
+  {
+    value: 'story',
+    label: '소설체',
+    description: '장면과 움직임이 살아나게 풀어줘요.',
+  },
+  {
+    value: 'poetic',
+    label: '시적인 문장',
+    description: '짧고 감각적인 문장으로 여운을 남겨요.',
+  },
+] as const;
 
 type RecipientMode = 'friend' | 'external';
+type ToneValue = (typeof toneOptions)[number]['value'];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
@@ -40,6 +64,7 @@ export function ComposeScreen({ navigation }: Props) {
   const currentUserId = sessionUserId ?? LOCAL_MOCK_USER_ID;
   const [rawInput, setRawInput] = useState('');
   const [mood, setMood] = useState('몽환');
+  const [tone, setTone] = useState<ToneValue>('warm');
   const [draft, setDraft] = useState<Dream | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -107,6 +132,8 @@ export function ComposeScreen({ navigation }: Props) {
   );
 
   const canGenerate = rawInput.trim().length > 0 && !isGenerating;
+  const selectedTone =
+    toneOptions.find(item => item.value === tone) ?? toneOptions[0];
   const trimmedLabel = externalLabel.trim();
   const recipientReady =
     recipientMode === 'friend'
@@ -152,7 +179,7 @@ export function ComposeScreen({ navigation }: Props) {
     setIsGenerating(true);
     let nextDraft: Dream;
     try {
-      nextDraft = await createDreamDraft({ rawInput: input, mood }, token);
+      nextDraft = await createDreamDraft({ rawInput: input, mood, tone }, token);
     } catch (error) {
       if (token) {
         setActionError(
@@ -351,10 +378,46 @@ export function ComposeScreen({ navigation }: Props) {
         ))}
       </View>
 
+      <Text style={styles.label}>어체</Text>
+      <View style={styles.toneGrid}>
+        {toneOptions.map(item => {
+          const isSelected = item.value === tone;
+          return (
+            <Pressable
+              key={item.value}
+              accessibilityRole="button"
+              onPress={() => setTone(item.value)}
+              style={({ pressed }) => [
+                styles.toneOption,
+                isSelected && styles.toneOptionActive,
+                pressed && interactionStyles.pressedSoft,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.toneLabel,
+                  isSelected && styles.toneLabelActive,
+                ]}
+              >
+                {item.label}
+              </Text>
+              <Text style={styles.toneDescription}>{item.description}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.toneHint}>{selectedTone.description}</Text>
+
       <PrimaryButton disabled={!canGenerate} onPress={createPreview}>
-        카드 미리보기 만들기
+        {isGenerating ? '꿈카드 빚는 중...' : '카드 미리보기 만들기'}
       </PrimaryButton>
       {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
+      {isGenerating ? (
+        <DreamGenerationAnimation
+          title="꿈을 글로 빚는 중"
+          subtitle="달빛과 구름 사이에서 카드 문장을 고르고 있어요."
+        />
+      ) : null}
 
       {draft ? (
         <View style={styles.preview}>
@@ -776,6 +839,48 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+  },
+  toneGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  toneOption: {
+    width: '48%',
+    minHeight: 78,
+    borderRadius: 16,
+    padding: 12,
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  toneOptionActive: {
+    backgroundColor: colors.lavenderMist,
+    borderColor: colors.primary,
+  },
+  toneLabel: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  toneLabelActive: {
+    color: colors.primaryDark,
+  },
+  toneDescription: {
+    marginTop: 7,
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  toneHint: {
+    marginTop: -6,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
   },
   preview: {
     gap: 16,

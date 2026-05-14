@@ -231,7 +231,9 @@ export function DreamLibraryView({
                           ) : (
                             <View style={styles.dayPreviewFallback}>
                               <Text style={styles.dayPreviewMood}>
-                                {firstDream?.mainMood.slice(0, 2)}
+                                {firstDream && isImagePending(firstDream)
+                                  ? '생성중'
+                                  : firstDream?.mainMood.slice(0, 2)}
                               </Text>
                             </View>
                           )}
@@ -328,7 +330,9 @@ export function DreamLibraryView({
                         ) : (
                           <View style={styles.pickerThumbFallback}>
                             <Text style={styles.pickerThumbMood}>
-                              {dream.mainMood.slice(0, 2)}
+                              {isImagePending(dream)
+                                ? '생성중'
+                                : dream.mainMood.slice(0, 2)}
                             </Text>
                           </View>
                         )}
@@ -425,7 +429,9 @@ function MiniDreamCard({
             style={styles.miniImageAsset}
           />
         ) : (
-          <Text style={styles.miniMood}>{dream.mainMood}</Text>
+          <Text style={styles.miniMood}>
+            {isImagePending(dream) ? '이미지 생성 중' : dream.mainMood}
+          </Text>
         )}
       </View>
       <View style={styles.miniBody}>
@@ -517,6 +523,10 @@ function formatCalendarLabel(
 
   const [, month, day] = dateKey.split('-');
   return `${Number(month)}월 ${Number(day)}일 ${calendarLabel} ${count}개`;
+}
+
+function isImagePending(dream: Dream) {
+  return dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
 }
 
 const styles = StyleSheet.create({
