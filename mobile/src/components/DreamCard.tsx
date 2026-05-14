@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   Alert,
-  type GestureResponderEvent,
   Image,
   Pressable,
   ScrollView,
@@ -75,11 +74,7 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
     });
   };
 
-  const runImageAction = async (
-    event: GestureResponderEvent,
-    action: 'share' | 'save',
-  ) => {
-    event.stopPropagation();
+  const runImageAction = async (action: 'share' | 'save') => {
     if (!imageUrl) {
       Alert.alert(
         '이미지가 아직 없어요',
@@ -116,7 +111,8 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
         accessibilityLabel="꿈카드 이미지 공유"
         accessibilityRole="button"
         disabled={isImageActionPending}
-        onPress={event => runImageAction(event, 'share')}
+        hitSlop={8}
+        onPress={() => runImageAction('share')}
         style={({ pressed }) => [
           styles.imageActionButton,
           isImageActionPending && styles.imageActionButtonDisabled,
@@ -129,7 +125,8 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
         accessibilityLabel="꿈카드 이미지 저장"
         accessibilityRole="button"
         disabled={isImageActionPending}
-        onPress={event => runImageAction(event, 'save')}
+        hitSlop={8}
+        onPress={() => runImageAction('save')}
         style={({ pressed }) => [
           styles.imageActionButton,
           isImageActionPending && styles.imageActionButtonDisabled,
@@ -141,48 +138,51 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
     </View>
   );
 
+  const cardPressHandler = onPress ?? flip;
+
   return (
-    <Pressable
-      onPress={onPress ?? flip}
-      onLongPress={flip}
-      style={({ pressed }) => [
-        styles.pressable,
-        pressed && interactionStyles.pressedSoft,
-      ]}
-    >
+    <View style={styles.pressable}>
       <View style={[styles.scene, { height: cardHeight }]}>
         <Animated.View
           style={[styles.card, styles.face, { height: cardHeight }, frontStyle]}
         >
-          <View style={[styles.imageWrap, { height: imageHeight }]}>
-            {dream.thumbnailUrl || dream.imageUrl ? (
-              <Image
-                source={{
-                  uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
-                }}
-                style={styles.image}
-              />
-            ) : (
-              <View style={styles.placeholder}>
-                <Text style={styles.placeholderText}>{dream.mainMood}</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.content}>
-            <Text style={styles.senderLine}>
-              {giverName} → {receiverName}
-            </Text>
-            <Text style={styles.message}>{dream.shortMessage}</Text>
-            {dream.titleVisible ? (
-              <Text style={styles.title}>{dream.title}</Text>
-            ) : null}
-            <View style={styles.tags}>
-              {dream.tags.map(tag => (
-                <TagChip key={tag} label={tag} />
-              ))}
+          <Pressable
+            onPress={cardPressHandler}
+            onLongPress={flip}
+            style={({ pressed }) => [
+              styles.facePressable,
+              pressed && interactionStyles.pressedSoft,
+            ]}
+          >
+            <View style={[styles.imageWrap, { height: imageHeight }]}>
+              {dream.thumbnailUrl || dream.imageUrl ? (
+                <Image
+                  source={{
+                    uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
+                  }}
+                  style={styles.image}
+                />
+              ) : (
+                <View style={styles.placeholder}>
+                  <Text style={styles.placeholderText}>{dream.mainMood}</Text>
+                </View>
+              )}
             </View>
-          </View>
-          {renderImageActions()}
+            <View style={styles.content}>
+              <Text style={styles.senderLine}>
+                {giverName} → {receiverName}
+              </Text>
+              <Text style={styles.message}>{dream.shortMessage}</Text>
+              {dream.titleVisible ? (
+                <Text style={styles.title}>{dream.title}</Text>
+              ) : null}
+              <View style={styles.tags}>
+                {dream.tags.map(tag => (
+                  <TagChip key={tag} label={tag} />
+                ))}
+              </View>
+            </View>
+          </Pressable>
         </Animated.View>
 
         <Animated.View
@@ -194,23 +194,32 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
             backStyle,
           ]}
         >
-          <ScrollView
-            bounces={false}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={false}
-            style={styles.backScroll}
-            contentContainerStyle={styles.backContent}
+          <Pressable
+            onPress={cardPressHandler}
+            onLongPress={flip}
+            style={({ pressed }) => [
+              styles.facePressable,
+              pressed && interactionStyles.pressedSoft,
+            ]}
           >
-            <Text style={styles.backTitle}>{dream.title}</Text>
-            <Text style={styles.backSenderLine}>
-              {giverName}이 {receiverName}에게 보낸 꿈
-            </Text>
-            <Text style={styles.story}>{dream.story}</Text>
-          </ScrollView>
-          {renderImageActions()}
+            <ScrollView
+              bounces={false}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+              style={styles.backScroll}
+              contentContainerStyle={styles.backContent}
+            >
+              <Text style={styles.backTitle}>{dream.title}</Text>
+              <Text style={styles.backSenderLine}>
+                {giverName}이 {receiverName}에게 보낸 꿈
+              </Text>
+              <Text style={styles.story}>{dream.story}</Text>
+            </ScrollView>
+          </Pressable>
         </Animated.View>
+        {renderImageActions()}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -220,6 +229,10 @@ const styles = StyleSheet.create({
   },
   scene: {
     width: '100%',
+    position: 'relative',
+  },
+  facePressable: {
+    flex: 1,
   },
   card: {
     borderRadius: radius.card,
@@ -322,6 +335,8 @@ const styles = StyleSheet.create({
     bottom: 14,
     flexDirection: 'row',
     gap: 8,
+    zIndex: 10,
+    elevation: 10,
   },
   imageActionButton: {
     width: 38,

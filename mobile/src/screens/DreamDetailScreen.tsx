@@ -6,7 +6,6 @@ import {
   Heart,
   MessageCircle,
   Moon,
-  Share2,
   Sparkles,
   X as XIcon,
 } from 'lucide-react-native';
@@ -14,7 +13,6 @@ import type { LucideIcon } from 'lucide-react-native';
 import {
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -29,7 +27,6 @@ import {
   fetchDreamReactions,
   markDreamBackOpened,
   markDreamRead,
-  shareDream,
   toggleDreamReaction,
 } from '../api/dreams';
 import { getCurrentUserId, isCurrentUserId } from '../data/currentUser';
@@ -188,29 +185,6 @@ export function DreamDetailScreen({ route }: Props) {
   );
   const canSubmit =
     !isSender && commentDraft.trim().length > 0 && !isSubmittingComment;
-  const [shareError, setShareError] = useState<string | null>(null);
-  const [isSharing, setIsSharing] = useState(false);
-
-  const onPressShare = async () => {
-    if (!token) {
-      setShareError('로그인이 필요합니다.');
-      return;
-    }
-    setShareError(null);
-    setIsSharing(true);
-    try {
-      const result = await shareDream(dream.id, token);
-      const recipientText = dream.receiverLabel
-        ? `${dream.receiverLabel}에게 보낸 꿈 카드`
-        : '내가 보낸 꿈 카드';
-      const message = `${recipientText}\n"${dream.shortMessage}"\n\n${result.shareUrl}\n\n꿈드림 앱에서 자세히 확인해보세요.`;
-      await Share.share({ message, url: result.shareUrl, title: dream.title });
-    } catch (error) {
-      setShareError(error instanceof Error ? error.message : '공유 링크를 만들지 못했어요.');
-    } finally {
-      setIsSharing(false);
-    }
-  };
 
   const onToggleReaction = async (reactionType: DreamReactionType) => {
     if (!token || pendingReaction) {
@@ -297,32 +271,6 @@ export function DreamDetailScreen({ route }: Props) {
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <DreamCard dream={dream} size="full" onBackOpen={onBackOpen} />
-
-      {isSender ? (
-        <View style={styles.shareBox}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={isSharing}
-            onPress={onPressShare}
-            style={({ pressed }) => [
-              styles.shareButton,
-              isSharing && styles.shareButtonDisabled,
-              pressed && !isSharing && interactionStyles.pressed,
-            ]}
-          >
-            <Share2 color={colors.primary} size={18} />
-            <Text style={styles.shareButtonText}>
-              {isSharing ? '공유 링크 만드는 중...' : '카톡 등으로 공유하기'}
-            </Text>
-          </Pressable>
-          {shareError ? <Text style={styles.errorText}>{shareError}</Text> : null}
-          {dream.receiverLabel && !dream.receiverId ? (
-            <Text style={styles.shareHint}>
-              "{dream.receiverLabel}"이 링크로 카드를 받으면 자동으로 받은 카드함에 등장해요.
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
 
       <View style={styles.reactionBox}>
         <View style={styles.reactionRow}>
@@ -490,40 +438,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     gap: 18,
-  },
-  shareBox: {
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: colors.cardBase,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    gap: 10,
-  },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    minHeight: 46,
-    borderRadius: 14,
-    backgroundColor: colors.lavenderMist,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  shareButtonDisabled: {
-    opacity: 0.5,
-  },
-  shareButtonText: {
-    color: colors.primaryDark,
-    fontSize: 14,
-    fontWeight: '700',
-    includeFontPadding: false,
-  },
-  shareHint: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 18,
   },
   reactionBox: {
     padding: 18,

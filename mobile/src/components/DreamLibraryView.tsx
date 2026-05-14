@@ -56,6 +56,8 @@ export function DreamLibraryView({
   const [mode, setMode] = useState<LibraryMode>('archive');
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null);
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([]);
+  const [multiDreamDateGroup, setMultiDreamDateGroup] =
+    useState<DateGroup | null>(null);
   const previewPanResponder = useMemo(
     () =>
       PanResponder.create({
@@ -81,9 +83,6 @@ export function DreamLibraryView({
     () => buildCalendarMonths(groupedDreams),
     [groupedDreams],
   );
-  const selectedDateDreams = selectedDateKeys.flatMap(
-    dateKey => groupedDreamMap.get(dateKey)?.items ?? [],
-  );
   const miniCardWidth = Math.floor((width - 40 - 20) / 3);
 
   const openDetail = (dream: Dream) => {
@@ -91,16 +90,25 @@ export function DreamLibraryView({
     navigation.navigate('DreamDetail', { dream });
   };
 
-  const toggleDate = (dateKey: string) => {
-    if (!groupedDreamMap.has(dateKey)) {
+  const onPressCalendarDate = (dateKey: string) => {
+    const group = groupedDreamMap.get(dateKey);
+    if (!group) {
       return;
     }
 
-    setSelectedDateKeys(currentKeys =>
-      currentKeys.includes(dateKey)
-        ? currentKeys.filter(key => key !== dateKey)
-        : [...currentKeys, dateKey],
-    );
+    if (!selectedDateKeys.includes(dateKey)) {
+      setSelectedDateKeys(currentKeys =>
+        currentKeys.includes(dateKey) ? currentKeys : [...currentKeys, dateKey],
+      );
+      return;
+    }
+
+    if (group.items.length === 1) {
+      setSelectedDream(group.items[0]);
+      return;
+    }
+
+    setMultiDreamDateGroup(group);
   };
 
   return (
@@ -197,12 +205,15 @@ export function DreamLibraryView({
 
                   const group = groupedDreamMap.get(cell.dateKey);
                   const isSelected = selectedDateKeys.includes(cell.dateKey);
+                  const firstDream = group?.items[0];
+                  const previewImageUrl =
+                    firstDream?.thumbnailUrl ?? firstDream?.imageUrl;
                   return (
                     <Pressable
                       key={cell.dateKey}
                       accessibilityRole="button"
                       disabled={!group}
-                      onPress={() => toggleDate(cell.dateKey)}
+                      onPress={() => onPressCalendarDate(cell.dateKey)}
                       style={({ pressed }) => [
                         styles.dayCell,
                         group && styles.dayCellWithDream,
@@ -210,73 +221,45 @@ export function DreamLibraryView({
                         pressed && group && interactionStyles.pressed,
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.dayText,
-                          group && styles.dayTextWithDream,
-                          isSelected && styles.dayTextSelected,
-                        ]}
-                      >
-                        {cell.day}
-                      </Text>
-                      {group ? (
-                        <View style={styles.dayDot}>
-                          <Text style={styles.dayDotText}>{group.items.length}</Text>
+                      {group && isSelected ? (
+                        <View style={styles.dayPreview}>
+                          {previewImageUrl ? (
+                            <Image
+                              source={{ uri: previewImageUrl }}
+                              style={styles.dayPreviewImage}
+                            />
+                          ) : (
+                            <View style={styles.dayPreviewFallback}>
+                              <Text style={styles.dayPreviewMood}>
+                                {firstDream?.mainMood.slice(0, 2)}
+                              </Text>
+                            </View>
+                          )}
+                          <View style={styles.dayPreviewOverlay}>
+                            <Text style={styles.dayPreviewDay}>{cell.day}</Text>
+                            {group.items.length > 1 ? (
+                              <Text style={styles.dayPreviewCount}>
+                                {group.items.length}
+                              </Text>
+                            ) : null}
+                          </View>
                         </View>
-                      ) : null}
+                      ) : (
+                        <Text
+                          style={[
+                            styles.dayText,
+                            group && styles.dayTextWithDream,
+                          ]}
+                        >
+                          {cell.day}
+                        </Text>
+                      )}
                     </Pressable>
                   );
                 })}
               </View>
             </View>
           ))}
-
-          {selectedDateDreams.length > 0 ? (
-            <View style={styles.storyTray}>
-              {selectedDateDreams.map((dream, index) => (
-                <Pressable
-                  key={dream.id}
-                  accessibilityRole="button"
-                  onPress={() => setSelectedDream(dream)}
-                  style={({ pressed }) => [
-                    styles.storyThumbButton,
-                    pressed && interactionStyles.pressed,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.storyThumbRing,
-                      { borderColor: cardColors[index % cardColors.length] },
-                    ]}
-                  >
-                    {dream.thumbnailUrl || dream.imageUrl ? (
-                      <Image
-                        source={{
-                          uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
-                        }}
-                        style={styles.storyThumbImage}
-                      />
-                    ) : (
-                      <View style={styles.storyThumbFallback}>
-                        <Text style={styles.storyThumbMood}>
-                          {dream.mainMood.slice(0, 2)}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.storyThumbLabel} numberOfLines={1}>
-                    {dream.title}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.calendarHintBox}>
-              <Text style={styles.calendarHintText}>
-                꿈이 있는 날짜를 누르면 원형 이미지가 떠요.
-              </Text>
-            </View>
-          )}
 
           {calendarMonths.length === 0 ? (
             <View style={styles.calendarHintBox}>
@@ -285,6 +268,82 @@ export function DreamLibraryView({
           ) : null}
         </ScrollView>
       )}
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={multiDreamDateGroup !== null}
+        onRequestClose={() => setMultiDreamDateGroup(null)}
+      >
+        <Pressable
+          style={styles.pickerBackdrop}
+          onPress={() => setMultiDreamDateGroup(null)}
+        >
+          {multiDreamDateGroup ? (
+            <Pressable
+              style={styles.pickerSheet}
+              onPress={event => event.stopPropagation()}
+            >
+              <View style={styles.pickerHeader}>
+                <Text style={styles.pickerTitle}>{multiDreamDateGroup.label}</Text>
+                <Pressable
+                  accessibilityLabel="닫기"
+                  accessibilityRole="button"
+                  onPress={() => setMultiDreamDateGroup(null)}
+                  style={({ pressed }) => [
+                    styles.pickerClose,
+                    pressed && interactionStyles.pressed,
+                  ]}
+                >
+                  <X color={colors.textSecondary} size={18} />
+                </Pressable>
+              </View>
+              <View style={styles.pickerGrid}>
+                {multiDreamDateGroup.items.map((dream, index) => {
+                  const imageUrl = dream.thumbnailUrl ?? dream.imageUrl;
+                  return (
+                    <Pressable
+                      key={dream.id}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setMultiDreamDateGroup(null);
+                        setSelectedDream(dream);
+                      }}
+                      style={({ pressed }) => [
+                        styles.pickerThumbButton,
+                        pressed && interactionStyles.pressed,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.pickerThumbRing,
+                          { borderColor: cardColors[index % cardColors.length] },
+                        ]}
+                      >
+                        {imageUrl ? (
+                          <Image
+                            source={{ uri: imageUrl }}
+                            style={styles.pickerThumbImage}
+                          />
+                        ) : (
+                          <View style={styles.pickerThumbFallback}>
+                            <Text style={styles.pickerThumbMood}>
+                              {dream.mainMood.slice(0, 2)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.pickerThumbLabel} numberOfLines={1}>
+                        {dream.title}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </Pressable>
+          ) : null}
+        </Pressable>
+      </Modal>
 
       <Modal
         animationType="slide"
@@ -600,10 +659,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   dayCellWithDream: {
-    backgroundColor: colors.lavenderMist,
+    backgroundColor: 'transparent',
   },
   dayCellSelected: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#FFFFFF',
   },
   dayText: {
     color: colors.textMuted,
@@ -614,75 +673,66 @@ const styles = StyleSheet.create({
   dayTextWithDream: {
     color: colors.textPrimary,
   },
-  dayTextSelected: {
-    color: '#FFFFFF',
-  },
-  dayDot: {
-    position: 'absolute',
-    right: 7,
-    bottom: 7,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 4,
-  },
-  dayDotText: {
-    color: colors.primaryDark,
-    fontSize: 9,
-    fontWeight: '700',
-    includeFontPadding: false,
-  },
-  storyTray: {
-    minHeight: 118,
-    borderRadius: 24,
-    padding: 14,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    backgroundColor: colors.lavenderMist,
-  },
-  storyThumbButton: {
-    width: 74,
-    alignItems: 'center',
-    gap: 7,
-  },
-  storyThumbRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    padding: 3,
+  dayPreview: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     borderWidth: 3,
-    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
     overflow: 'hidden',
+    backgroundColor: colors.lavenderTint,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  storyThumbImage: {
+  dayPreviewImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 29,
   },
-  storyThumbFallback: {
+  dayPreviewFallback: {
     flex: 1,
-    borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.lavenderTint,
   },
-  storyThumbMood: {
+  dayPreviewMood: {
     color: colors.primaryDark,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
     includeFontPadding: false,
   },
-  storyThumbLabel: {
-    width: '100%',
-    textAlign: 'center',
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '700',
+  dayPreviewOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(35, 30, 54, 0.26)',
+  },
+  dayPreviewDay: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
     includeFontPadding: false,
+  },
+  dayPreviewCount: {
+    position: 'absolute',
+    right: 5,
+    bottom: 4,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    textAlign: 'center',
+    color: colors.primaryDark,
+    backgroundColor: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '800',
+    includeFontPadding: false,
+    overflow: 'hidden',
   },
   calendarHintBox: {
     borderRadius: 20,
@@ -694,6 +744,87 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
+  },
+  pickerBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.34)',
+  },
+  pickerSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 18,
+    gap: 16,
+    backgroundColor: colors.background,
+  },
+  pickerHeader: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  pickerTitle: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  pickerClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
+  },
+  pickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    paddingBottom: 4,
+  },
+  pickerThumbButton: {
+    width: 76,
+    alignItems: 'center',
+    gap: 7,
+  },
+  pickerThumbRing: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    padding: 3,
+    borderWidth: 3,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  pickerThumbImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 30,
+  },
+  pickerThumbFallback: {
+    flex: 1,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lavenderTint,
+  },
+  pickerThumbMood: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  pickerThumbLabel: {
+    width: '100%',
+    textAlign: 'center',
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+    includeFontPadding: false,
   },
   previewBackdrop: {
     flex: 1,
