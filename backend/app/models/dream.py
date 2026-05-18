@@ -20,6 +20,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
+DEFAULT_DREAM_DESIGN = {"card_color": "ivory", "font_style": "rounded"}
+
 
 class Dream(Base):
     __tablename__ = "dreams"
@@ -60,6 +62,14 @@ class Dream(Base):
     main_mood: Mapped[str] = mapped_column(String(20), nullable=False)
     tags: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    design: Mapped[dict[str, str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=lambda: DEFAULT_DREAM_DESIGN.copy(),
+        server_default=text(
+            """'{"card_color": "ivory", "font_style": "rounded"}'::jsonb"""
+        ),
     )
 
     status: Mapped[str] = mapped_column(

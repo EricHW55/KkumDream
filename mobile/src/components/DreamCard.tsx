@@ -16,6 +16,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { colors } from '../theme/colors';
+import {
+  CARD_COLOR_THEMES,
+  getDreamFontStyle,
+  normalizeDreamDesign,
+} from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
 import { saveDreamImage, shareDreamImage } from '../native/dreamImageActions';
 import { radius } from '../theme/spacing';
@@ -33,7 +38,12 @@ type Props = {
   onBackOpen?: () => void;
 };
 
-export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) {
+export function DreamCard({
+  dream,
+  size = 'feed',
+  onPress,
+  onBackOpen,
+}: Props) {
   const sessionUserId = useSessionStore(state => state.userId);
   const [isBackVisible, setIsBackVisible] = useState(false);
   const [isImageActionPending, setIsImageActionPending] = useState(false);
@@ -54,6 +64,9 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
   const hasImage = Boolean(dream.thumbnailUrl || dream.imageUrl);
   const isImageGenerating =
     dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
+  const design = normalizeDreamDesign(dream.design);
+  const designTheme = CARD_COLOR_THEMES[design.cardColor];
+  const dreamFontStyle = getDreamFontStyle(design.fontStyle);
 
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
@@ -152,7 +165,16 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
     <View style={styles.pressable}>
       <View style={[styles.scene, { height: cardHeight }]}>
         <Animated.View
-          style={[styles.card, styles.face, { height: cardHeight }, frontStyle]}
+          style={[
+            styles.card,
+            styles.face,
+            {
+              height: cardHeight,
+              backgroundColor: designTheme.card,
+              shadowColor: designTheme.shadow,
+            },
+            frontStyle,
+          ]}
         >
           <Pressable
             onPress={cardPressHandler}
@@ -162,7 +184,15 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
               pressed && interactionStyles.pressedSoft,
             ]}
           >
-            <View style={[styles.imageWrap, { height: imageHeight }]}>
+            <View
+              style={[
+                styles.imageWrap,
+                {
+                  height: imageHeight,
+                  backgroundColor: designTheme.image,
+                },
+              ]}
+            >
               {hasImage ? (
                 <Image
                   source={{
@@ -177,29 +207,87 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
                   subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
                 />
               ) : dream.imageStatus === 'failed' ? (
-                <View style={styles.placeholder}>
-                  <Text style={styles.failureText}>이미지 준비 실패</Text>
-                  <Text style={styles.placeholderHint}>
+                <View
+                  style={[
+                    styles.placeholder,
+                    { backgroundColor: designTheme.placeholder },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.failureText,
+                      dreamFontStyle,
+                      { color: designTheme.accent },
+                    ]}
+                  >
+                    이미지 준비 실패
+                  </Text>
+                  <Text
+                    style={[
+                      styles.placeholderHint,
+                      { color: designTheme.secondaryText },
+                    ]}
+                  >
                     다시 보내거나 새 카드로 시도해 주세요.
                   </Text>
                 </View>
               ) : (
-                <View style={styles.placeholder}>
-                  <Text style={styles.placeholderText}>{dream.mainMood}</Text>
+                <View
+                  style={[
+                    styles.placeholder,
+                    { backgroundColor: designTheme.placeholder },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.placeholderText,
+                      dreamFontStyle,
+                      { color: designTheme.accent },
+                    ]}
+                  >
+                    {dream.mainMood}
+                  </Text>
                 </View>
               )}
             </View>
             <View style={styles.content}>
-              <Text style={styles.senderLine}>
+              <Text
+                style={[
+                  styles.senderLine,
+                  dreamFontStyle,
+                  { color: designTheme.accent },
+                ]}
+              >
                 {giverName} → {receiverName}
               </Text>
-              <Text style={styles.message}>{dream.shortMessage}</Text>
+              <Text
+                style={[
+                  styles.message,
+                  dreamFontStyle,
+                  { color: designTheme.secondaryText },
+                ]}
+              >
+                {dream.shortMessage}
+              </Text>
               {dream.titleVisible ? (
-                <Text style={styles.title}>{dream.title}</Text>
+                <Text
+                  style={[
+                    styles.title,
+                    dreamFontStyle,
+                    { color: designTheme.text },
+                  ]}
+                >
+                  {dream.title}
+                </Text>
               ) : null}
               <View style={styles.tags}>
                 {dream.tags.map(tag => (
-                  <TagChip key={tag} label={tag} />
+                  <TagChip
+                    key={tag}
+                    label={tag}
+                    backgroundColor={designTheme.tagBackground}
+                    textColor={designTheme.tagText}
+                  />
                 ))}
               </View>
             </View>
@@ -211,7 +299,11 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
             styles.card,
             styles.face,
             styles.backFace,
-            { height: cardHeight },
+            {
+              height: cardHeight,
+              backgroundColor: designTheme.back,
+              shadowColor: designTheme.shadow,
+            },
             backStyle,
           ]}
         >
@@ -230,11 +322,33 @@ export function DreamCard({ dream, size = 'feed', onPress, onBackOpen }: Props) 
               style={styles.backScroll}
               contentContainerStyle={styles.backContent}
             >
-              <Text style={styles.backTitle}>{dream.title}</Text>
-              <Text style={styles.backSenderLine}>
+              <Text
+                style={[
+                  styles.backTitle,
+                  dreamFontStyle,
+                  { color: designTheme.text },
+                ]}
+              >
+                {dream.title}
+              </Text>
+              <Text
+                style={[
+                  styles.backSenderLine,
+                  dreamFontStyle,
+                  { color: designTheme.accent },
+                ]}
+              >
                 {giverName}이 {receiverName}에게 보낸 꿈
               </Text>
-              <Text style={styles.story}>{dream.story}</Text>
+              <Text
+                style={[
+                  styles.story,
+                  dreamFontStyle,
+                  { color: designTheme.secondaryText },
+                ]}
+              >
+                {dream.story}
+              </Text>
             </ScrollView>
           </Pressable>
         </Animated.View>

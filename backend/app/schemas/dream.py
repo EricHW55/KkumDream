@@ -8,12 +8,20 @@ from app.schemas.base import ApiModel
 
 ReactionType = Literal["heart", "sparkle", "moon", "cloud"]
 REACTION_TYPES: tuple[ReactionType, ...] = ("heart", "sparkle", "moon", "cloud")
+CardColor = Literal["ivory", "lilac", "peach", "mint", "midnight"]
+FontStyle = Literal["rounded", "serif", "clean"]
+
+
+class DreamDesign(ApiModel):
+    card_color: CardColor = "ivory"
+    font_style: FontStyle = "rounded"
 
 
 class DreamDraftCreate(ApiModel):
     raw_input: str = Field(min_length=1, max_length=500)
     mood: str | None = Field(default=None, max_length=20)
     tone: str | None = Field(default=None, max_length=30)
+    design: DreamDesign = Field(default_factory=DreamDesign)
 
 
 class DreamUpdate(ApiModel):
@@ -23,6 +31,7 @@ class DreamUpdate(ApiModel):
     summary: str | None = Field(default=None, max_length=220)
     story: str | None = Field(default=None, max_length=1000)
     tags: list[str] | None = None
+    design: DreamDesign | None = None
 
 
 class DreamGiveRequest(ApiModel):
@@ -54,6 +63,7 @@ class DreamOut(ApiModel):
     thumbnail_url: str | None = None
     main_mood: str
     tags: list[str]
+    design: DreamDesign
     status: str
     image_status: str
     created_at: datetime

@@ -1,6 +1,25 @@
 export type DreamStatus = 'draft' | 'given' | 'opened' | 'replied';
-export type ImageStatus = 'empty' | 'queued' | 'generating' | 'ready' | 'failed';
-export type Mood = '몽환' | '판타지' | '공포' | '코믹' | '따뜻함' | '추억' | '기괴함';
+export type ImageStatus =
+  | 'empty'
+  | 'queued'
+  | 'generating'
+  | 'ready'
+  | 'failed';
+export type Mood =
+  | '몽환'
+  | '판타지'
+  | '공포'
+  | '코믹'
+  | '따뜻함'
+  | '추억'
+  | '기괴함';
+export type DreamCardColor = 'ivory' | 'lilac' | 'peach' | 'mint' | 'midnight';
+export type DreamFontStyle = 'rounded' | 'serif' | 'clean';
+
+export interface DreamDesign {
+  cardColor: DreamCardColor;
+  fontStyle: DreamFontStyle;
+}
 
 export interface Dream {
   id: string;
@@ -19,6 +38,7 @@ export interface Dream {
   thumbnailUrl: string | null;
   mainMood: Mood | string;
   tags: string[];
+  design?: DreamDesign;
   status: DreamStatus;
   imageStatus: ImageStatus;
   createdAt: string;
@@ -32,6 +52,7 @@ export interface DreamDraftPayload {
   rawInput: string;
   mood?: string;
   tone?: string;
+  design?: DreamDesign;
 }
 
 export interface DreamGivePayload {
@@ -47,6 +68,7 @@ export interface DreamUpdatePayload {
   summary?: string;
   story?: string;
   tags?: string[];
+  design?: DreamDesign;
 }
 
 export interface DreamShareResult {

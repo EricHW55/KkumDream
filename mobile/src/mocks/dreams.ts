@@ -1,4 +1,5 @@
 import type { Dream } from '../types/dream';
+import { DEFAULT_DREAM_DESIGN } from '../theme/dreamDesigns';
 
 const now = new Date().toISOString();
 
@@ -22,6 +23,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '몽환',
     tags: ['몽환', '친구', '비행'],
+    design: { cardColor: 'lilac', fontStyle: 'rounded' },
     status: 'opened',
     imageStatus: 'ready',
     createdAt: now,
@@ -49,6 +51,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '코믹',
     tags: ['코믹', '학교', '고양이'],
+    design: { cardColor: 'peach', fontStyle: 'clean' },
     status: 'given',
     imageStatus: 'queued',
     createdAt: now,
@@ -75,6 +78,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '잔잔',
     tags: ['비', '도시', '창문'],
+    design: { cardColor: 'midnight', fontStyle: 'serif' },
     status: 'opened',
     imageStatus: 'ready',
     createdAt: now,
@@ -101,6 +105,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '상상',
     tags: ['달', '책방', '별'],
+    design: { cardColor: 'ivory', fontStyle: 'serif' },
     status: 'given',
     imageStatus: 'ready',
     createdAt: now,
@@ -127,6 +132,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '몽환',
     tags: ['바다', '계단', '기억'],
+    design: { cardColor: 'mint', fontStyle: 'rounded' },
     status: 'given',
     imageStatus: 'ready',
     createdAt: now,
@@ -137,7 +143,11 @@ export const mockDreams: Dream[] = [
   },
 ];
 
-export function buildMockDraft(rawInput: string, mood: string): Dream {
+export function buildMockDraft(
+  rawInput: string,
+  mood: string,
+  design = DEFAULT_DREAM_DESIGN,
+): Dream {
   return {
     ...mockDreams[0],
     id: `draft-${Date.now()}`,
@@ -152,6 +162,7 @@ export function buildMockDraft(rawInput: string, mood: string): Dream {
       '꿈속에서 익숙한 장면은 천천히 낯선 정원으로 바뀌었다. 손에 쥔 작은 카드가 빛나자 기억하던 풍경들이 조용히 펼쳐졌고, 그 끝에는 누군가에게 건네고 싶은 한 문장이 남았다.',
     mainMood: mood,
     tags: [mood, '기억', '선물'],
+    design,
     status: 'draft',
     imageStatus: 'empty',
     givenAt: null,

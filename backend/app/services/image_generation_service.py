@@ -4,6 +4,10 @@ import replicate
 
 from app.core.config import settings
 
+REPLICATE_IMAGE_COSTS = {
+    "black-forest-labs/flux-schnell": 0.003,
+}
+
 
 async def generate_image_url(image_prompt: str) -> str:
     if settings.ai_mock_mode or not settings.replicate_api_token:
@@ -28,3 +32,12 @@ async def generate_image_url(image_prompt: str) -> str:
     if isinstance(output, list):
         return str(output[0])
     return str(output)
+
+
+def estimate_image_generation_cost(
+    model_name: str, output_count: int = 1
+) -> float | None:
+    cost_per_image = REPLICATE_IMAGE_COSTS.get(model_name)
+    if cost_per_image is None:
+        return None
+    return cost_per_image * output_count

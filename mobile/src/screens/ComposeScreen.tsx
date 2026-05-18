@@ -10,10 +10,22 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Check, PencilLine, Search, Share2, X } from 'lucide-react-native';
+import {
+  Check,
+  Palette,
+  PencilLine,
+  Search,
+  Share2,
+  X,
+} from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createDreamDraft, giveDream, shareDream, updateDream } from '../api/dreams';
+import {
+  createDreamDraft,
+  giveDream,
+  shareDream,
+  updateDream,
+} from '../api/dreams';
 import { DreamCard } from '../components/DreamCard';
 import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
 import { MoonAvatar } from '../components/MoonAvatar';
@@ -25,8 +37,14 @@ import { buildMockDraft } from '../mocks/dreams';
 import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
+import {
+  CARD_COLOR_OPTIONS,
+  DEFAULT_DREAM_DESIGN,
+  FONT_STYLE_OPTIONS,
+  normalizeDreamDesign,
+} from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
-import type { Dream } from '../types/dream';
+import type { Dream, DreamDesign } from '../types/dream';
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
 const toneOptions = [
@@ -65,6 +83,8 @@ export function ComposeScreen({ navigation }: Props) {
   const [rawInput, setRawInput] = useState('');
   const [mood, setMood] = useState('몽환');
   const [tone, setTone] = useState<ToneValue>('warm');
+  const [selectedDesign, setSelectedDesign] =
+    useState<DreamDesign>(DEFAULT_DREAM_DESIGN);
   const [draft, setDraft] = useState<Dream | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -123,7 +143,9 @@ export function ComposeScreen({ navigation }: Props) {
       return friends;
     }
 
-    return friends.filter(friend => friend.name.toLowerCase().includes(keyword));
+    return friends.filter(friend =>
+      friend.name.toLowerCase().includes(keyword),
+    );
   }, [friendSearch, friends]);
 
   const myRooms = useMemo(
@@ -134,6 +156,12 @@ export function ComposeScreen({ navigation }: Props) {
   const canGenerate = rawInput.trim().length > 0 && !isGenerating;
   const selectedTone =
     toneOptions.find(item => item.value === tone) ?? toneOptions[0];
+  const selectedColorOption =
+    CARD_COLOR_OPTIONS.find(item => item.value === selectedDesign.cardColor) ??
+    CARD_COLOR_OPTIONS[0];
+  const selectedFontOption =
+    FONT_STYLE_OPTIONS.find(item => item.value === selectedDesign.fontStyle) ??
+    FONT_STYLE_OPTIONS[0];
   const trimmedLabel = externalLabel.trim();
   const recipientReady =
     recipientMode === 'friend'
@@ -159,15 +187,34 @@ export function ComposeScreen({ navigation }: Props) {
           .join(', ')
       : '꿈방 공유 없음';
 
-  const previewDream =
-    draft
-      ? {
-          ...draft,
-          receiverId: recipientMode === 'friend' ? selectedReceiverId : null,
-          receiverLabel: recipientMode === 'external' ? trimmedLabel || null : null,
-          groupIds: selectedGroupIds,
-        }
-      : null;
+  const previewDream = draft
+    ? {
+        ...draft,
+        receiverId: recipientMode === 'friend' ? selectedReceiverId : null,
+        receiverLabel:
+          recipientMode === 'external' ? trimmedLabel || null : null,
+        groupIds: selectedGroupIds,
+        design: selectedDesign,
+      }
+    : null;
+
+  const updateSelectedDesign = (nextDesign: DreamDesign) => {
+    const normalizedDesign = normalizeDreamDesign(nextDesign);
+    setSelectedDesign(normalizedDesign);
+    setDraft(currentDraft =>
+      currentDraft
+        ? { ...currentDraft, design: normalizedDesign }
+        : currentDraft,
+    );
+  };
+
+  const updateCardColor = (cardColor: DreamDesign['cardColor']) => {
+    updateSelectedDesign({ ...selectedDesign, cardColor });
+  };
+
+  const updateFontStyle = (fontStyle: DreamDesign['fontStyle']) => {
+    updateSelectedDesign({ ...selectedDesign, fontStyle });
+  };
 
   const createPreview = async () => {
     const input = rawInput.trim();
@@ -179,20 +226,30 @@ export function ComposeScreen({ navigation }: Props) {
     setIsGenerating(true);
     let nextDraft: Dream;
     try {
-      nextDraft = await createDreamDraft({ rawInput: input, mood, tone }, token);
+      nextDraft = await createDreamDraft(
+        { rawInput: input, mood, tone, design: selectedDesign },
+        token,
+      );
     } catch (error) {
       if (token) {
         setActionError(
-          error instanceof Error ? error.message : '카드 미리보기를 만들지 못했어요.',
+          error instanceof Error
+            ? error.message
+            : '카드 미리보기를 만들지 못했어요.',
         );
         return;
       }
-      nextDraft = buildMockDraft(input, mood);
+      nextDraft = buildMockDraft(input, mood, selectedDesign);
     } finally {
       setIsGenerating(false);
     }
 
-    setDraft(nextDraft);
+    const normalizedDraft = {
+      ...nextDraft,
+      design: normalizeDreamDesign(nextDraft.design ?? selectedDesign),
+    };
+    setSelectedDesign(normalizedDraft.design);
+    setDraft(normalizedDraft);
     setEditTitle(nextDraft.title);
     setEditStory(nextDraft.story);
     setIsEditOpen(false);
@@ -215,7 +272,13 @@ export function ComposeScreen({ navigation }: Props) {
     const title = editTitle.trim() || draft.title;
     const story = editStory.trim() || draft.story;
     const summary = story.slice(0, 48) || draft.summary;
-    const nextDraft = { ...draft, title, story, summary };
+    const nextDraft = {
+      ...draft,
+      title,
+      story,
+      summary,
+      design: selectedDesign,
+    };
 
     if (!token) {
       setDraft(nextDraft);
@@ -226,11 +289,19 @@ export function ComposeScreen({ navigation }: Props) {
     setActionError(null);
     setIsSavingEdit(true);
     try {
-      const updatedDream = await updateDream(draft.id, { title, story, summary }, token);
+      const updatedDream = await updateDream(
+        draft.id,
+        { title, story, summary, design: selectedDesign },
+        token,
+      );
       setDraft(updatedDream);
       setIsEditOpen(false);
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : '카드 수정을 저장하지 못했어요.');
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : '카드 수정을 저장하지 못했어요.',
+      );
     } finally {
       setIsSavingEdit(false);
     }
@@ -273,8 +344,14 @@ export function ComposeScreen({ navigation }: Props) {
     setActionError(null);
     setIsGiving(true);
     try {
-      const result = await giveDream(
+      const dreamToGive = await updateDream(
         draft.id,
+        { design: selectedDesign },
+        token,
+      );
+      setDraft(dreamToGive);
+      const result = await giveDream(
+        dreamToGive.id,
         {
           receiverId:
             recipientMode === 'friend' && selectedReceiverId
@@ -339,7 +416,9 @@ export function ComposeScreen({ navigation }: Props) {
         navigation.navigate('MainTabs');
       }
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : '꿈카드를 보내지 못했어요.');
+      setActionError(
+        error instanceof Error ? error.message : '꿈카드를 보내지 못했어요.',
+      );
     } finally {
       setIsGiving(false);
     }
@@ -394,10 +473,7 @@ export function ComposeScreen({ navigation }: Props) {
               ]}
             >
               <Text
-                style={[
-                  styles.toneLabel,
-                  isSelected && styles.toneLabelActive,
-                ]}
+                style={[styles.toneLabel, isSelected && styles.toneLabelActive]}
               >
                 {item.label}
               </Text>
@@ -407,6 +483,97 @@ export function ComposeScreen({ navigation }: Props) {
         })}
       </View>
       <Text style={styles.toneHint}>{selectedTone.description}</Text>
+
+      <View style={styles.designPanel}>
+        <View style={styles.designHeader}>
+          <Palette color={colors.primary} size={19} strokeWidth={2.4} />
+          <View style={styles.flex}>
+            <Text style={styles.designTitle}>카드 디자인</Text>
+            <Text style={styles.designSummary}>
+              {selectedColorOption.label} · {selectedFontOption.label}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.designLabel}>카드 색감</Text>
+        <View style={styles.colorGrid}>
+          {CARD_COLOR_OPTIONS.map(option => {
+            const isSelected = option.value === selectedDesign.cardColor;
+            return (
+              <Pressable
+                key={option.value}
+                accessibilityRole="button"
+                accessibilityLabel={`${option.label} 카드 색감`}
+                onPress={() => updateCardColor(option.value)}
+                style={({ pressed }) => [
+                  styles.colorOption,
+                  isSelected && styles.colorOptionActive,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.colorSwatch,
+                    { backgroundColor: option.swatch },
+                    option.value === 'midnight' && styles.darkSwatch,
+                  ]}
+                >
+                  {isSelected ? (
+                    <Check
+                      color={
+                        option.value === 'midnight'
+                          ? '#FFFFFF'
+                          : colors.primaryDark
+                      }
+                      size={15}
+                      strokeWidth={3}
+                    />
+                  ) : null}
+                </View>
+                <Text
+                  style={[
+                    styles.colorOptionText,
+                    isSelected && styles.colorOptionTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={styles.designLabel}>글씨체</Text>
+        <View style={styles.fontGrid}>
+          {FONT_STYLE_OPTIONS.map(option => {
+            const isSelected = option.value === selectedDesign.fontStyle;
+            return (
+              <Pressable
+                key={option.value}
+                accessibilityRole="button"
+                onPress={() => updateFontStyle(option.value)}
+                style={({ pressed }) => [
+                  styles.fontOption,
+                  isSelected && styles.fontOptionActive,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.fontOptionTitle,
+                    isSelected && styles.fontOptionTitleActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                <Text style={styles.fontOptionDescription}>
+                  {option.description}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
 
       <PrimaryButton disabled={!canGenerate} onPress={createPreview}>
         {isGenerating ? '꿈카드 빚는 중...' : '카드 미리보기 만들기'}
@@ -523,7 +690,8 @@ export function ComposeScreen({ navigation }: Props) {
               <View style={styles.flex}>
                 <Text style={styles.sheetTitle}>받는 사람과 공유 방</Text>
                 <Text style={styles.sheetSubtitle}>
-                  꿈카드는 한 사람에게 보내고, 원하는 꿈방에 함께 공유할 수 있어요.
+                  꿈카드는 한 사람에게 보내고, 원하는 꿈방에 함께 공유할 수
+                  있어요.
                 </Text>
               </View>
               <Pressable
@@ -637,13 +805,17 @@ export function ComposeScreen({ navigation }: Props) {
                     style={styles.labelInput}
                   />
                   <Text style={styles.hintText}>
-                    링크로 카드를 받게 되는 사람에게 보여줄 호칭이에요. 카톡 등 외부에 공유한 링크로 그 사람이 들어와 카드를 받으면, 받는 사람이 자동으로 연결됩니다.
+                    링크로 카드를 받게 되는 사람에게 보여줄 호칭이에요. 카톡 등
+                    외부에 공유한 링크로 그 사람이 들어와 카드를 받으면, 받는
+                    사람이 자동으로 연결됩니다.
                   </Text>
                 </View>
               )}
 
               <View style={styles.sectionBlock}>
-                <Text style={styles.sectionTitle}>공유할 꿈방 (다중 선택, 선택사항)</Text>
+                <Text style={styles.sectionTitle}>
+                  공유할 꿈방 (다중 선택, 선택사항)
+                </Text>
                 <View style={styles.groupList}>
                   {myRooms.map(room => {
                     const isSelected = selectedGroupIds.includes(room.id);
@@ -679,14 +851,18 @@ export function ComposeScreen({ navigation }: Props) {
                   })}
                   {myRooms.length === 0 ? (
                     <Text style={styles.emptyText}>
-                      아직 가입한 꿈방이 없어요. 친구에게 1:1로 보내거나 새 방을 만들어보세요.
+                      아직 가입한 꿈방이 없어요. 친구에게 1:1로 보내거나 새 방을
+                      만들어보세요.
                     </Text>
                   ) : null}
                 </View>
               </View>
             </ScrollView>
 
-            <PrimaryButton disabled={!recipientReady} onPress={confirmRecipient}>
+            <PrimaryButton
+              disabled={!recipientReady}
+              onPress={confirmRecipient}
+            >
               선택 완료
             </PrimaryButton>
           </Pressable>
@@ -878,6 +1054,113 @@ const styles = StyleSheet.create({
   toneHint: {
     marginTop: -6,
     color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  designPanel: {
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  designHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  designTitle: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  designSummary: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  designLabel: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  colorOption: {
+    minHeight: 42,
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingLeft: 7,
+    paddingRight: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  colorOptionActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.lavenderMist,
+  },
+  colorSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(34,34,34,0.08)',
+  },
+  darkSwatch: {
+    borderColor: 'rgba(255,255,255,0.36)',
+  },
+  colorOptionText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  colorOptionTextActive: {
+    color: colors.primaryDark,
+  },
+  fontGrid: {
+    gap: 8,
+  },
+  fontOption: {
+    minHeight: 58,
+    borderRadius: 16,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  fontOptionActive: {
+    backgroundColor: colors.lavenderMist,
+    borderColor: colors.primary,
+  },
+  fontOptionTitle: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  fontOptionTitleActive: {
+    color: colors.primaryDark,
+  },
+  fontOptionDescription: {
+    marginTop: 5,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,

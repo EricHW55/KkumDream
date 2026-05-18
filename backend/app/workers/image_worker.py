@@ -3,10 +3,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.ai_generation import AiGenerationJob, AiGenerationLog
 from app.models.dream import Dream
-from app.services.image_generation_service import generate_image_url
+from app.services.image_generation_service import (
+    estimate_image_generation_cost,
+    generate_image_url,
+)
 from app.services.storage_service import store_generated_image
 
 
@@ -50,8 +54,11 @@ async def run_once() -> bool:
                 AiGenerationLog(
                     user_id=job.user_id,
                     dream_id=dream.id,
-                    model_name="replicate-flux-schnell",
+                    model_name=settings.replicate_flux_model,
                     generation_type="image",
+                    cost_estimate=estimate_image_generation_cost(
+                        settings.replicate_flux_model
+                    ),
                     status="success",
                 )
             )
@@ -63,7 +70,7 @@ async def run_once() -> bool:
                 AiGenerationLog(
                     user_id=job.user_id,
                     dream_id=dream.id,
-                    model_name="replicate-flux-schnell",
+                    model_name=settings.replicate_flux_model,
                     generation_type="image",
                     status="failure",
                     error_message=str(exc),
@@ -84,4 +91,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

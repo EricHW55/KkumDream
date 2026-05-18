@@ -17,6 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
+import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
@@ -42,7 +43,6 @@ type CalendarCell = {
   day: number;
 } | null;
 
-const cardColors = ['#E9E4FB', '#F4EFFF', '#E4F6FB', '#FFF2C9', '#FDFBF6'];
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 
 export function DreamLibraryView({
@@ -84,6 +84,11 @@ export function DreamLibraryView({
     [groupedDreams],
   );
   const miniCardWidth = Math.floor((width - 40 - 20) / 3);
+  const calendarCellSize = Math.max(
+    40,
+    Math.min(62, Math.floor((width - 72) / 7)),
+  );
+  const dayPreviewSize = Math.max(40, Math.min(56, calendarCellSize - 4));
 
   const openDetail = (dream: Dream) => {
     setSelectedDream(null);
@@ -102,6 +107,10 @@ export function DreamLibraryView({
       );
       return;
     }
+
+    setSelectedDateKeys(currentKeys =>
+      currentKeys.filter(key => key !== dateKey),
+    );
 
     if (group.items.length === 1) {
       setSelectedDream(group.items[0]);
@@ -173,10 +182,9 @@ export function DreamLibraryView({
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.archiveGrid}
-          renderItem={({ item, index }) => (
+          renderItem={({ item }) => (
             <MiniDreamCard
               dream={item}
-              index={index}
               width={miniCardWidth}
               onPress={() => setSelectedDream(item)}
             />
@@ -200,7 +208,12 @@ export function DreamLibraryView({
               <View style={styles.monthGrid}>
                 {month.cells.map((cell, index) => {
                   if (!cell) {
-                    return <View key={`blank-${index}`} style={styles.dayCell} />;
+                    return (
+                      <View
+                        key={`blank-${index}`}
+                        style={[styles.dayCell, { height: calendarCellSize }]}
+                      />
+                    );
                   }
 
                   const group = groupedDreamMap.get(cell.dateKey);
@@ -208,6 +221,11 @@ export function DreamLibraryView({
                   const firstDream = group?.items[0];
                   const previewImageUrl =
                     firstDream?.thumbnailUrl ?? firstDream?.imageUrl;
+                  const previewDesign = normalizeDreamDesign(
+                    firstDream?.design,
+                  );
+                  const previewTheme =
+                    CARD_COLOR_THEMES[previewDesign.cardColor];
                   return (
                     <Pressable
                       key={cell.dateKey}
@@ -216,21 +234,41 @@ export function DreamLibraryView({
                       onPress={() => onPressCalendarDate(cell.dateKey)}
                       style={({ pressed }) => [
                         styles.dayCell,
+                        { height: calendarCellSize },
                         group && styles.dayCellWithDream,
                         isSelected && styles.dayCellSelected,
                         pressed && group && interactionStyles.pressed,
                       ]}
                     >
                       {group && isSelected ? (
-                        <View style={styles.dayPreview}>
+                        <View
+                          style={[
+                            styles.dayPreview,
+                            {
+                              width: dayPreviewSize,
+                              height: dayPreviewSize,
+                              borderRadius: dayPreviewSize / 2,
+                            },
+                          ]}
+                        >
                           {previewImageUrl ? (
                             <Image
                               source={{ uri: previewImageUrl }}
                               style={styles.dayPreviewImage}
                             />
                           ) : (
-                            <View style={styles.dayPreviewFallback}>
-                              <Text style={styles.dayPreviewMood}>
+                            <View
+                              style={[
+                                styles.dayPreviewFallback,
+                                { backgroundColor: previewTheme.placeholder },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.dayPreviewMood,
+                                  { color: previewTheme.accent },
+                                ]}
+                              >
                                 {firstDream && isImagePending(firstDream)
                                   ? '생성중'
                                   : firstDream?.mainMood.slice(0, 2)}
@@ -247,14 +285,25 @@ export function DreamLibraryView({
                           </View>
                         </View>
                       ) : (
-                        <Text
+                        <View
                           style={[
-                            styles.dayText,
-                            group && styles.dayTextWithDream,
+                            styles.dayNumberFrame,
+                            {
+                              width: dayPreviewSize,
+                              height: dayPreviewSize,
+                              borderRadius: dayPreviewSize / 2,
+                            },
                           ]}
                         >
-                          {cell.day}
-                        </Text>
+                          <Text
+                            style={[
+                              styles.dayText,
+                              group && styles.dayTextWithDream,
+                            ]}
+                          >
+                            {cell.day}
+                          </Text>
+                        </View>
                       )}
                     </Pressable>
                   );
@@ -265,7 +314,9 @@ export function DreamLibraryView({
 
           {calendarMonths.length === 0 ? (
             <View style={styles.calendarHintBox}>
-              <Text style={styles.calendarHintText}>아직 표시할 꿈카드가 없어요.</Text>
+              <Text style={styles.calendarHintText}>
+                아직 표시할 꿈카드가 없어요.
+              </Text>
             </View>
           ) : null}
         </ScrollView>
@@ -287,7 +338,9 @@ export function DreamLibraryView({
               onPress={event => event.stopPropagation()}
             >
               <View style={styles.pickerHeader}>
-                <Text style={styles.pickerTitle}>{multiDreamDateGroup.label}</Text>
+                <Text style={styles.pickerTitle}>
+                  {multiDreamDateGroup.label}
+                </Text>
                 <Pressable
                   accessibilityLabel="닫기"
                   accessibilityRole="button"
@@ -301,8 +354,10 @@ export function DreamLibraryView({
                 </Pressable>
               </View>
               <View style={styles.pickerGrid}>
-                {multiDreamDateGroup.items.map((dream, index) => {
+                {multiDreamDateGroup.items.map(dream => {
                   const imageUrl = dream.thumbnailUrl ?? dream.imageUrl;
+                  const design = normalizeDreamDesign(dream.design);
+                  const designTheme = CARD_COLOR_THEMES[design.cardColor];
                   return (
                     <Pressable
                       key={dream.id}
@@ -319,7 +374,7 @@ export function DreamLibraryView({
                       <View
                         style={[
                           styles.pickerThumbRing,
-                          { borderColor: cardColors[index % cardColors.length] },
+                          { borderColor: designTheme.accent },
                         ]}
                       >
                         {imageUrl ? (
@@ -328,8 +383,18 @@ export function DreamLibraryView({
                             style={styles.pickerThumbImage}
                           />
                         ) : (
-                          <View style={styles.pickerThumbFallback}>
-                            <Text style={styles.pickerThumbMood}>
+                          <View
+                            style={[
+                              styles.pickerThumbFallback,
+                              { backgroundColor: designTheme.placeholder },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.pickerThumbMood,
+                                { color: designTheme.accent },
+                              ]}
+                            >
                               {isImagePending(dream)
                                 ? '생성중'
                                 : dream.mainMood.slice(0, 2)}
@@ -398,15 +463,16 @@ export function DreamLibraryView({
 
 function MiniDreamCard({
   dream,
-  index,
   width,
   onPress,
 }: {
   dream: Dream;
-  index: number;
   width: number;
   onPress: () => void;
 }) {
+  const design = normalizeDreamDesign(dream.design);
+  const designTheme = CARD_COLOR_THEMES[design.cardColor];
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -417,28 +483,29 @@ function MiniDreamCard({
         pressed && interactionStyles.pressedSoft,
       ]}
     >
-      <View
-        style={[
-          styles.miniImage,
-          { backgroundColor: cardColors[index % cardColors.length] },
-        ]}
-      >
+      <View style={[styles.miniImage, { backgroundColor: designTheme.image }]}>
         {dream.thumbnailUrl || dream.imageUrl ? (
           <Image
             source={{ uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined }}
             style={styles.miniImageAsset}
           />
         ) : (
-          <Text style={styles.miniMood}>
+          <Text style={[styles.miniMood, { color: designTheme.accent }]}>
             {isImagePending(dream) ? '이미지 생성 중' : dream.mainMood}
           </Text>
         )}
       </View>
-      <View style={styles.miniBody}>
-        <Text style={styles.miniTitle} numberOfLines={2}>
+      <View style={[styles.miniBody, { backgroundColor: designTheme.card }]}>
+        <Text
+          style={[styles.miniTitle, { color: designTheme.text }]}
+          numberOfLines={2}
+        >
           {dream.title}
         </Text>
-        <Text style={styles.miniMeta} numberOfLines={1}>
+        <Text
+          style={[styles.miniMeta, { color: designTheme.secondaryText }]}
+          numberOfLines={1}
+        >
           {dream.tags
             .slice(0, 2)
             .map(tag => `#${tag}`)
@@ -449,7 +516,10 @@ function MiniDreamCard({
   );
 }
 
-function groupDreamsByDate(dreams: Dream[], calendarLabel: string): DateGroup[] {
+function groupDreamsByDate(
+  dreams: Dream[],
+  calendarLabel: string,
+): DateGroup[] {
   const groups = new Map<string, Dream[]>();
 
   dreams.forEach(dream => {
@@ -663,7 +733,6 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: `${100 / 7}%`,
-    aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 18,
@@ -672,7 +741,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   dayCellSelected: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+  },
+  dayNumberFrame: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dayText: {
     color: colors.textMuted,

@@ -22,6 +22,7 @@ from app.models.group import GroupMember
 from app.models.user import User
 from app.schemas.dream import (
     REACTION_TYPES,
+    DreamDesign,
     DreamDraftCreate,
     DreamGiveRequest,
     DreamUpdate,
@@ -65,6 +66,7 @@ async def create_dream_draft(
         image_prompt=result.image_prompt,
         main_mood=result.main_mood,
         tags=result.tags,
+        design=_normalize_design(payload.design),
         status="draft",
         image_status="empty",
     )
@@ -100,6 +102,8 @@ async def update_dream_text(
 
     updates = payload.model_dump(exclude_unset=True)
     for key, value in updates.items():
+        if key == "design":
+            value = _normalize_design(value)
         setattr(dream, key, value)
     await session.commit()
     await session.refresh(dream)
@@ -541,6 +545,14 @@ async def _attach_group_ids_batch(
     for dream in dreams:
         dream.group_ids = bucket.get(dream.id, [])  # type: ignore[attr-defined]
     return dreams
+
+
+def _normalize_design(value: DreamDesign | dict | None) -> dict[str, str]:
+    if isinstance(value, DreamDesign):
+        return value.model_dump()
+    if isinstance(value, dict):
+        return DreamDesign.model_validate(value).model_dump()
+    return DreamDesign().model_dump()
 
 
 async def _consume_daily_give_limit(session: AsyncSession, user_id: UUID) -> None:

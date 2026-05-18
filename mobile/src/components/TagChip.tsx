@@ -2,10 +2,18 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
 
-export function TagChip({ label }: { label: string }) {
+export function TagChip({
+  label,
+  backgroundColor = colors.lavenderMist,
+  textColor = colors.primaryDark,
+}: {
+  label: string;
+  backgroundColor?: string;
+  textColor?: string;
+}) {
   return (
-    <View style={styles.chip}>
-      <Text style={styles.label}>#{label}</Text>
+    <View style={[styles.chip, { backgroundColor }]}>
+      <Text style={[styles.label, { color: textColor }]}>#{label}</Text>
     </View>
   );
 }
@@ -17,12 +25,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.lavenderMist,
   },
   label: {
-    color: colors.primaryDark,
     fontSize: 12,
     fontWeight: '600',
   },
 });
-
