@@ -595,13 +595,6 @@ export function ComposeScreen({ navigation }: Props) {
       {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
         </>
       ) : null}
-      {isGenerating ? (
-        <DreamGenerationAnimation
-          title="꿈을 글로 빚는 중"
-          subtitle="달빛과 구름 사이에서 카드 문장을 고르고 있어요."
-        />
-      ) : null}
-
       {draft ? (
         <View style={styles.preview}>
           <View style={styles.previewHeader}>
@@ -1377,7 +1370,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: 'rgba(251, 250, 253, 0.86)',
+    backgroundColor: 'rgba(251, 250, 253, 0.96)',
   },
   loadingPanel: {
     borderRadius: 28,

@@ -307,18 +307,12 @@ export function DreamCard({
             backStyle,
           ]}
         >
-          <Pressable
-            onPress={cardPressHandler}
-            onLongPress={flip}
-            style={({ pressed }) => [
-              styles.facePressable,
-              pressed && interactionStyles.pressedSoft,
-            ]}
-          >
+          <View style={styles.facePressable}>
             <ScrollView
               bounces={false}
               nestedScrollEnabled
-              showsVerticalScrollIndicator={false}
+              persistentScrollbar
+              showsVerticalScrollIndicator
               style={styles.backScroll}
               contentContainerStyle={styles.backContent}
             >
@@ -349,10 +343,23 @@ export function DreamCard({
               >
                 {dream.story}
               </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={cardPressHandler}
+                onLongPress={flip}
+                style={({ pressed }) => [
+                  styles.backFlipButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <Text style={[styles.backFlipButtonText, dreamFontStyle]}>
+                  앞면 보기
+                </Text>
+              </Pressable>
             </ScrollView>
-          </Pressable>
+          </View>
         </Animated.View>
-        {renderImageActions()}
+        {!isBackVisible ? renderImageActions() : null}
       </View>
     </View>
   );
@@ -460,6 +467,7 @@ const styles = StyleSheet.create({
   },
   backContent: {
     padding: 24,
+    paddingBottom: 34,
     gap: 18,
     minHeight: '100%',
   },
@@ -479,6 +487,21 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 26,
+  },
+  backFlipButton: {
+    minHeight: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  backFlipButtonText: {
+    color: colors.primaryDark,
+    fontSize: 14,
+    fontWeight: '700',
+    includeFontPadding: false,
   },
   imageActions: {
     position: 'absolute',
