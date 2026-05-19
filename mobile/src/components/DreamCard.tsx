@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { GestureResponderEvent } from 'react-native';
 import {
   Alert,
   Image,
@@ -47,6 +48,8 @@ export function DreamCard({
   const sessionUserId = useSessionStore(state => state.userId);
   const [isBackVisible, setIsBackVisible] = useState(false);
   const [isImageActionPending, setIsImageActionPending] = useState(false);
+  const backTouchStart = useRef<{ x: number; y: number } | null>(null);
+  const backTouchMoved = useRef(false);
   const rotation = useSharedValue(0);
   const cardHeight = size === 'full' ? 560 : 430;
   const imageHeight = size === 'full' ? 300 : 250;
@@ -160,6 +163,34 @@ export function DreamCard({
   );
 
   const cardPressHandler = onPress ?? flip;
+  const resetBackTouch = () => {
+    backTouchStart.current = null;
+    backTouchMoved.current = false;
+  };
+  const handleBackTouchStart = (event: GestureResponderEvent) => {
+    const { pageX, pageY } = event.nativeEvent;
+    backTouchStart.current = { x: pageX, y: pageY };
+    backTouchMoved.current = false;
+  };
+  const handleBackTouchMove = (event: GestureResponderEvent) => {
+    const start = backTouchStart.current;
+    if (!start) {
+      return;
+    }
+
+    const { pageX, pageY } = event.nativeEvent;
+    const distanceX = Math.abs(pageX - start.x);
+    const distanceY = Math.abs(pageY - start.y);
+    if (distanceX > 8 || distanceY > 8) {
+      backTouchMoved.current = true;
+    }
+  };
+  const handleBackTouchEnd = () => {
+    if (!backTouchMoved.current) {
+      flip();
+    }
+    resetBackTouch();
+  };
 
   return (
     <View style={styles.pressable}>
@@ -315,6 +346,13 @@ export function DreamCard({
             <ScrollView
               bounces={false}
               nestedScrollEnabled
+              onScrollBeginDrag={() => {
+                backTouchMoved.current = true;
+              }}
+              onTouchCancel={resetBackTouch}
+              onTouchEnd={handleBackTouchEnd}
+              onTouchMove={handleBackTouchMove}
+              onTouchStart={handleBackTouchStart}
               persistentScrollbar
               showsVerticalScrollIndicator
               style={styles.backScroll}
@@ -499,6 +537,7 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   backFlipButton: {
+    display: 'none',
     minHeight: 44,
     borderRadius: 22,
     alignItems: 'center',
