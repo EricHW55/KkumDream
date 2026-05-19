@@ -8,34 +8,34 @@ export const DEFAULT_PROFILE_AVATAR = 'kkumdream-avatar:app-default';
 
 export const PROFILE_AVATAR_PRESETS = [
   {
+    value: 'kkumdream-avatar:google-default',
+    label: '기본',
+    type: 'google',
+    color: colors.textMuted,
+  },
+  {
     value: DEFAULT_PROFILE_AVATAR,
-    label: '꿈달',
+    label: '새벽달',
     type: 'app',
     color: colors.primary,
   },
   {
     value: 'kkumdream-avatar:app-midnight',
-    label: '밤보라',
+    label: '깊은밤',
     type: 'app',
     color: colors.primaryDark,
   },
   {
     value: 'kkumdream-avatar:app-lavender',
-    label: '라벤더',
+    label: '보랏새벽',
     type: 'app',
     color: colors.primaryLight,
   },
   {
     value: 'kkumdream-avatar:app-sky',
-    label: '새벽하늘',
+    label: '하늘새벽',
     type: 'app',
     color: colors.outboxAccent,
-  },
-  {
-    value: 'kkumdream-avatar:google-default',
-    label: '기본',
-    type: 'google',
-    color: colors.textMuted,
   },
 ] as const;
 
