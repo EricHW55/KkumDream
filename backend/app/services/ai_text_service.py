@@ -130,11 +130,41 @@ Priorities:
 """.strip()
 
 IMAGE_STYLE_GUIDE = """
-soft Korean storybook illustration, warm pastel colors, gentle paper texture,
-rounded shapes, subtle cinematic light, dreamlike but calm, emotionally warm,
+soft Korean storybook illustration, mood-matched colors, gentle paper texture,
+rounded shapes, subtle cinematic light, dreamlike but calm, emotionally expressive,
 clean centered composition, clear focal object, mobile card thumbnail friendly,
 not photorealistic, not anime, no text, no logo, no watermark
 """.replace("\n", " ").strip()
+MOOD_IMAGE_GUIDES = {
+    MOOD_DREAMY: (
+        "dreamy mood: hazy glow, floating light, soft lavender-blue atmosphere, "
+        "surreal calm, quiet wonder"
+    ),
+    MOOD_FANTASY: (
+        "fantasy mood: enchanted architecture or nature, magical scale, gentle "
+        "sparkles, adventurous wonder"
+    ),
+    MOOD_SCARY: (
+        "soft scary mood: moonlit shadows, quiet suspense, eerie but harmless "
+        "atmosphere, no gore, no violence"
+    ),
+    MOOD_FUNNY: (
+        "comic mood: playful exaggeration, whimsical shapes, cheerful surprise, "
+        "light visual humor"
+    ),
+    MOOD_WARM: (
+        "warm mood: cozy light, affectionate atmosphere, soft peach and cream "
+        "colors, comforting composition"
+    ),
+    MOOD_NOSTALGIC: (
+        "nostalgic mood: faded afternoon light, gentle sepia warmth, familiar "
+        "objects, memory-like softness"
+    ),
+    MOOD_STRANGE: (
+        "strange mood: uncanny but gentle composition, offbeat objects, surreal "
+        "proportions, muted mysterious colors"
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -257,10 +287,11 @@ Create a polished Korean dream card with these constraints:
 - story: 300-700 Korean characters. Connect the dream naturally without making it
   a long fantasy plot. Keep the user's original scenes visible.
 - Apply the preferred writing tone to shortMessage, summary, and story.
-- mainMood: choose exactly one of {", ".join(VALID_MOODS)}.
+- mainMood: use the preferred mood exactly: {mood}.
 - tags: 2-3 short Korean words, no hashtags.
-- imagePrompt: English only. Describe the main visual scene and include this fixed
-  art direction exactly in meaning: {IMAGE_STYLE_GUIDE}.
+- imagePrompt: English only. Describe the main visual scene, explicitly express
+  the preferred mood, and include this mood guide: {MOOD_IMAGE_GUIDES[mood]}.
+  Also include this fixed art direction exactly in meaning: {IMAGE_STYLE_GUIDE}.
 
 Avoid:
 - moral lessons, dream interpretation, fortune-telling, therapy language.
@@ -303,15 +334,14 @@ def _normalize_result(
         220,
     )
     story = _text(data.get("story"), summary, 1000)
-    main_mood = _select_mood(str(data.get("mainMood") or selected_mood))
+    main_mood = selected_mood
     tags = _normalize_tags(data.get("tags"), main_mood)
     image_prompt = _text(
         data.get("imagePrompt"),
         _build_mock_image_prompt(summary, main_mood),
         1600,
     )
-    if "no text" not in image_prompt.lower():
-        image_prompt = f"{image_prompt}, no text, no logo, no watermark"
+    image_prompt = _apply_image_style(image_prompt, main_mood)
 
     token_count = input_tokens + output_tokens
     cost_estimate = _estimate_cost(model_name, input_tokens, output_tokens)
@@ -383,6 +413,20 @@ def _normalize_tags(value: Any, main_mood: str) -> list[str]:
     return unique_tags[:3]
 
 
+def _apply_image_style(image_prompt: str, mood: str) -> str:
+    prompt = image_prompt.strip()
+    mood_guide = MOOD_IMAGE_GUIDES[mood]
+    lower_prompt = prompt.lower()
+    additions: list[str] = []
+    if mood_guide.lower() not in lower_prompt:
+        additions.append(mood_guide)
+    if "no text" not in lower_prompt:
+        additions.append("no text, no logo, no watermark")
+    if additions:
+        prompt = f"{prompt}, {', '.join(additions)}"
+    return prompt
+
+
 def _estimate_cost(model_name: str, input_tokens: int, output_tokens: int) -> float | None:
     for model_prefix, (input_price, output_price) in ANTHROPIC_TOKEN_PRICES.items():
         if model_name.startswith(model_prefix):
@@ -396,5 +440,5 @@ def _estimate_cost(model_name: str, input_tokens: int, output_tokens: int) -> fl
 def _build_mock_image_prompt(scene: str, mood: str) -> str:
     return (
         f"A square Korean dream-card illustration about {scene}, mood: {mood}, "
-        f"{IMAGE_STYLE_GUIDE}"
+        f"{MOOD_IMAGE_GUIDES[mood]}, {IMAGE_STYLE_GUIDE}"
     )

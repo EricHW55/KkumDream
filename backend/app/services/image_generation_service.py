@@ -25,7 +25,7 @@ async def generate_image_url(image_prompt: str) -> str:
             "num_inference_steps": 4,
             "megapixels": "1",
             "output_format": "webp",
-            "output_quality": 82,
+            "output_quality": 90,
             "disable_safety_checker": False,
         },
     )

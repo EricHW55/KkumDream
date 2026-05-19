@@ -229,7 +229,7 @@ export function DreamCard({
               {hasImage ? (
                 <Image
                   source={{
-                    uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
+                    uri: dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
                   }}
                   style={styles.image}
                 />

@@ -21,8 +21,8 @@ async def store_generated_image(dream_id: UUID, source_url: str) -> tuple[str, s
         response.raise_for_status()
         image_bytes = response.content
 
-    card_bytes = await asyncio.to_thread(_to_webp, image_bytes, 768)
-    thumb_bytes = await asyncio.to_thread(_to_webp, image_bytes, 256)
+    card_bytes = await asyncio.to_thread(_to_webp, image_bytes, 1024, 90)
+    thumb_bytes = await asyncio.to_thread(_to_webp, image_bytes, 320, 86)
 
     card_key = f"dreams/{dream_id}/card.webp"
     thumb_key = f"dreams/{dream_id}/thumb.webp"
@@ -34,12 +34,12 @@ async def store_generated_image(dream_id: UUID, source_url: str) -> tuple[str, s
     )
 
 
-def _to_webp(source: bytes, size: int) -> bytes:
+def _to_webp(source: bytes, size: int, quality: int) -> bytes:
     with Image.open(BytesIO(source)) as image:
         image = image.convert("RGB")
         image.thumbnail((size, size))
         output = BytesIO()
-        image.save(output, format="WEBP", quality=82, method=6)
+        image.save(output, format="WEBP", quality=quality, method=6)
         return output.getvalue()
 
 
@@ -67,4 +67,3 @@ def _upload(key: str, body: bytes) -> None:
         ContentType="image/webp",
         CacheControl="public, max-age=31536000, immutable",
     )
-
