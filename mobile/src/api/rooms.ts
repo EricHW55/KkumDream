@@ -7,6 +7,7 @@ export type ApiDreamRoom = {
   inviteCode: string;
   lastGivenAt: string | null;
   dreamCount: number;
+  todayDreamCount: number;
   memberIds: string[];
   members: {
     id: string;

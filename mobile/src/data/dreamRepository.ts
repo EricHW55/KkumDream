@@ -168,10 +168,10 @@ function toGroupRoom(room: ApiDreamRoom): GroupRoom {
   return {
     id: room.roomId,
     name: room.title || '꿈방',
-    description:
-      room.dreamCount > 0 ? `꿈카드 ${room.dreamCount}개` : '아직 꿈카드가 없어요',
+    description: `오늘 꿈카드 ${room.todayDreamCount ?? 0}개`,
     inviteCode: room.inviteCode,
     lastActivityLabel: room.lastGivenAt ? formatActivityLabel(room.lastGivenAt) : '',
+    todayDreamCount: room.todayDreamCount ?? 0,
     unreadCount: 0,
     memberIds: room.memberIds,
     members,

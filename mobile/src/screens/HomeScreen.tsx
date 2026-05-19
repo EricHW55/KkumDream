@@ -511,7 +511,7 @@ function GroupRoomItem({
       <View style={styles.roomText}>
         <Text style={styles.roomName}>{room.name}</Text>
         <Text style={styles.roomMeta} numberOfLines={1}>
-          {room.lastActivityLabel ? `${room.lastActivityLabel} ` : ''}
+          {room.lastActivityLabel ? `${room.lastActivityLabel} · ` : ''}
           {room.description}
         </Text>
       </View>

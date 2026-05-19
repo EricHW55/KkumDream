@@ -519,15 +519,15 @@ const styles = StyleSheet.create({
   avatarOptions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   avatarOption: {
-    width: '31%',
-    minHeight: 84,
+    width: '30%',
+    minHeight: 80,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 6,
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.divider,
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   },
   avatarOptionLabel: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     includeFontPadding: false,
   },

@@ -28,9 +28,10 @@ export const mockGroupRooms: GroupRoom[] = [
   {
     id: 'group-room-1',
     name: '싱어송',
-    description: '새 꿈카드 5시간',
+    description: '오늘 꿈카드 3개',
     inviteCode: 'SING-0503',
     lastActivityLabel: '새 로그',
+    todayDreamCount: 3,
     unreadCount: 4,
     memberIds: ['mock-user-1', 'mock-user-2', 'mock-user-3', 'mock-user-4'],
     members: mockMembers,
@@ -40,9 +41,10 @@ export const mockGroupRooms: GroupRoom[] = [
   {
     id: 'group-room-2',
     name: '고양이의 삶',
-    description: '메시지 보냄 22시간',
+    description: '오늘 꿈카드 1개',
     inviteCode: 'CAT-2210',
     lastActivityLabel: '메시지 보냄',
+    todayDreamCount: 1,
     unreadCount: 2,
     memberIds: ['mock-user-1', 'mock-user-2'],
     members: mockMembers.filter(member =>
@@ -54,9 +56,10 @@ export const mockGroupRooms: GroupRoom[] = [
   {
     id: 'group-room-3',
     name: 'vlog',
-    description: '나만의 공간, 매일 오전 4시에 하루 시작',
+    description: '오늘 꿈카드 0개',
     inviteCode: 'VLOG-0400',
     lastActivityLabel: '매일 기록',
+    todayDreamCount: 0,
     unreadCount: 0,
     memberIds: ['mock-user-1'],
     members: mockMembers.filter(member => member.id === 'mock-user-1'),

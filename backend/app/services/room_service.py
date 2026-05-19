@@ -21,6 +21,7 @@ class DreamRoom:
     invite_code: str
     last_given_at: datetime | None
     dream_count: int
+    today_dream_count: int
     member_ids: list[UUID]
     members: list["RoomMember"]
     latest_dream_id: UUID | None
@@ -137,11 +138,16 @@ async def update_room(session: AsyncSession, user_id: UUID, room_id: str, name: 
 
 
 async def list_rooms(session: AsyncSession, user_id: UUID) -> list[DreamRoom]:
+    today_start, today_end = _today_bounds_utc()
+    dream_activity_at = func.coalesce(Dream.given_at, Dream.created_at)
     stats_subquery = (
         select(
             DreamGroup.group_id.label("group_id"),
             func.max(Dream.given_at).label("last_given_at"),
             func.count(Dream.id).label("dream_count"),
+            func.count(Dream.id)
+            .filter(dream_activity_at >= today_start, dream_activity_at < today_end)
+            .label("today_dream_count"),
         )
         .join(Dream, Dream.id == DreamGroup.dream_id)
         .where(Dream.status != "draft")
@@ -153,6 +159,9 @@ async def list_rooms(session: AsyncSession, user_id: UUID) -> list[DreamRoom]:
             Group,
             stats_subquery.c.last_given_at,
             func.coalesce(stats_subquery.c.dream_count, 0).label("dream_count"),
+            func.coalesce(stats_subquery.c.today_dream_count, 0).label(
+                "today_dream_count"
+            ),
         )
         .join(GroupMember, GroupMember.group_id == Group.id)
         .outerjoin(stats_subquery, stats_subquery.c.group_id == Group.id)
@@ -161,13 +170,14 @@ async def list_rooms(session: AsyncSession, user_id: UUID) -> list[DreamRoom]:
     )
     rows = (await session.execute(stmt)).all()
     rooms: list[DreamRoom] = []
-    for group, last_given_at, dream_count in rows:
+    for group, last_given_at, dream_count, today_dream_count in rows:
         rooms.append(
             await _build_room(
                 session,
                 group=group,
                 last_given_at=last_given_at,
                 dream_count=dream_count,
+                today_dream_count=today_dream_count,
             )
         )
     return rooms
@@ -199,12 +209,26 @@ async def _build_room(
     group: Group,
     last_given_at: datetime | None = None,
     dream_count: int | None = None,
+    today_dream_count: int | None = None,
 ) -> DreamRoom:
+    today_start, today_end = _today_bounds_utc()
+    dream_activity_at = func.coalesce(Dream.given_at, Dream.created_at)
     if dream_count is None:
         dream_count = await session.scalar(
             select(func.count(Dream.id))
             .join(DreamGroup, DreamGroup.dream_id == Dream.id)
             .where(DreamGroup.group_id == group.id, Dream.status != "draft")
+        )
+    if today_dream_count is None:
+        today_dream_count = await session.scalar(
+            select(func.count(Dream.id))
+            .join(DreamGroup, DreamGroup.dream_id == Dream.id)
+            .where(
+                DreamGroup.group_id == group.id,
+                Dream.status != "draft",
+                dream_activity_at >= today_start,
+                dream_activity_at < today_end,
+            )
         )
     latest_dream_id = await session.scalar(
         select(Dream.id)
@@ -252,6 +276,7 @@ async def _build_room(
         invite_code=group.invite_code,
         last_given_at=last_given_at,
         dream_count=dream_count or 0,
+        today_dream_count=today_dream_count or 0,
         member_ids=member_ids,
         members=members,
         latest_dream_id=latest_dream_id,
@@ -260,10 +285,8 @@ async def _build_room(
 
 
 async def _list_today_giver_ids(session: AsyncSession, group_id: UUID) -> list[UUID]:
-    timezone = ZoneInfo("Asia/Seoul")
-    today = datetime.now(timezone).date()
-    start = datetime.combine(today, time.min, tzinfo=timezone).astimezone(UTC)
-    end = start + timedelta(days=1)
+    start, end = _today_bounds_utc()
+    dream_activity_at = func.coalesce(Dream.given_at, Dream.created_at)
     rows = (
         await session.scalars(
             select(Dream.giver_id)
@@ -271,13 +294,20 @@ async def _list_today_giver_ids(session: AsyncSession, group_id: UUID) -> list[U
             .where(
                 DreamGroup.group_id == group_id,
                 Dream.status != "draft",
-                Dream.given_at >= start,
-                Dream.given_at < end,
+                dream_activity_at >= start,
+                dream_activity_at < end,
             )
             .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
         )
     ).all()
     return list(dict.fromkeys(rows))
+
+
+def _today_bounds_utc() -> tuple[datetime, datetime]:
+    timezone = ZoneInfo("Asia/Seoul")
+    today = datetime.now(timezone).date()
+    start = datetime.combine(today, time.min, tzinfo=timezone).astimezone(UTC)
+    return start, start + timedelta(days=1)
 
 
 async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: UUID) -> None:

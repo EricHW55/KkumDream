@@ -31,6 +31,7 @@ class DreamRoomOut(ApiModel):
     invite_code: str
     last_given_at: datetime | None
     dream_count: int
+    today_dream_count: int = 0
     member_ids: list[UUID]
     members: list[RoomMemberOut]
     latest_dream_id: UUID | None = None

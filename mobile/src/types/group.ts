@@ -12,6 +12,7 @@ export interface GroupRoom {
   description: string;
   inviteCode: string;
   lastActivityLabel: string;
+  todayDreamCount: number;
   unreadCount: number;
   memberIds: string[];
   members: GroupMember[];
