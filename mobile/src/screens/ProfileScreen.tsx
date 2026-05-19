@@ -2,11 +2,13 @@ import { useState } from 'react';
 import {
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { updateProfile } from '../api/auth';
@@ -20,6 +22,7 @@ import { interactionStyles } from '../theme/interactions';
 import { unregisterPushToken } from '../services/pushNotifications';
 
 export function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const user = useSessionStore(state => state.user);
   const userId = useSessionStore(state => state.userId);
@@ -107,110 +110,122 @@ export function ProfileScreen() {
 
   return (
     <Screen>
-      <Text style={styles.title}>내 정보</Text>
-      <View style={styles.panel}>
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarWrap}>
-            {profileImageDraft.trim() ? (
-              <Image
-                source={{ uri: profileImageDraft.trim() }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <MoonAvatar size={64} color={colors.primary} />
-            )}
-          </View>
-          <View style={styles.profileText}>
-            <Text style={styles.name}>{user?.nickname ?? '꿈드림 사용자'}</Text>
-            <Text style={styles.meta}>
-              {user?.email ?? '구글 계정 이메일 없음'}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={styles.inputLabel}>이름</Text>
-        <TextInput
-          autoCorrect={false}
-          spellCheck={false}
-          defaultValue={nicknameDraft}
-          onChangeText={setNicknameDraft}
-          placeholder="이름"
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-        />
-
-        <Text style={styles.inputLabel}>프로필 사진 URL</Text>
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          spellCheck={false}
-          defaultValue={profileImageDraft}
-          onChangeText={setProfileImageDraft}
-          placeholder="https://..."
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-        />
-
-        {statusText ? <Text style={styles.statusText}>{statusText}</Text> : null}
-
-        <Pressable
-          accessibilityRole="button"
-          disabled={isSaving}
-          onPress={saveProfile}
-          style={({ pressed }) => [
-            styles.saveButton,
-            isSaving && styles.disabledButton,
-            pressed && !isSaving && interactionStyles.pressed,
-          ]}
-        >
-          <Text style={styles.saveText}>{isSaving ? '저장 중...' : '저장'}</Text>
-        </Pressable>
-      </View>
-      <View style={styles.panel}>
-        <Text style={styles.sectionHeading}>꿈카드 받기</Text>
-        <Text style={styles.sectionDescription}>
-          누군가 카톡 등으로 보낸 꿈카드 링크를 여기에 붙여넣으면 받은 카드함에 담을 수 있어요.
-        </Text>
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          spellCheck={false}
-          value={claimToken}
-          onChangeText={setClaimToken}
-          placeholder="https://kkumdream.app/d/...?claim=... 또는 토큰"
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-        />
-        {claimStatus ? <Text style={styles.statusText}>{claimStatus}</Text> : null}
-        <Pressable
-          accessibilityRole="button"
-          disabled={isClaiming}
-          onPress={submitClaim}
-          style={({ pressed }) => [
-            styles.saveButton,
-            isClaiming && styles.disabledButton,
-            pressed && !isClaiming && interactionStyles.pressed,
-          ]}
-        >
-          <Text style={styles.saveText}>{isClaiming ? '받는 중...' : '카드 받기'}</Text>
-        </Pressable>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        onPress={logout}
-        style={({ pressed }) => [
-          styles.logoutButton,
-          pressed && interactionStyles.pressed,
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom + 48, 96) },
         ]}
       >
-        <Text style={styles.logoutText}>로그아웃</Text>
-      </Pressable>
+        <Text style={styles.title}>내 정보</Text>
+        <View style={styles.panel}>
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarWrap}>
+              {profileImageDraft.trim() ? (
+                <Image
+                  source={{ uri: profileImageDraft.trim() }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <MoonAvatar size={64} color={colors.primary} />
+              )}
+            </View>
+            <View style={styles.profileText}>
+              <Text style={styles.name}>{user?.nickname ?? '꿈드림 사용자'}</Text>
+              <Text style={styles.meta}>
+                {user?.email ?? '구글 계정 이메일 없음'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.inputLabel}>이름</Text>
+          <TextInput
+            autoCorrect={false}
+            spellCheck={false}
+            defaultValue={nicknameDraft}
+            onChangeText={setNicknameDraft}
+            placeholder="이름"
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+          />
+
+          <Text style={styles.inputLabel}>프로필 사진 URL</Text>
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            defaultValue={profileImageDraft}
+            onChangeText={setProfileImageDraft}
+            placeholder="https://..."
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+          />
+
+          {statusText ? <Text style={styles.statusText}>{statusText}</Text> : null}
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSaving}
+            onPress={saveProfile}
+            style={({ pressed }) => [
+              styles.saveButton,
+              isSaving && styles.disabledButton,
+              pressed && !isSaving && interactionStyles.pressed,
+            ]}
+          >
+            <Text style={styles.saveText}>{isSaving ? '저장 중...' : '저장'}</Text>
+          </Pressable>
+        </View>
+        <View style={styles.panel}>
+          <Text style={styles.sectionHeading}>꿈카드 받기</Text>
+          <Text style={styles.sectionDescription}>
+            누군가 카톡 등으로 보낸 꿈카드 링크를 여기에 붙여넣으면 받은 카드함에 담을 수 있어요.
+          </Text>
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            value={claimToken}
+            onChangeText={setClaimToken}
+            placeholder="https://kkumdream.app/d/...?claim=... 또는 토큰"
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+          />
+          {claimStatus ? <Text style={styles.statusText}>{claimStatus}</Text> : null}
+          <Pressable
+            accessibilityRole="button"
+            disabled={isClaiming}
+            onPress={submitClaim}
+            style={({ pressed }) => [
+              styles.saveButton,
+              isClaiming && styles.disabledButton,
+              pressed && !isClaiming && interactionStyles.pressed,
+            ]}
+          >
+            <Text style={styles.saveText}>{isClaiming ? '받는 중...' : '카드 받기'}</Text>
+          </Pressable>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={logout}
+          style={({ pressed }) => [
+            styles.logoutButton,
+            pressed && interactionStyles.pressed,
+          ]}
+        >
+          <Text style={styles.logoutText}>로그아웃</Text>
+        </Pressable>
+      </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    flexGrow: 1,
+  },
   title: {
     color: colors.textPrimary,
     fontSize: 24,

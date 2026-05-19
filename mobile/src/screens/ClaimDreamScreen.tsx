@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Loader2 } from 'lucide-react-native';
 
@@ -16,6 +17,7 @@ import { interactionStyles } from '../theme/interactions';
 type Props = NativeStackScreenProps<RootStackParamList, 'ClaimDream'>;
 
 export function ClaimDreamScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const userId = useSessionStore(state => state.userId);
@@ -88,7 +90,15 @@ export function ClaimDreamScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={styles.root}>
+    <View
+      style={[
+        styles.root,
+        {
+          paddingTop: Math.max(insets.top + 24, 48),
+          paddingBottom: Math.max(insets.bottom + 24, 72),
+        },
+      ]}
+    >
       <View style={styles.panel}>
         <MoonAvatar size={70} color={colors.primary} />
         <Text style={styles.title}>꿈카드 받기</Text>

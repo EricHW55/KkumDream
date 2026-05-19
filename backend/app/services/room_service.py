@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, time, timedelta
 from secrets import choice
 from string import ascii_uppercase, digits
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +23,8 @@ class DreamRoom:
     dream_count: int
     member_ids: list[UUID]
     members: list["RoomMember"]
+    latest_dream_id: UUID | None
+    today_giver_ids: list[UUID]
 
 
 @dataclass
@@ -203,6 +206,14 @@ async def _build_room(
             .join(DreamGroup, DreamGroup.dream_id == Dream.id)
             .where(DreamGroup.group_id == group.id, Dream.status != "draft")
         )
+    latest_dream_id = await session.scalar(
+        select(Dream.id)
+        .join(DreamGroup, DreamGroup.dream_id == Dream.id)
+        .where(DreamGroup.group_id == group.id, Dream.status != "draft")
+        .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
+        .limit(1)
+    )
+    today_giver_ids = await _list_today_giver_ids(session, group.id)
     member_rows = (
         await session.execute(
             select(GroupMember.user_id, GroupMember.role, User.nickname, User.profile_image_url)
@@ -243,7 +254,30 @@ async def _build_room(
         dream_count=dream_count or 0,
         member_ids=member_ids,
         members=members,
+        latest_dream_id=latest_dream_id,
+        today_giver_ids=today_giver_ids,
     )
+
+
+async def _list_today_giver_ids(session: AsyncSession, group_id: UUID) -> list[UUID]:
+    timezone = ZoneInfo("Asia/Seoul")
+    today = datetime.now(timezone).date()
+    start = datetime.combine(today, time.min, tzinfo=timezone).astimezone(UTC)
+    end = start + timedelta(days=1)
+    rows = (
+        await session.scalars(
+            select(Dream.giver_id)
+            .join(DreamGroup, DreamGroup.dream_id == Dream.id)
+            .where(
+                DreamGroup.group_id == group_id,
+                Dream.status != "draft",
+                Dream.given_at >= start,
+                Dream.given_at < end,
+            )
+            .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
+        )
+    ).all()
+    return list(dict.fromkeys(rows))
 
 
 async def _require_group_member(session: AsyncSession, group_id: UUID, user_id: UUID) -> None:

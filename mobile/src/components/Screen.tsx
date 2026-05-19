@@ -6,7 +6,19 @@ import { colors } from '../theme/colors';
 
 export function Screen({ children }: PropsWithChildren) {
   const insets = useSafeAreaInsets();
-  return <View style={[styles.root, { paddingTop: insets.top + 12 }]}>{children}</View>;
+  return (
+    <View
+      style={[
+        styles.root,
+        {
+          paddingTop: insets.top + 12,
+          paddingBottom: Math.max(insets.bottom, 12),
+        },
+      ]}
+    >
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -16,4 +28,3 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 });
-

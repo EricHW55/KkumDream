@@ -18,6 +18,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DreamCard } from '../components/DreamCard';
 import {
@@ -84,6 +85,7 @@ const initialComments: DreamComment[] = [
 ];
 
 export function DreamDetailScreen({ route }: Props) {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [displayDream, setDisplayDream] = useState(route.params.dream);
   const dream = displayDream;
@@ -285,7 +287,13 @@ export function DreamDetailScreen({ route }: Props) {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: Math.max(insets.bottom + 44, 88) },
+      ]}
+    >
       <DreamCard dream={dream} size="full" onBackOpen={onBackOpen} />
 
       <View style={styles.reactionBox}>

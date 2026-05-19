@@ -35,6 +35,7 @@ export const mockGroupRooms: GroupRoom[] = [
     memberIds: ['mock-user-1', 'mock-user-2', 'mock-user-3', 'mock-user-4'],
     members: mockMembers,
     latestDreamId: 'mock-dream-1',
+    todayGiverIds: ['mock-user-2', 'mock-user-3', 'mock-user-1'],
   },
   {
     id: 'group-room-2',
@@ -48,6 +49,7 @@ export const mockGroupRooms: GroupRoom[] = [
       ['mock-user-1', 'mock-user-2'].includes(member.id),
     ),
     latestDreamId: 'mock-dream-2',
+    todayGiverIds: ['mock-user-1'],
   },
   {
     id: 'group-room-3',
@@ -59,6 +61,7 @@ export const mockGroupRooms: GroupRoom[] = [
     memberIds: ['mock-user-1'],
     members: mockMembers.filter(member => member.id === 'mock-user-1'),
     latestDreamId: null,
+    todayGiverIds: [],
   },
 ];
 

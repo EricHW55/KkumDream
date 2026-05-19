@@ -175,7 +175,8 @@ function toGroupRoom(room: ApiDreamRoom): GroupRoom {
     unreadCount: 0,
     memberIds: room.memberIds,
     members,
-    latestDreamId: null,
+    latestDreamId: room.latestDreamId ?? null,
+    todayGiverIds: room.todayGiverIds ?? [],
   };
 }
 

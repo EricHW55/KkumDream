@@ -33,3 +33,5 @@ class DreamRoomOut(ApiModel):
     dream_count: int
     member_ids: list[UUID]
     members: list[RoomMemberOut]
+    latest_dream_id: UUID | None = None
+    today_giver_ids: list[UUID] = Field(default_factory=list)

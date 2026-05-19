@@ -16,6 +16,7 @@ export interface GroupRoom {
   memberIds: string[];
   members: GroupMember[];
   latestDreamId: string | null;
+  todayGiverIds: string[];
 }
 
 export interface GroupDreamMessage {

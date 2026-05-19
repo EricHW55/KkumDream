@@ -22,6 +22,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MoonAvatar } from '../components/MoonAvatar';
 import { TagChip } from '../components/TagChip';
@@ -50,6 +51,7 @@ import type { Dream } from '../types/dream';
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupRoom'>;
 
 export function GroupRoomScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
@@ -109,6 +111,9 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     requestAnimationFrame(() => {
       dreamListRef.current?.scrollToEnd({ animated: false });
     });
+    setTimeout(() => {
+      dreamListRef.current?.scrollToEnd({ animated: false });
+    }, 80);
   }, [dreams.length]);
 
   useEffect(() => {
@@ -214,7 +219,12 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={styles.root}>
+    <View
+      style={[
+        styles.root,
+        { paddingTop: Math.max(insets.top + 12, 42) },
+      ]}
+    >
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로가기"
@@ -312,6 +322,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         }}
         contentContainerStyle={[
           styles.messages,
+          { paddingBottom: Math.max(insets.bottom + 64, 112) },
           dreams.length === 0 && styles.emptyMessages,
         ]}
         ListEmptyComponent={

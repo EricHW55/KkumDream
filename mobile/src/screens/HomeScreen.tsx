@@ -486,18 +486,16 @@ function GroupRoomItem({
         .map(dream => dream.giverId),
     ),
   );
-  const uploaders =
-    recentGiverIds.length > 0
-      ? recentGiverIds.slice(0, 3).map(giverId =>
-          resolveRoomMember(room, giverId, sessionUserId),
-        )
-      : (room.members ?? []).length > 0
-        ? room.members.slice(0, 3)
-        : room.memberIds
-            .map(memberId => getDisplayMember(memberId, sessionUserId))
-            .slice(0, 3);
-  const latestUploader = latestDream
-    ? resolveRoomMember(room, latestDream.giverId, sessionUserId)
+  const todayGiverIds = room.todayGiverIds ?? [];
+  const visibleGiverIds =
+    todayGiverIds.length > 0 ? todayGiverIds : recentGiverIds;
+  const uploaders = visibleGiverIds
+    .slice(0, 3)
+    .map(giverId => resolveRoomMember(room, giverId, sessionUserId));
+  const latestGiverId =
+    latestDream?.giverId ?? todayGiverIds[0] ?? recentGiverIds[0] ?? null;
+  const latestUploader = latestGiverId
+    ? resolveRoomMember(room, latestGiverId, sessionUserId)
     : null;
 
   return (

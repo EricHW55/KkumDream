@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { loginWithGoogleIdToken } from '../api/auth';
 import { getGoogleIdToken } from '../auth/googleSignIn';
@@ -10,6 +11,7 @@ import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
 
 export function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const setSession = useSessionStore(state => state.setSession);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,7 +36,15 @@ export function LoginScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View
+      style={[
+        styles.root,
+        {
+          paddingTop: Math.max(insets.top + 48, 96),
+          paddingBottom: Math.max(insets.bottom + 36, 72),
+        },
+      ]}
+    >
       <View style={styles.brand}>
         <MoonAvatar size={74} color={colors.primary} />
         <Text style={styles.title}>꿈드림</Text>

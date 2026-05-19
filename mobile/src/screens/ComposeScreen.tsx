@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   Check,
@@ -76,6 +77,7 @@ type ToneValue = (typeof toneOptions)[number]['value'];
 type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
 export function ComposeScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
@@ -428,7 +430,10 @@ export function ComposeScreen({ navigation }: Props) {
     <ScrollView
       style={styles.root}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: Math.max(insets.bottom + 40, 84) },
+      ]}
     >
       <Text style={styles.label}>오늘 꾼 꿈</Text>
       <TextInput

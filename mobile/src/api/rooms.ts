@@ -14,6 +14,8 @@ export type ApiDreamRoom = {
     profileImageUrl: string | null;
     role: string;
   }[];
+  latestDreamId: string | null;
+  todayGiverIds: string[];
 };
 
 export function fetchRooms(token?: string | null) {
