@@ -939,6 +939,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.38)',
   },
   previewCard: {
+    position: 'relative',
     maxHeight: '92%',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
@@ -960,7 +961,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
-    zIndex: 2,
+    zIndex: 30,
+    elevation: 12,
     width: 34,
     height: 34,
     borderRadius: 17,
