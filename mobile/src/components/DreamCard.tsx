@@ -401,7 +401,7 @@ export function DreamCard({
             </ScrollView>
           </View>
         </Animated.View>
-        {!isBackVisible ? renderImageActions() : null}
+        {renderImageActions()}
       </View>
     </View>
   );
