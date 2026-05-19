@@ -15,6 +15,7 @@ export type Mood =
   | '기괴함';
 export type DreamCardColor = 'ivory' | 'lilac' | 'peach' | 'mint' | 'midnight';
 export type DreamFontStyle = 'rounded' | 'serif' | 'clean';
+export type DreamStoryLength = 'short' | 'standard' | 'long';
 
 export interface DreamDesign {
   cardColor: DreamCardColor;
@@ -52,6 +53,7 @@ export interface DreamDraftPayload {
   rawInput: string;
   mood?: string;
   tone?: string;
+  storyLength?: DreamStoryLength;
   design?: DreamDesign;
 }
 

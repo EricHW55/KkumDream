@@ -10,6 +10,7 @@ ReactionType = Literal["heart", "sparkle", "moon", "cloud"]
 REACTION_TYPES: tuple[ReactionType, ...] = ("heart", "sparkle", "moon", "cloud")
 CardColor = Literal["ivory", "lilac", "peach", "mint", "midnight"]
 FontStyle = Literal["rounded", "serif", "clean"]
+StoryLength = Literal["short", "standard", "long"]
 
 
 class DreamDesign(ApiModel):
@@ -21,6 +22,7 @@ class DreamDraftCreate(ApiModel):
     raw_input: str = Field(min_length=1, max_length=500)
     mood: str | None = Field(default=None, max_length=20)
     tone: str | None = Field(default=None, max_length=30)
+    story_length: StoryLength = "standard"
     design: DreamDesign = Field(default_factory=DreamDesign)
 
 

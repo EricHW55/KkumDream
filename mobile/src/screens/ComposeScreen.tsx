@@ -45,7 +45,7 @@ import {
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
-import type { Dream, DreamDesign } from '../types/dream';
+import type { Dream, DreamDesign, DreamStoryLength } from '../types/dream';
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
 const toneOptions = [
@@ -70,6 +70,27 @@ const toneOptions = [
     description: '짧고 감각적인 문장으로 여운을 남겨요.',
   },
 ] as const;
+const lengthOptions: readonly {
+  value: DreamStoryLength;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'short',
+    label: '간결',
+    description: '핵심 장면만 짧고 선명하게 담아요.',
+  },
+  {
+    value: 'standard',
+    label: '기본',
+    description: '장면과 감정을 균형 있게 담아요.',
+  },
+  {
+    value: 'long',
+    label: '풍부',
+    description: '꿈의 흐름을 더 천천히 풀어줘요.',
+  },
+];
 
 type RecipientMode = 'friend' | 'external';
 type ToneValue = (typeof toneOptions)[number]['value'];
@@ -86,6 +107,8 @@ export function ComposeScreen({ navigation }: Props) {
   const [rawInput, setRawInput] = useState('');
   const [mood, setMood] = useState('몽환');
   const [tone, setTone] = useState<ToneValue>('warm');
+  const [storyLength, setStoryLength] =
+    useState<DreamStoryLength>('standard');
   const [selectedDesign, setSelectedDesign] =
     useState<DreamDesign>(DEFAULT_DREAM_DESIGN);
   const [draft, setDraft] = useState<Dream | null>(null);
@@ -159,6 +182,8 @@ export function ComposeScreen({ navigation }: Props) {
   const canGenerate = rawInput.trim().length > 0 && !isGenerating;
   const selectedTone =
     toneOptions.find(item => item.value === tone) ?? toneOptions[0];
+  const selectedLength =
+    lengthOptions.find(item => item.value === storyLength) ?? lengthOptions[1];
   const selectedColorOption =
     CARD_COLOR_OPTIONS.find(item => item.value === selectedDesign.cardColor) ??
     CARD_COLOR_OPTIONS[0];
@@ -230,7 +255,7 @@ export function ComposeScreen({ navigation }: Props) {
     let nextDraft: Dream;
     try {
       nextDraft = await createDreamDraft(
-        { rawInput: input, mood, tone, design: selectedDesign },
+        { rawInput: input, mood, tone, storyLength, design: selectedDesign },
         token,
       );
     } catch (error) {
@@ -242,7 +267,7 @@ export function ComposeScreen({ navigation }: Props) {
         );
         return;
       }
-      nextDraft = buildMockDraft(input, mood, selectedDesign);
+      nextDraft = buildMockDraft(input, mood, selectedDesign, storyLength);
     } finally {
       setIsGenerating(false);
     }
@@ -495,6 +520,36 @@ export function ComposeScreen({ navigation }: Props) {
         })}
       </View>
       <Text style={styles.toneHint}>{selectedTone.description}</Text>
+
+      <Text style={styles.label}>분량</Text>
+      <View style={styles.lengthBar}>
+        {lengthOptions.map(item => {
+          const isSelected = item.value === storyLength;
+          return (
+            <Pressable
+              key={item.value}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              onPress={() => setStoryLength(item.value)}
+              style={({ pressed }) => [
+                styles.lengthOption,
+                isSelected && styles.lengthOptionActive,
+                pressed && interactionStyles.pressedSoft,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.lengthLabel,
+                  isSelected && styles.lengthLabelActive,
+                ]}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.toneHint}>{selectedLength.description}</Text>
 
       {draft ? (
       <View style={styles.designPanel}>
@@ -1169,6 +1224,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,
+  },
+  lengthBar: {
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: 999,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  lengthOption: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lengthOptionActive: {
+    backgroundColor: colors.primary,
+  },
+  lengthLabel: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  lengthLabelActive: {
+    color: '#FFFFFF',
   },
   designPanel: {
     borderRadius: 20,

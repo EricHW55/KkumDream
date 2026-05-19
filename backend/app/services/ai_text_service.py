@@ -28,6 +28,11 @@ TONE_STORY = "story"
 TONE_POETIC = "poetic"
 VALID_TONES = (TONE_WARM, TONE_POLITE, TONE_STORY, TONE_POETIC)
 DEFAULT_TONE = TONE_WARM
+LENGTH_SHORT = "short"
+LENGTH_STANDARD = "standard"
+LENGTH_LONG = "long"
+VALID_STORY_LENGTHS = (LENGTH_SHORT, LENGTH_STANDARD, LENGTH_LONG)
+DEFAULT_STORY_LENGTH = LENGTH_STANDARD
 TONE_GUIDES = {
     TONE_WARM: {
         "label": "warm letter style",
@@ -56,6 +61,35 @@ TONE_GUIDES = {
             "Use compact, lyrical Korean with vivid images and lingering rhythm. "
             "Avoid becoming obscure or overly ornate."
         ),
+    },
+}
+STORY_LENGTH_GUIDES = {
+    LENGTH_SHORT: {
+        "label": "concise",
+        "instruction": (
+            "story: 180-320 Korean characters. Keep only the clearest dream "
+            "scene and emotion."
+        ),
+        "max_chars": 360,
+        "max_tokens": 1100,
+    },
+    LENGTH_STANDARD: {
+        "label": "balanced",
+        "instruction": (
+            "story: 300-700 Korean characters. Connect the dream naturally "
+            "without making it a long fantasy plot."
+        ),
+        "max_chars": 760,
+        "max_tokens": 1400,
+    },
+    LENGTH_LONG: {
+        "label": "rich",
+        "instruction": (
+            "story: 650-1000 Korean characters. Let the scene breathe with "
+            "more sensory detail while keeping the user's original scenes visible."
+        ),
+        "max_chars": 1000,
+        "max_tokens": 1800,
     },
 }
 ANTHROPIC_TOKEN_PRICES = {
@@ -185,19 +219,22 @@ async def generate_dream_text(
     raw_input: str,
     mood: str | None,
     tone: str | None = None,
+    story_length: str | None = None,
 ) -> DreamTextResult:
     if settings.ai_mock_mode or not settings.anthropic_api_key:
-        return _mock_dream_text(raw_input, mood, tone)
-    return await _generate_with_anthropic(raw_input, mood, tone)
+        return _mock_dream_text(raw_input, mood, tone, story_length)
+    return await _generate_with_anthropic(raw_input, mood, tone, story_length)
 
 
 def _mock_dream_text(
     raw_input: str,
     mood: str | None,
     tone: str | None,
+    story_length: str | None,
 ) -> DreamTextResult:
     selected_mood = _select_mood(mood)
     selected_tone = _select_tone(tone)
+    selected_story_length = _select_story_length(story_length)
     clipped = raw_input.strip()[:70] or "\uc774\ub984 \uc5c6\ub294 \uc7a5\uba74"
     return DreamTextResult(
         title=f"{selected_mood}\ud55c \uafc8 \uc870\uac01",
@@ -206,21 +243,9 @@ def _mock_dream_text(
         summary=f"{clipped}\uc5d0\uc11c \uc2dc\uc791\ub41c {selected_mood}\ud55c "
         "\uafc8\uc758 \uc7a5\uba74\uc744 \ubd80\ub4dc\ub7fd\uac8c "
         "\uc5ee\uc5c8\uc5b4\uc694.",
-        story=_apply_mock_tone(
-            (
-                f"{clipped}\ub77c\ub294 \uc7a5\uba74\uc740 \uafc8\uc18d\uc5d0\uc11c "
-                "\uc624\ub798 \ub0a8\ub294 \uc791\uc740 \ubb38\ucc98\ub7fc "
-                "\uc5f4\ub838\uc5b4\uc694. \ud750\ub9bf\ud588\ub358 "
-                "\uc21c\uac04\ub4e4\uc740 \ucc9c\ucc9c\ud788 \uc774\uc5b4\uc9c0\uace0, "
-                "\uadf8 \uc548\uc5d0 \uc788\ub358 \uac10\uc815\uc740 \uc870\uc6a9\ud55c "
-                "\ube5b\ucc98\ub7fc \uc120\uba85\ud574\uc84c\uc2b5\ub2c8\ub2e4. "
-                "\ub9d0\ub85c \ub2e4 \uc124\uba85\ud560 \uc218 \uc5c6\ub294 "
-                "\uc7a5\uba74\uc774\uc9c0\ub9cc, \ub204\uad70\uac00\uc5d0\uac8c "
-                "\uac74\ub124\uba74 \uc624\ub298\uc758 \ub9c8\uc74c\uc744 "
-                "\uc870\uae08 \ub354 \ub2e4\uc815\ud558\uac8c \uc804\ud574 \uc904 "
-                "\uc218 \uc788\ub294 \uafc8\uc774 \ub418\uc5c8\uc5b4\uc694."
-            ),
-            selected_tone,
+        story=_apply_mock_length(
+            _apply_mock_tone(_build_mock_story(clipped), selected_tone),
+            selected_story_length,
         ),
         main_mood=selected_mood,
         tags=[selected_mood, "\uae30\uc5b5", "\uc120\ubb3c"],
@@ -233,14 +258,16 @@ async def _generate_with_anthropic(
     raw_input: str,
     mood: str | None,
     tone: str | None,
+    story_length: str | None,
 ) -> DreamTextResult:
     selected_mood = _select_mood(mood)
     selected_tone = _select_tone(tone)
+    selected_story_length = _select_story_length(story_length)
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     message = await client.messages.create(
         model=settings.anthropic_text_model,
-        max_tokens=1400,
+        max_tokens=STORY_LENGTH_GUIDES[selected_story_length]["max_tokens"],
         temperature=0.55,
         system=SYSTEM_PROMPT,
         tools=[CREATE_DREAM_CARD_TOOL],
@@ -252,6 +279,7 @@ async def _generate_with_anthropic(
                     raw_input.strip(),
                     selected_mood,
                     selected_tone,
+                    selected_story_length,
                 ),
             }
         ],
@@ -262,14 +290,21 @@ async def _generate_with_anthropic(
     return _normalize_result(
         tool_input,
         selected_mood=selected_mood,
+        selected_story_length=selected_story_length,
         model_name=settings.anthropic_text_model,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
     )
 
 
-def _build_user_prompt(raw_input: str, mood: str, tone: str) -> str:
+def _build_user_prompt(
+    raw_input: str,
+    mood: str,
+    tone: str,
+    story_length: str,
+) -> str:
     tone_guide = TONE_GUIDES[tone]
+    length_guide = STORY_LENGTH_GUIDES[story_length]
     return f"""
 User dream memo:
 {raw_input}
@@ -280,12 +315,14 @@ Preferred mood:
 Preferred writing tone:
 {tone_guide["label"]}: {tone_guide["instruction"]}
 
+Preferred story length:
+{length_guide["label"]}: {length_guide["instruction"]}
+
 Create a polished Korean dream card with these constraints:
 - title: short, evocative Korean title.
 - shortMessage: a sender-facing message that feels like a small gift.
 - summary: one natural Korean sentence.
-- story: 300-700 Korean characters. Connect the dream naturally without making it
-  a long fantasy plot. Keep the user's original scenes visible.
+- {length_guide["instruction"]}
 - Apply the preferred writing tone to shortMessage, summary, and story.
 - mainMood: use the preferred mood exactly: {mood}.
 - tags: 2-3 short Korean words, no hashtags.
@@ -316,6 +353,7 @@ def _normalize_result(
     data: dict[str, Any],
     *,
     selected_mood: str,
+    selected_story_length: str,
     model_name: str,
     input_tokens: int,
     output_tokens: int,
@@ -333,7 +371,11 @@ def _normalize_result(
         "\uce74\ub4dc\ub85c \uc5ee\uc5c8\uc5b4\uc694.",
         220,
     )
-    story = _text(data.get("story"), summary, 1000)
+    story = _text(
+        data.get("story"),
+        summary,
+        int(STORY_LENGTH_GUIDES[selected_story_length]["max_chars"]),
+    )
     main_mood = selected_mood
     tags = _normalize_tags(data.get("tags"), main_mood)
     image_prompt = _text(
@@ -370,6 +412,42 @@ def _select_tone(tone: str | None) -> str:
     if tone in VALID_TONES:
         return tone
     return DEFAULT_TONE
+
+
+def _select_story_length(story_length: str | None) -> str:
+    if story_length in VALID_STORY_LENGTHS:
+        return story_length
+    return DEFAULT_STORY_LENGTH
+
+
+def _build_mock_story(scene: str) -> str:
+    return (
+        f"{scene}\ub77c\ub294 \uc7a5\uba74\uc740 \uafc8\uc18d\uc5d0\uc11c "
+        "\uc624\ub798 \ub0a8\ub294 \uc791\uc740 \ubb38\ucc98\ub7fc "
+        "\uc5f4\ub838\uc5b4\uc694. \ud750\ub9bf\ud588\ub358 "
+        "\uc21c\uac04\ub4e4\uc740 \ucc9c\ucc9c\ud788 \uc774\uc5b4\uc9c0\uace0, "
+        "\uadf8 \uc548\uc5d0 \uc788\ub358 \uac10\uc815\uc740 \uc870\uc6a9\ud55c "
+        "\ube5b\ucc98\ub7fc \uc120\uba85\ud574\uc84c\uc2b5\ub2c8\ub2e4. "
+        "\ub9d0\ub85c \ub2e4 \uc124\uba85\ud560 \uc218 \uc5c6\ub294 "
+        "\uc7a5\uba74\uc774\uc9c0\ub9cc, \ub204\uad70\uac00\uc5d0\uac8c "
+        "\uac74\ub124\uba74 \uc624\ub298\uc758 \ub9c8\uc74c\uc744 "
+        "\uc870\uae08 \ub354 \ub2e4\uc815\ud558\uac8c \uc804\ud574 \uc904 "
+        "\uc218 \uc788\ub294 \uafc8\uc774 \ub418\uc5c8\uc5b4\uc694."
+    )
+
+
+def _apply_mock_length(story: str, story_length: str) -> str:
+    if story_length == LENGTH_SHORT:
+        return story[:320]
+    if story_length == LENGTH_LONG:
+        return (
+            f"{story} "
+            "\uadf8 \uc7a5\uba74\uc758 \ub05d\uc5d0\uc11c \ub0a8\uc740 "
+            "\ube5b\uc740 \uc624\ub798 \uc0ac\ub77c\uc9c0\uc9c0 \uc54a\uace0, "
+            "\uc544\uce68\uc774 \ub418\uc5b4\ub3c4 \ub9c8\uc74c \ud55c\ucabd\uc5d0 "
+            "\uc791\uc740 \uae38\ucc98\ub7fc \uc774\uc5b4\uc84c\uc5b4\uc694."
+        )[:1000]
+    return story[:760]
 
 
 def _apply_mock_tone(story: str, tone: str) -> str:

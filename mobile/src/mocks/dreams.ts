@@ -1,4 +1,4 @@
-import type { Dream } from '../types/dream';
+import type { Dream, DreamStoryLength } from '../types/dream';
 import { DEFAULT_DREAM_DESIGN } from '../theme/dreamDesigns';
 
 const now = new Date().toISOString();
@@ -147,7 +147,16 @@ export function buildMockDraft(
   rawInput: string,
   mood: string,
   design = DEFAULT_DREAM_DESIGN,
+  storyLength: DreamStoryLength = 'standard',
 ): Dream {
+  const storyByLength: Record<DreamStoryLength, string> = {
+    short:
+      '꿈속에서 가장 선명했던 장면만 조용히 남겼어요. 작은 이미지들이 천천히 이어지고, 그 안의 감정은 누군가에게 건넬 수 있는 문장처럼 빛났습니다.',
+    standard:
+      '꿈속에서 익숙한 장면은 천천히 낯선 정원으로 바뀌었다. 손에 쥔 작은 카드가 빛나자 기억하던 풍경들이 조용히 펼쳐졌고, 그 끝에는 누군가에게 건네고 싶은 한 문장이 남았다.',
+    long:
+      '꿈속에서 익숙한 장면은 천천히 낯선 정원으로 바뀌었다. 손에 쥔 작은 카드가 빛나자 잊고 있던 풍경들이 조용히 펼쳐졌고, 발걸음을 옮길 때마다 공기 속의 색이 조금씩 달라졌다. 그 길의 끝에는 누군가에게 건네고 싶은 말이 남아 있었고, 오늘의 마음은 그 문장을 따라 부드럽게 이어졌다.',
+  };
   return {
     ...mockDreams[0],
     id: `draft-${Date.now()}`,
@@ -168,5 +177,6 @@ export function buildMockDraft(
     givenAt: null,
     readAt: null,
     openedBackAt: null,
+    ...{ story: storyByLength[storyLength] },
   };
 }
