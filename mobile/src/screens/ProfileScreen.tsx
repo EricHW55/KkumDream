@@ -1,23 +1,27 @@
 import { useMemo, useState } from 'react';
 import {
+  LayoutAnimation,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from 'react-native';
+import { launchImageLibrary, type Asset } from 'react-native-image-picker';
+import { Plus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { updateProfile } from '../api/auth';
+import { updateProfile, uploadProfileImage } from '../api/auth';
 import { claimDream } from '../api/dreams';
 import { signOutGoogle } from '../auth/googleSignIn';
 import {
   DEFAULT_PROFILE_AVATAR,
   PROFILE_AVATAR_PRESETS,
   ProfileAvatar,
-  isRemoteProfileImage,
   normalizeProfileAvatarValue,
 } from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
@@ -25,6 +29,10 @@ import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
 import { unregisterPushToken } from '../services/pushNotifications';
+
+if (Platform.OS === 'android') {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -38,24 +46,68 @@ export function ProfileScreen() {
   const [profileAvatarValue, setProfileAvatarValue] = useState(
     normalizeProfileAvatarValue(user?.profileImageUrl),
   );
+  const [pendingProfileImage, setPendingProfileImage] = useState<Asset | null>(
+    null,
+  );
+  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [claimToken, setClaimToken] = useState('');
   const [claimStatus, setClaimStatus] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
   const avatarOptions = useMemo(() => {
-    const googleProfileImageUrl = user?.profileImageUrl;
-    if (isRemoteProfileImage(googleProfileImageUrl) && googleProfileImageUrl) {
+    const isPreset = PROFILE_AVATAR_PRESETS.some(
+      option => option.value === profileAvatarValue,
+    );
+    if (!isPreset && profileAvatarValue) {
       return [
-        {
-          value: googleProfileImageUrl,
-          label: '구글 프로필',
-        },
         ...PROFILE_AVATAR_PRESETS,
+        {
+          value: profileAvatarValue,
+          label: '내 사진',
+        },
       ];
     }
     return PROFILE_AVATAR_PRESETS;
-  }, [user?.profileImageUrl]);
+  }, [profileAvatarValue]);
+
+  const toggleProfileEditor = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setStatusText(null);
+    if (isProfileEditorOpen) {
+      setNicknameDraft(user?.nickname ?? '');
+      setProfileAvatarValue(normalizeProfileAvatarValue(user?.profileImageUrl));
+      setPendingProfileImage(null);
+    }
+    setIsProfileEditorOpen(isOpen => !isOpen);
+  };
+
+  const pickProfileImage = async () => {
+    setStatusText(null);
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 1,
+      quality: 0.9,
+    });
+
+    if (result.didCancel) {
+      return;
+    }
+    if (result.errorMessage) {
+      setStatusText(result.errorMessage);
+      return;
+    }
+
+    const asset = result.assets?.[0];
+    if (!asset?.uri) {
+      setStatusText('선택한 이미지를 불러오지 못했어요.');
+      return;
+    }
+
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setPendingProfileImage(asset);
+    setProfileAvatarValue(asset.uri);
+  };
 
   const submitClaim = async () => {
     if (!token) {
@@ -110,14 +162,32 @@ export function ProfileScreen() {
     setStatusText(null);
     setIsSaving(true);
     try {
+      let nextProfileImageUrl = profileAvatarValue || DEFAULT_PROFILE_AVATAR;
+      if (pendingProfileImage?.uri) {
+        const uploadedUser = await uploadProfileImage(
+          {
+            uri: pendingProfileImage.uri,
+            fileName: pendingProfileImage.fileName,
+            type: pendingProfileImage.type,
+          },
+          token,
+        );
+        nextProfileImageUrl =
+          uploadedUser.profileImageUrl ?? DEFAULT_PROFILE_AVATAR;
+      }
+
       const nextUser = await updateProfile(
         {
           nickname,
-          profileImageUrl: profileAvatarValue || DEFAULT_PROFILE_AVATAR,
+          profileImageUrl: nextProfileImageUrl,
         },
         token,
       );
       updateUser(nextUser);
+      setPendingProfileImage(null);
+      setProfileAvatarValue(normalizeProfileAvatarValue(nextUser.profileImageUrl));
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsProfileEditorOpen(false);
       setStatusText('내 정보를 저장했어요.');
     } catch (error) {
       setStatusText(error instanceof Error ? error.message : '내 정보를 저장하지 못했어요.');
@@ -152,67 +222,103 @@ export function ProfileScreen() {
                 {user?.email ?? '구글 계정 이메일 없음'}
               </Text>
             </View>
-          </View>
-
-          <Text style={styles.inputLabel}>이름</Text>
-          <TextInput
-            autoCorrect={false}
-            spellCheck={false}
-            defaultValue={nicknameDraft}
-            onChangeText={setNicknameDraft}
-            placeholder="이름"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-          />
-
-          <Text style={styles.inputLabel}>프로필 아이콘</Text>
-          <View style={styles.avatarOptions}>
-            {avatarOptions.map(option => {
-              const isSelected = option.value === profileAvatarValue;
-              return (
-                <Pressable
-                  key={option.value}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => setProfileAvatarValue(option.value)}
-                  style={({ pressed }) => [
-                    styles.avatarOption,
-                    isSelected && styles.avatarOptionActive,
-                    pressed && interactionStyles.pressedSoft,
-                  ]}
-                >
-                  <ProfileAvatar
-                    value={option.value}
-                    name={nicknameDraft || user?.nickname}
-                    size={42}
-                  />
-                  <Text
-                    style={[
-                      styles.avatarOptionLabel,
-                      isSelected && styles.avatarOptionLabelActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            <Pressable
+              accessibilityRole="button"
+              onPress={toggleProfileEditor}
+              style={({ pressed }) => [
+                styles.editProfileButton,
+                pressed && interactionStyles.pressed,
+              ]}
+            >
+              <Text style={styles.editProfileButtonText}>
+                {isProfileEditorOpen ? '닫기' : '수정'}
+              </Text>
+            </Pressable>
           </View>
 
           {statusText ? <Text style={styles.statusText}>{statusText}</Text> : null}
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={isSaving}
-            onPress={saveProfile}
-            style={({ pressed }) => [
-              styles.saveButton,
-              isSaving && styles.disabledButton,
-              pressed && !isSaving && interactionStyles.pressed,
-            ]}
-          >
-            <Text style={styles.saveText}>{isSaving ? '저장 중...' : '저장'}</Text>
-          </Pressable>
+          {isProfileEditorOpen ? (
+            <View style={styles.profileEditor}>
+              <Text style={styles.inputLabel}>이름</Text>
+              <TextInput
+                autoCorrect={false}
+                spellCheck={false}
+                defaultValue={nicknameDraft}
+                onChangeText={setNicknameDraft}
+                placeholder="이름"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+              />
+
+              <Text style={styles.inputLabel}>프로필 아이콘</Text>
+              <View style={styles.avatarOptions}>
+                {avatarOptions.map(option => {
+                  const isSelected = option.value === profileAvatarValue;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      onPress={() => {
+                        setPendingProfileImage(null);
+                        setProfileAvatarValue(option.value);
+                      }}
+                      style={({ pressed }) => [
+                        styles.avatarOption,
+                        isSelected && styles.avatarOptionActive,
+                        pressed && interactionStyles.pressedSoft,
+                      ]}
+                    >
+                      <ProfileAvatar
+                        value={option.value}
+                        name={nicknameDraft || user?.nickname}
+                        size={42}
+                      />
+                      <Text
+                        style={[
+                          styles.avatarOptionLabel,
+                          isSelected && styles.avatarOptionLabelActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="갤러리에서 프로필 이미지 선택"
+                  onPress={pickProfileImage}
+                  style={({ pressed }) => [
+                    styles.avatarOption,
+                    styles.uploadAvatarOption,
+                    pressed && interactionStyles.pressedSoft,
+                  ]}
+                >
+                  <View style={styles.uploadAvatarIcon}>
+                    <Plus color={colors.primary} size={24} strokeWidth={2.5} />
+                  </View>
+                  <Text style={styles.avatarOptionLabel}>사진 추가</Text>
+                </Pressable>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={isSaving}
+                onPress={saveProfile}
+                style={({ pressed }) => [
+                  styles.saveButton,
+                  isSaving && styles.disabledButton,
+                  pressed && !isSaving && interactionStyles.pressed,
+                ]}
+              >
+                <Text style={styles.saveText}>
+                  {isSaving ? '저장 중...' : '저장'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
         <View style={styles.panel}>
           <Text style={styles.sectionHeading}>꿈카드 받기</Text>
@@ -318,6 +424,27 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
   },
+  editProfileButton: {
+    minWidth: 54,
+    minHeight: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  editProfileButtonText: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  profileEditor: {
+    gap: 12,
+    overflow: 'hidden',
+  },
   inputLabel: {
     color: colors.textPrimary,
     fontSize: 14,
@@ -354,6 +481,17 @@ const styles = StyleSheet.create({
   avatarOptionActive: {
     backgroundColor: colors.lavenderMist,
     borderColor: colors.primary,
+  },
+  uploadAvatarOption: {
+    borderStyle: 'dashed',
+  },
+  uploadAvatarIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lavenderMist,
   },
   avatarOptionLabel: {
     color: colors.textSecondary,

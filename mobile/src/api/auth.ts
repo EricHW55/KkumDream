@@ -36,3 +36,21 @@ export function updateProfile(
     body: JSON.stringify(payload),
   });
 }
+
+export function uploadProfileImage(
+  asset: { uri: string; fileName?: string | null; type?: string | null },
+  token: string,
+) {
+  const form = new FormData();
+  form.append('file', {
+    uri: asset.uri,
+    name: asset.fileName ?? 'profile-image.jpg',
+    type: asset.type ?? 'image/jpeg',
+  } as unknown as Blob);
+
+  return requestJson<AuthUser>('/auth/me/profile-image', {
+    method: 'POST',
+    token,
+    body: form,
+  });
+}

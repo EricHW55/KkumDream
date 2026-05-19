@@ -9,7 +9,7 @@ export const DEFAULT_PROFILE_AVATAR = 'kkumdream-avatar:app-default';
 export const PROFILE_AVATAR_PRESETS = [
   {
     value: DEFAULT_PROFILE_AVATAR,
-    label: '기본',
+    label: '꿈달',
     type: 'app',
     color: colors.primary,
   },
@@ -33,7 +33,7 @@ export const PROFILE_AVATAR_PRESETS = [
   },
   {
     value: 'kkumdream-avatar:google-default',
-    label: '구글 기본',
+    label: '기본',
     type: 'google',
     color: colors.textMuted,
   },
@@ -55,6 +55,10 @@ export function normalizeProfileAvatarValue(value?: string | null) {
 
 export function isRemoteProfileImage(value?: string | null) {
   return /^https?:\/\//i.test(value?.trim() ?? '');
+}
+
+export function isProfileImageUri(value?: string | null) {
+  return /^(https?|file|content|ph):\/\//i.test(value?.trim() ?? '');
 }
 
 export function getProfileAvatarPreset(value?: string | null) {
@@ -79,7 +83,7 @@ export function ProfileAvatar({
     return <PresetAvatar preset={preset} size={size} />;
   }
 
-  if (isRemoteProfileImage(normalizedValue)) {
+  if (isProfileImageUri(normalizedValue)) {
     return (
       <Image
         source={{ uri: normalizedValue }}

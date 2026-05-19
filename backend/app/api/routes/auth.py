@@ -1,7 +1,7 @@
 from uuid import UUID
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
@@ -14,6 +14,7 @@ from app.services.user_service import (
     get_user,
     update_user_profile,
 )
+from app.services.storage_service import store_profile_image
 
 router = APIRouter()
 
@@ -72,6 +73,35 @@ async def update_me(
         payload.nickname,
         payload.profile_image_url,
     )
+    return UserOut.model_validate(user)
+
+
+@router.post("/me/profile-image", response_model=UserOut)
+async def upload_profile_image(
+    file: UploadFile = File(...),
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> UserOut:
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미지 파일만 업로드할 수 있어요.",
+        )
+
+    image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="업로드할 이미지가 비어 있어요.",
+        )
+    if len(image_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="프로필 이미지는 5MB 이하로 업로드해주세요.",
+        )
+
+    image_url = await store_profile_image(user_id, image_bytes)
+    user = await update_user_profile(session, user_id, None, image_url)
     return UserOut.model_validate(user)
 
 

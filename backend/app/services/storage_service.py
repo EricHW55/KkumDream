@@ -34,6 +34,13 @@ async def store_generated_image(dream_id: UUID, source_url: str) -> tuple[str, s
     )
 
 
+async def store_profile_image(user_id: UUID, image_bytes: bytes) -> str:
+    avatar_bytes = await asyncio.to_thread(_to_webp, image_bytes, 512, 90)
+    avatar_key = f"profiles/{user_id}/avatar.webp"
+    await asyncio.to_thread(_upload, avatar_key, avatar_bytes)
+    return f"{settings.r2_public_base_url}/{avatar_key}"
+
+
 def _to_webp(source: bytes, size: int, quality: int) -> bytes:
     with Image.open(BytesIO(source)) as image:
         image = image.convert("RGB")
