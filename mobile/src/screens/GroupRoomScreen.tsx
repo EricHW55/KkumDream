@@ -114,6 +114,12 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     setTimeout(() => {
       dreamListRef.current?.scrollToEnd({ animated: false });
     }, 80);
+    setTimeout(() => {
+      dreamListRef.current?.scrollToEnd({ animated: false });
+    }, 220);
+    setTimeout(() => {
+      dreamListRef.current?.scrollToEnd({ animated: false });
+    }, 500);
   }, [dreams.length]);
 
   useEffect(() => {
@@ -123,9 +129,16 @@ export function GroupRoomScreen({ navigation, route }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      shouldScrollToLatestRef.current = dreams.length > 0;
+      scrollToLatestDream();
       refetchRooms().catch(() => undefined);
-      refetchDreams().catch(() => undefined);
-    }, [refetchDreams, refetchRooms]),
+      refetchDreams()
+        .then(() => {
+          shouldScrollToLatestRef.current = dreams.length > 0;
+          scrollToLatestDream();
+        })
+        .catch(() => undefined);
+    }, [dreams.length, refetchDreams, refetchRooms, scrollToLatestDream]),
   );
 
   const openSettings = () => {
@@ -322,7 +335,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         }}
         contentContainerStyle={[
           styles.messages,
-          { paddingBottom: Math.max(insets.bottom + 64, 112) },
+          { paddingBottom: Math.max(insets.bottom + 24, 56) },
           dreams.length === 0 && styles.emptyMessages,
         ]}
         ListEmptyComponent={

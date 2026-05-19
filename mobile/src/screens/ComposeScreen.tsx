@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -78,6 +78,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
 export function ComposeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const composeScrollRef = useRef<ScrollView>(null);
   const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
@@ -255,6 +256,9 @@ export function ComposeScreen({ navigation }: Props) {
     setEditTitle(nextDraft.title);
     setEditStory(nextDraft.story);
     setIsEditOpen(false);
+    setTimeout(() => {
+      composeScrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, 0);
   };
 
   const openEdit = () => {
@@ -428,6 +432,7 @@ export function ComposeScreen({ navigation }: Props) {
 
   return (
     <ScrollView
+      ref={composeScrollRef}
       style={styles.root}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[
@@ -435,6 +440,8 @@ export function ComposeScreen({ navigation }: Props) {
         { paddingBottom: Math.max(insets.bottom + 40, 84) },
       ]}
     >
+      {!draft ? (
+        <>
       <Text style={styles.label}>오늘 꾼 꿈</Text>
       <TextInput
         autoCorrect={false}
@@ -489,6 +496,7 @@ export function ComposeScreen({ navigation }: Props) {
       </View>
       <Text style={styles.toneHint}>{selectedTone.description}</Text>
 
+      {draft ? (
       <View style={styles.designPanel}>
         <View style={styles.designHeader}>
           <Palette color={colors.primary} size={19} strokeWidth={2.4} />
@@ -579,11 +587,14 @@ export function ComposeScreen({ navigation }: Props) {
           })}
         </View>
       </View>
+      ) : null}
 
       <PrimaryButton disabled={!canGenerate} onPress={createPreview}>
         {isGenerating ? '꿈카드 빚는 중...' : '카드 미리보기 만들기'}
       </PrimaryButton>
       {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
+        </>
+      ) : null}
       {isGenerating ? (
         <DreamGenerationAnimation
           title="꿈을 글로 빚는 중"
@@ -646,6 +657,97 @@ export function ComposeScreen({ navigation }: Props) {
           ) : null}
 
           {previewDream ? <DreamCard dream={previewDream} /> : null}
+          <View style={styles.designPanel}>
+            <View style={styles.designHeader}>
+              <Palette color={colors.primary} size={19} strokeWidth={2.4} />
+              <View style={styles.flex}>
+                <Text style={styles.designTitle}>카드 디자인</Text>
+                <Text style={styles.designSummary}>
+                  {selectedColorOption.label} · {selectedFontOption.label}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.designLabel}>카드 색감</Text>
+            <View style={styles.colorGrid}>
+              {CARD_COLOR_OPTIONS.map(option => {
+                const isSelected = option.value === selectedDesign.cardColor;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${option.label} 카드 색감`}
+                    onPress={() => updateCardColor(option.value)}
+                    style={({ pressed }) => [
+                      styles.colorOption,
+                      isSelected && styles.colorOptionActive,
+                      pressed && interactionStyles.pressed,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: option.swatch },
+                        option.value === 'midnight' && styles.darkSwatch,
+                      ]}
+                    >
+                      {isSelected ? (
+                        <Check
+                          color={
+                            option.value === 'midnight'
+                              ? '#FFFFFF'
+                              : colors.primaryDark
+                          }
+                          size={15}
+                          strokeWidth={3}
+                        />
+                      ) : null}
+                    </View>
+                    <Text
+                      style={[
+                        styles.colorOptionText,
+                        isSelected && styles.colorOptionTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.designLabel}>글씨체</Text>
+            <View style={styles.fontGrid}>
+              {FONT_STYLE_OPTIONS.map(option => {
+                const isSelected = option.value === selectedDesign.fontStyle;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    onPress={() => updateFontStyle(option.value)}
+                    style={({ pressed }) => [
+                      styles.fontOption,
+                      isSelected && styles.fontOptionActive,
+                      pressed && interactionStyles.pressedSoft,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.fontOptionTitle,
+                        isSelected && styles.fontOptionTitleActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text style={styles.fontOptionDescription}>
+                      {option.description}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
           <PrimaryButton onPress={() => setIsRecipientModalVisible(true)}>
             {recipientReady ? '받는 사람 변경' : '받는 사람 선택하기'}
           </PrimaryButton>
@@ -674,8 +776,20 @@ export function ComposeScreen({ navigation }: Props) {
               {isGiving ? '보내는 중...' : '보내기'}
             </PrimaryButton>
           )}
+          {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
         </View>
       ) : null}
+
+      <Modal animationType="fade" transparent visible={isGenerating}>
+        <View style={styles.loadingBackdrop}>
+          <View style={styles.loadingPanel}>
+            <DreamGenerationAnimation
+              title="꿈카드를 만드는 중"
+              subtitle="달빛과 구름 사이에서 카드 문장과 이미지를 고르고 있어요."
+            />
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="fade"
@@ -1258,6 +1372,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
+  },
+  loadingBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'rgba(251, 250, 253, 0.86)',
+  },
+  loadingPanel: {
+    borderRadius: 28,
+    padding: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   modalBackdrop: {
     flex: 1,
