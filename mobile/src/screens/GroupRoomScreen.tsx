@@ -39,6 +39,11 @@ import { getDisplayMember } from '../data/members';
 import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
+import {
+  CARD_COLOR_THEMES,
+  getDreamFontStyle,
+  normalizeDreamDesign,
+} from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 
@@ -463,6 +468,9 @@ function DreamMessage({
   const sender = getDisplayMember(dream.giverId, sessionUserId);
   const isMine = isCurrentUserId(dream.giverId, sessionUserId);
   const visibleTags = dream.tags.slice(0, 3);
+  const design = normalizeDreamDesign(dream.design);
+  const designTheme = CARD_COLOR_THEMES[design.cardColor];
+  const dreamFontStyle = getDreamFontStyle(design.fontStyle);
 
   return (
     <View style={[styles.messageRow, isMine && styles.myMessageRow]}>
@@ -477,10 +485,19 @@ function DreamMessage({
           style={({ pressed }) => [
             styles.dreamBubble,
             isMine && styles.myDreamBubble,
+            {
+              backgroundColor: designTheme.card,
+              shadowColor: designTheme.shadow,
+            },
             pressed && interactionStyles.pressedSoft,
           ]}
         >
-          <View style={styles.previewWrap}>
+          <View
+            style={[
+              styles.previewWrap,
+              { backgroundColor: designTheme.image },
+            ]}
+          >
             {dream.thumbnailUrl || dream.imageUrl ? (
               <Image
                 source={{
@@ -491,22 +508,61 @@ function DreamMessage({
             ) : isImagePending(dream) ? (
               <DreamGenerationAnimation compact title="이미지 생성 중" />
             ) : (
-              <View style={styles.previewPlaceholder}>
-                <Text style={styles.previewMood}>{dream.mainMood}</Text>
+              <View
+                style={[
+                  styles.previewPlaceholder,
+                  { backgroundColor: designTheme.placeholder },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.previewMood,
+                    dreamFontStyle,
+                    { color: designTheme.accent },
+                  ]}
+                >
+                  {dream.mainMood}
+                </Text>
               </View>
             )}
           </View>
-          <View style={styles.bubbleText}>
-            <Text style={styles.bubbleMeta}>
+          <View style={[styles.bubbleText, { backgroundColor: designTheme.card }]}>
+            <Text
+              style={[
+                styles.bubbleMeta,
+                dreamFontStyle,
+                { color: designTheme.secondaryText },
+              ]}
+            >
               {formatSentAt(dream.givenAt ?? dream.createdAt)}
             </Text>
-            <Text style={styles.bubbleTitle}>{dream.title}</Text>
-            <Text style={styles.bubbleSummary} numberOfLines={2}>
+            <Text
+              style={[
+                styles.bubbleTitle,
+                dreamFontStyle,
+                { color: designTheme.text },
+              ]}
+            >
+              {dream.title}
+            </Text>
+            <Text
+              style={[
+                styles.bubbleSummary,
+                dreamFontStyle,
+                { color: designTheme.secondaryText },
+              ]}
+              numberOfLines={2}
+            >
               {dream.summary}
             </Text>
             <View style={styles.tags}>
               {visibleTags.map(tag => (
-                <TagChip key={tag} label={tag} />
+                <TagChip
+                  key={tag}
+                  label={tag}
+                  backgroundColor={designTheme.tagBackground}
+                  textColor={designTheme.tagText}
+                />
               ))}
             </View>
           </View>

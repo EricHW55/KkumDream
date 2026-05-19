@@ -17,7 +17,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
-import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
+import {
+  CARD_COLOR_THEMES,
+  getDreamFontStyle,
+  normalizeDreamDesign,
+} from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
@@ -472,6 +476,7 @@ function MiniDreamCard({
 }) {
   const design = normalizeDreamDesign(dream.design);
   const designTheme = CARD_COLOR_THEMES[design.cardColor];
+  const dreamFontStyle = getDreamFontStyle(design.fontStyle);
 
   return (
     <Pressable
@@ -479,7 +484,11 @@ function MiniDreamCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.miniCard,
-        { width },
+        {
+          width,
+          backgroundColor: designTheme.card,
+          shadowColor: designTheme.shadow,
+        },
         pressed && interactionStyles.pressedSoft,
       ]}
     >
@@ -490,20 +499,34 @@ function MiniDreamCard({
             style={styles.miniImageAsset}
           />
         ) : (
-          <Text style={[styles.miniMood, { color: designTheme.accent }]}>
+          <Text
+            style={[
+              styles.miniMood,
+              dreamFontStyle,
+              { color: designTheme.accent },
+            ]}
+          >
             {isImagePending(dream) ? '이미지 생성 중' : dream.mainMood}
           </Text>
         )}
       </View>
       <View style={[styles.miniBody, { backgroundColor: designTheme.card }]}>
         <Text
-          style={[styles.miniTitle, { color: designTheme.text }]}
+          style={[
+            styles.miniTitle,
+            dreamFontStyle,
+            { color: designTheme.text },
+          ]}
           numberOfLines={2}
         >
           {dream.title}
         </Text>
         <Text
-          style={[styles.miniMeta, { color: designTheme.secondaryText }]}
+          style={[
+            styles.miniMeta,
+            dreamFontStyle,
+            { color: designTheme.secondaryText },
+          ]}
           numberOfLines={1}
         >
           {dream.tags
