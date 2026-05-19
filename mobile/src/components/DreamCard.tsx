@@ -165,6 +165,7 @@ export function DreamCard({
     <View style={styles.pressable}>
       <View style={[styles.scene, { height: cardHeight }]}>
         <Animated.View
+          pointerEvents={isBackVisible ? 'none' : 'auto'}
           style={[
             styles.card,
             styles.face,
@@ -173,6 +174,7 @@ export function DreamCard({
               backgroundColor: designTheme.card,
               shadowColor: designTheme.shadow,
             },
+            isBackVisible ? styles.faceHidden : styles.faceVisible,
             frontStyle,
           ]}
         >
@@ -295,6 +297,7 @@ export function DreamCard({
         </Animated.View>
 
         <Animated.View
+          pointerEvents={isBackVisible ? 'auto' : 'none'}
           style={[
             styles.card,
             styles.face,
@@ -304,6 +307,7 @@ export function DreamCard({
               backgroundColor: designTheme.back,
               shadowColor: designTheme.shadow,
             },
+            isBackVisible ? styles.faceVisible : styles.faceHidden,
             backStyle,
           ]}
         >
@@ -389,6 +393,12 @@ const styles = StyleSheet.create({
   face: {
     width: '100%',
     backfaceVisibility: 'hidden',
+  },
+  faceVisible: {
+    zIndex: 2,
+  },
+  faceHidden: {
+    zIndex: 0,
   },
   backFace: {
     position: 'absolute',
