@@ -1,20 +1,22 @@
 import Svg, { Circle, Path, Polygon } from 'react-native-svg';
 
+import { colors } from '../theme/colors';
+
 type Props = {
   size?: number;
   color?: string;
 };
 
-export function MoonAvatar({ size = 42, color = '#B069FF' }: Props) {
-  const cloudColor = '#F4F2F7';
-  const cloudShade = '#E4E1EA';
-  const moonColor = '#FFD66B';
+export function MoonAvatar({ size = 42, color = colors.primary }: Props) {
+  const cloudColor = colors.skyMist;
+  const cloudShade = colors.lavenderTint;
+  const moonColor = colors.moonAccent;
   const starColor = '#FFE891';
 
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64">
       <Circle cx="32" cy="32" r="30" fill={color} />
-      <Circle cx="25" cy="26" r="21" fill="#FFFFFF" opacity={0.14} />
+      <Circle cx="25" cy="26" r="21" fill={colors.cardBase} opacity={0.14} />
       <Path
         d="M41 12c-7.7 3.1-12.5 10-12.5 18.1 0 9.7 7.3 17.7 16.7 19-3.5 2.7-7.9 4.2-12.6 4.2-11.6 0-21-9.4-21-21 0-10.8 8.2-19.8 18.7-20.9 3.7-.4 7.4.2 10.7 1.6z"
         fill={moonColor}

@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import {
   Clipboard,
   FlatList,
-  Image,
   Modal,
   Pressable,
   Share,
@@ -27,7 +26,7 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { MoonAvatar } from '../components/MoonAvatar';
+import { ProfileAvatar } from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
 import {
   createGroupRoom,
@@ -55,6 +54,7 @@ export function HomeScreen() {
   const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
+  const user = useSessionStore(state => state.user);
   const [isRoomSheetVisible, setIsRoomSheetVisible] = useState(false);
   const [roomSheetMode, setRoomSheetMode] = useState<RoomSheetMode>('menu');
   const [roomNameDraft, setRoomNameDraft] = useState('새 꿈방');
@@ -212,7 +212,11 @@ export function HomeScreen() {
               pressed && interactionStyles.pressed,
             ]}
           >
-            <MoonAvatar size={48} color={colors.primary} />
+            <ProfileAvatar
+              value={user?.profileImageUrl}
+              name={user?.nickname}
+              size={48}
+            />
           </Pressable>
         </View>
       </View>
@@ -222,15 +226,12 @@ export function HomeScreen() {
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.list, rooms.length === 0 && styles.emptyList]}
-        ListHeaderComponent={
-          rooms.length > 0 ? (
-            <Text style={styles.helperText}>백엔드 DB에 저장된 내 꿈방입니다.</Text>
-          ) : null
-        }
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>아직 꿈방이 없어요</Text>
-            <Text style={styles.emptyText}>아래 버튼으로 새 꿈방을 만들거나 초대코드로 참가할 수 있어요.</Text>
+            <Text style={styles.emptyTitle}>현재 가입된 꿈방이 없습니다.</Text>
+            <Text style={styles.emptyText}>
+              초대코드로 들어가거나 새 꿈방을 만들어보세요.
+            </Text>
           </View>
         }
         ListFooterComponent={
@@ -524,14 +525,14 @@ function GroupRoomItem({
                 index > 0 && styles.stackedMemberDot,
               ]}
             >
-              <ProfileAvatar member={member} size={27} />
+              <RoomMemberAvatar member={member} size={27} />
             </View>
           ))}
         </View>
         <View style={styles.roomDivider} />
         {latestUploader ? (
           <View style={styles.latestBadge}>
-            <ProfileAvatar member={latestUploader} size={36} />
+            <RoomMemberAvatar member={latestUploader} size={36} />
           </View>
         ) : (
           <View style={styles.emptyDreamBadge}>
@@ -554,23 +555,21 @@ function resolveRoomMember(
   );
 }
 
-function ProfileAvatar({
+function RoomMemberAvatar({
   member,
   size,
 }: {
-  member: { avatarColor: string; profileImageUrl?: string | null };
+  member: { avatarColor: string; name: string; profileImageUrl?: string | null };
   size: number;
 }) {
-  if (member.profileImageUrl) {
-    return (
-      <Image
-        source={{ uri: member.profileImageUrl }}
-        style={{ width: size, height: size, borderRadius: size / 2 }}
-      />
-    );
-  }
-
-  return <MoonAvatar size={size} color={member.avatarColor} />;
+  return (
+    <ProfileAvatar
+      value={member.profileImageUrl}
+      name={member.name}
+      size={size}
+      fallbackColor={member.avatarColor}
+    />
+  );
 }
 
 function upsertRoom(rooms: GroupRoom[], room: GroupRoom) {
@@ -612,7 +611,7 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2F2F4',
+    backgroundColor: colors.lavenderMist,
   },
   profileBadge: {
     width: 56,
@@ -622,14 +621,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primary,
     borderWidth: 4,
-    borderColor: '#F2F2F4',
-  },
-  helperText: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 19,
-    marginBottom: 14,
+    borderColor: colors.lavenderTint,
   },
   list: {
     gap: 14,
@@ -663,9 +655,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: colors.lavenderMist,
+    backgroundColor: colors.lavenderTint,
     borderWidth: 1,
-    borderColor: colors.divider,
+    borderColor: colors.primaryLight,
   },
   addRoomIcon: {
     width: 46,
@@ -673,7 +665,7 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cardBase,
+    backgroundColor: colors.lavenderMist,
   },
   addRoomText: {
     flex: 1,
@@ -694,18 +686,20 @@ const styles = StyleSheet.create({
   roomItem: {
     minHeight: 96,
     borderRadius: 28,
-    backgroundColor: '#F3F3F4',
+    backgroundColor: colors.lavenderMist,
     paddingHorizontal: 22,
     paddingVertical: 18,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   roomText: {
     flex: 1,
     paddingRight: 12,
   },
   roomName: {
-    color: '#000000',
+    color: colors.textPrimary,
     fontSize: 24,
     fontWeight: '700',
     includeFontPadding: false,
@@ -732,9 +726,9 @@ const styles = StyleSheet.create({
     borderRadius: 14.5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
     borderWidth: 2,
-    borderColor: '#E5E5E8',
+    borderColor: colors.lavenderTint,
     overflow: 'hidden',
   },
   stackedMemberDot: {
@@ -743,7 +737,7 @@ const styles = StyleSheet.create({
   roomDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#D9D9DE',
+    backgroundColor: colors.lavenderTint,
   },
   latestBadge: {
     width: 36,
@@ -771,7 +765,7 @@ const styles = StyleSheet.create({
   sheetBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    backgroundColor: 'rgba(40, 35, 63, 0.28)',
   },
   sheet: {
     borderTopLeftRadius: 28,
@@ -799,7 +793,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F3F4',
+    backgroundColor: colors.lavenderMist,
   },
   sheetAction: {
     flexDirection: 'row',
@@ -857,7 +851,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
   },
   inviteCode: {
     color: colors.primaryDark,
@@ -905,7 +899,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
     color: colors.textPrimary,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
     paddingHorizontal: 16,
     fontSize: 18,
     fontWeight: '700',

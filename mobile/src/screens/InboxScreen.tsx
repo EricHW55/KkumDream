@@ -34,6 +34,7 @@ export function InboxScreen() {
         title="받은 꿈"
         description="친구들이 보내준 꿈카드를 보관함이나 날짜별 캘린더에서 볼 수 있어요."
         calendarLabel="받은 꿈카드"
+        emptyMessage="받은 꿈 카드가 없습니다."
         dreams={inbox}
       />
     </Screen>

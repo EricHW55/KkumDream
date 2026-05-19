@@ -33,6 +33,7 @@ type Props = {
   title: string;
   description: string;
   calendarLabel: string;
+  emptyMessage: string;
   dreams: Dream[];
 };
 
@@ -53,6 +54,7 @@ export function DreamLibraryView({
   title,
   description,
   calendarLabel,
+  emptyMessage,
   dreams,
 }: Props) {
   const navigation = useNavigation<Navigation>();
@@ -185,7 +187,11 @@ export function DreamLibraryView({
           numColumns={3}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.gridRow}
-          contentContainerStyle={styles.archiveGrid}
+          contentContainerStyle={[
+            styles.archiveGrid,
+            dreams.length === 0 && styles.emptyArchiveGrid,
+          ]}
+          ListEmptyComponent={<EmptyDreamState message={emptyMessage} />}
           renderItem={({ item }) => (
             <MiniDreamCard
               dream={item}
@@ -318,9 +324,7 @@ export function DreamLibraryView({
 
           {calendarMonths.length === 0 ? (
             <View style={styles.calendarHintBox}>
-              <Text style={styles.calendarHintText}>
-                아직 표시할 꿈카드가 없어요.
-              </Text>
+              <Text style={styles.calendarHintText}>{emptyMessage}</Text>
             </View>
           ) : null}
         </ScrollView>
@@ -461,6 +465,14 @@ export function DreamLibraryView({
           ) : null}
         </Pressable>
       </Modal>
+    </View>
+  );
+}
+
+function EmptyDreamState({ message }: { message: string }) {
+  return (
+    <View style={styles.emptyDreamBox}>
+      <Text style={styles.emptyDreamText}>{message}</Text>
     </View>
   );
 }
@@ -648,7 +660,7 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: 18,
     flexDirection: 'row',
-    backgroundColor: '#F0F0F2',
+    backgroundColor: colors.lavenderMist,
   },
   segment: {
     flex: 1,
@@ -659,7 +671,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   segmentActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
   },
   segmentLabel: {
     color: colors.textMuted,
@@ -672,6 +684,21 @@ const styles = StyleSheet.create({
   },
   archiveGrid: {
     paddingBottom: 120,
+  },
+  emptyArchiveGrid: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyDreamBox: {
+    borderRadius: 20,
+    padding: 18,
+    backgroundColor: colors.lavenderMist,
+  },
+  emptyDreamText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
   },
   gridRow: {
     gap: 10,
@@ -784,7 +811,7 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 23,
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: colors.cardBase,
     overflow: 'hidden',
     backgroundColor: colors.lavenderTint,
     shadowColor: colors.primary,
@@ -817,7 +844,7 @@ const styles = StyleSheet.create({
     left: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(35, 30, 54, 0.26)',
+    backgroundColor: 'rgba(40, 35, 63, 0.28)',
   },
   dayPreviewDay: {
     color: '#FFFFFF',
@@ -834,7 +861,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     textAlign: 'center',
     color: colors.primaryDark,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
     fontSize: 8,
     fontWeight: '800',
     includeFontPadding: false,
@@ -855,7 +882,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     padding: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.34)',
+    backgroundColor: 'rgba(40, 35, 63, 0.34)',
   },
   pickerSheet: {
     borderTopLeftRadius: 28,
@@ -903,7 +930,7 @@ const styles = StyleSheet.create({
     borderRadius: 33,
     padding: 3,
     borderWidth: 3,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
     overflow: 'hidden',
   },
   pickerThumbImage: {
@@ -936,7 +963,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     padding: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.38)',
+    backgroundColor: 'rgba(40, 35, 63, 0.38)',
   },
   previewCard: {
     position: 'relative',
@@ -955,7 +982,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#D1D1D8',
+    backgroundColor: colors.lavenderTint,
   },
   previewClose: {
     position: 'absolute',
@@ -968,7 +995,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,252,255,0.92)',
   },
   detailButton: {
     minHeight: 48,

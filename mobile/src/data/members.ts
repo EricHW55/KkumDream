@@ -1,7 +1,7 @@
 import { mockMembers } from '../mocks/groups';
 import { isCurrentUserId } from './currentUser';
 
-const fallbackColors = ['#F56BEF', '#B069FF', '#7FC8D9', '#FFD66B', '#7FC8B5'];
+const fallbackColors = ['#6F61AD', '#9B8AC7', '#9BDDEB', '#8ED7E8', '#76CDBA'];
 
 function colorForId(id: string) {
   const total = Array.from(id).reduce((sum, char) => sum + char.charCodeAt(0), 0);

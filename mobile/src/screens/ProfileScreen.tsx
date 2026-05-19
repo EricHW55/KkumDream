@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,7 +13,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { updateProfile } from '../api/auth';
 import { claimDream } from '../api/dreams';
 import { signOutGoogle } from '../auth/googleSignIn';
-import { MoonAvatar } from '../components/MoonAvatar';
+import {
+  DEFAULT_PROFILE_AVATAR,
+  PROFILE_AVATAR_PRESETS,
+  ProfileAvatar,
+  isRemoteProfileImage,
+  normalizeProfileAvatarValue,
+} from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
@@ -30,14 +35,27 @@ export function ProfileScreen() {
   const updateUser = useSessionStore(state => state.updateUser);
   const clearSession = useSessionStore(state => state.clearSession);
   const [nicknameDraft, setNicknameDraft] = useState(user?.nickname ?? '');
-  const [profileImageDraft, setProfileImageDraft] = useState(
-    user?.profileImageUrl ?? '',
+  const [profileAvatarValue, setProfileAvatarValue] = useState(
+    normalizeProfileAvatarValue(user?.profileImageUrl),
   );
   const [statusText, setStatusText] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [claimToken, setClaimToken] = useState('');
   const [claimStatus, setClaimStatus] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
+  const avatarOptions = useMemo(() => {
+    const googleProfileImageUrl = user?.profileImageUrl;
+    if (isRemoteProfileImage(googleProfileImageUrl) && googleProfileImageUrl) {
+      return [
+        {
+          value: googleProfileImageUrl,
+          label: '구글 프로필',
+        },
+        ...PROFILE_AVATAR_PRESETS,
+      ];
+    }
+    return PROFILE_AVATAR_PRESETS;
+  }, [user?.profileImageUrl]);
 
   const submitClaim = async () => {
     if (!token) {
@@ -95,7 +113,7 @@ export function ProfileScreen() {
       const nextUser = await updateProfile(
         {
           nickname,
-          profileImageUrl: profileImageDraft.trim() || null,
+          profileImageUrl: profileAvatarValue || DEFAULT_PROFILE_AVATAR,
         },
         token,
       );
@@ -122,14 +140,11 @@ export function ProfileScreen() {
         <View style={styles.panel}>
           <View style={styles.profileHeader}>
             <View style={styles.avatarWrap}>
-              {profileImageDraft.trim() ? (
-                <Image
-                  source={{ uri: profileImageDraft.trim() }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <MoonAvatar size={64} color={colors.primary} />
-              )}
+              <ProfileAvatar
+                value={profileAvatarValue}
+                name={nicknameDraft || user?.nickname}
+                size={64}
+              />
             </View>
             <View style={styles.profileText}>
               <Text style={styles.name}>{user?.nickname ?? '꿈드림 사용자'}</Text>
@@ -150,17 +165,39 @@ export function ProfileScreen() {
             style={styles.input}
           />
 
-          <Text style={styles.inputLabel}>프로필 사진 URL</Text>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            spellCheck={false}
-            defaultValue={profileImageDraft}
-            onChangeText={setProfileImageDraft}
-            placeholder="https://..."
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-          />
+          <Text style={styles.inputLabel}>프로필 아이콘</Text>
+          <View style={styles.avatarOptions}>
+            {avatarOptions.map(option => {
+              const isSelected = option.value === profileAvatarValue;
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  onPress={() => setProfileAvatarValue(option.value)}
+                  style={({ pressed }) => [
+                    styles.avatarOption,
+                    isSelected && styles.avatarOptionActive,
+                    pressed && interactionStyles.pressedSoft,
+                  ]}
+                >
+                  <ProfileAvatar
+                    value={option.value}
+                    name={nicknameDraft || user?.nickname}
+                    size={42}
+                  />
+                  <Text
+                    style={[
+                      styles.avatarOptionLabel,
+                      isSelected && styles.avatarOptionLabelActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
           {statusText ? <Text style={styles.statusText}>{statusText}</Text> : null}
 
@@ -268,10 +305,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.lavenderMist,
   },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
   profileText: {
     flex: 1,
   },
@@ -301,6 +334,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     fontSize: 16,
     fontWeight: '700',
+  },
+  avatarOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  avatarOption: {
+    width: '31%',
+    minHeight: 84,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  avatarOptionActive: {
+    backgroundColor: colors.lavenderMist,
+    borderColor: colors.primary,
+  },
+  avatarOptionLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  avatarOptionLabelActive: {
+    color: colors.primaryDark,
   },
   statusText: {
     color: colors.textSecondary,

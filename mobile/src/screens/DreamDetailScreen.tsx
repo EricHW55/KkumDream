@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
     borderWidth: 1,
     borderColor: colors.divider,
   },
@@ -551,9 +551,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lavenderMist,
   },
   ownerCommentItem: {
-    backgroundColor: '#FFF8D8',
+    backgroundColor: colors.skyMist,
     borderWidth: 1,
-    borderColor: '#F1D780',
+    borderColor: colors.accent,
   },
   commentAuthorRow: {
     flexDirection: 'row',
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     color: colors.primaryDark,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
     fontSize: 11,
     fontWeight: '700',
     includeFontPadding: false,
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.divider,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
     color: colors.textPrimary,
     fontSize: 15,
     lineHeight: 22,
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   commentNotice: {
     borderRadius: 16,
     padding: 14,
-    backgroundColor: '#F3F3F4',
+    backgroundColor: colors.lavenderMist,
   },
   commentNoticeText: {
     color: colors.textMuted,

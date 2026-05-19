@@ -24,9 +24,18 @@ VALID_MOODS = (
 DEFAULT_MOOD = MOOD_DREAMY
 TONE_WARM = "warm"
 TONE_POLITE = "polite"
+TONE_CASUAL = "casual"
+TONE_MZ_COMIC = "mz_comic"
 TONE_STORY = "story"
 TONE_POETIC = "poetic"
-VALID_TONES = (TONE_WARM, TONE_POLITE, TONE_STORY, TONE_POETIC)
+VALID_TONES = (
+    TONE_WARM,
+    TONE_POLITE,
+    TONE_CASUAL,
+    TONE_MZ_COMIC,
+    TONE_STORY,
+    TONE_POETIC,
+)
 DEFAULT_TONE = TONE_WARM
 LENGTH_SHORT = "short"
 LENGTH_STANDARD = "standard"
@@ -46,6 +55,21 @@ TONE_GUIDES = {
         "instruction": (
             "Use calm, respectful 존댓말. Keep sentences clear, composed, "
             "and not overly intimate."
+        ),
+    },
+    TONE_CASUAL: {
+        "label": "casual friend style",
+        "instruction": (
+            "Use natural, everyday Korean 반말 as if talking to a close friend. "
+            "Keep it warm, relaxed, direct, and easy to read."
+        ),
+    },
+    TONE_MZ_COMIC: {
+        "label": "MZ comic slang style",
+        "instruction": (
+            "Use playful Korean with modern slang and abbreviations where natural, "
+            "such as ㅋㅋ, ㄹㅇ, 찐, 텐션, 레전드, and 폼 미쳤다. Keep it funny, "
+            "affectionate, and readable; avoid insults, obscenity, or harsh sarcasm."
         ),
     },
     TONE_STORY: {
@@ -158,7 +182,7 @@ Priorities:
 2. Make the Korean natural, connected, and suitable to send to another person.
 3. Do not over-explain the dream or interpret it like a fortune teller.
 4. Add only gentle connective details when the memo is too fragmented.
-5. Keep the tone warm, intimate, and lightly poetic, not childish or grandiose.
+5. Match the selected writing tone while keeping the card suitable to send as a gift.
 6. Never mention AI, prompts, models, policies, JSON, or image generation to the user.
 7. Use the create_dream_card tool exactly once.
 """.strip()
@@ -451,6 +475,21 @@ def _apply_mock_length(story: str, story_length: str) -> str:
 
 
 def _apply_mock_tone(story: str, tone: str) -> str:
+    if tone == TONE_CASUAL:
+        return story.replace(
+            "\uc5c8\uc5b4\uc694.",
+            "\uc5c8\uc5b4.",
+        )
+    if tone == TONE_MZ_COMIC:
+        return (
+            story.replace(
+                "\uc5c8\uc5b4\uc694.",
+                "\uc5c8\uc5b4.",
+                2,
+            )
+            + " \uc774\uac74 \u3139\u3147 \uafc8 \ud150\uc158 "
+            "\ub808\uc804\ub4dc\uc600\uc5b4. \uae30\uc5b5 \uc800\uc7a5 \uac01."
+        )
     if tone == TONE_STORY:
         return story.replace(
             "\uc5c8\uc5b4\uc694.",

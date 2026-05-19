@@ -36,6 +36,7 @@ export function OutboxScreen() {
         title="보낸 꿈"
         description="내가 건넨 꿈카드를 보관함이나 날짜별 캘린더에서 다시 열어볼 수 있어요."
         calendarLabel="보낸 꿈카드"
+        emptyMessage="보낸 꿈 카드가 없습니다."
         dreams={outbox}
       />
     </Screen>

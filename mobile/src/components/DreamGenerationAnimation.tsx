@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: 'rgba(255,252,255,0.72)',
   },
   cloudLeft: {
     position: 'absolute',

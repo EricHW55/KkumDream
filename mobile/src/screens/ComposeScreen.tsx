@@ -60,6 +60,16 @@ const toneOptions = [
     description: '차분한 존댓말로 정돈해서 써요.',
   },
   {
+    value: 'casual',
+    label: '친구 말투',
+    description: '일상적으로 친구에게 말하듯 편하게 써요.',
+  },
+  {
+    value: 'mz_comic',
+    label: 'MZ 코믹체',
+    description: '신조어와 줄임말을 섞어 가볍고 웃기게 써요.',
+  },
+  {
     value: 'story',
     label: '소설체',
     description: '장면과 움직임이 살아나게 풀어줘요.',
@@ -1313,7 +1323,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(34,34,34,0.08)',
+    borderColor: 'rgba(40,35,63,0.08)',
   },
   darkSwatch: {
     borderColor: 'rgba(255,255,255,0.36)',
@@ -1452,19 +1462,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: 'rgba(251, 250, 253, 0.96)',
+    backgroundColor: 'rgba(248, 246, 255, 0.96)',
   },
   loadingPanel: {
     borderRadius: 28,
     padding: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: 'rgba(255, 252, 255, 0.92)',
     borderWidth: 1,
     borderColor: colors.divider,
   },
   modalBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.32)',
+    backgroundColor: 'rgba(40, 35, 63, 0.32)',
   },
   recipientSheet: {
     maxHeight: '90%',
@@ -1500,7 +1510,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F3F4',
+    backgroundColor: colors.lavenderMist,
   },
   modeRow: {
     flexDirection: 'row',
@@ -1517,7 +1527,7 @@ const styles = StyleSheet.create({
   },
   modeChipActive: {
     borderColor: colors.primary,
-    backgroundColor: '#F7F3FF',
+    backgroundColor: colors.lavenderTint,
   },
   modeChipText: {
     color: colors.textSecondary,
@@ -1639,7 +1649,7 @@ const styles = StyleSheet.create({
   },
   selectedItem: {
     borderColor: colors.primary,
-    backgroundColor: '#F7F3FF',
+    backgroundColor: colors.lavenderTint,
   },
   friendName: {
     flex: 1,

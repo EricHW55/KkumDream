@@ -5,22 +5,22 @@ export const mockMembers: GroupMember[] = [
   {
     id: 'mock-user-1',
     name: '나',
-    avatarColor: '#F56BEF',
+    avatarColor: '#6F61AD',
   },
   {
     id: 'mock-user-2',
     name: '유하람',
-    avatarColor: '#B069FF',
+    avatarColor: '#9B8AC7',
   },
   {
     id: 'mock-user-3',
     name: '권민준',
-    avatarColor: '#7FC8D9',
+    avatarColor: '#9BDDEB',
   },
   {
     id: 'mock-user-4',
     name: '유찬',
-    avatarColor: '#FFD66B',
+    avatarColor: '#8ED7E8',
   },
 ];
 

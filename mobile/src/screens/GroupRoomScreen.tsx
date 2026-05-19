@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MoonAvatar } from '../components/MoonAvatar';
+import { ProfileAvatar } from '../components/ProfileAvatar';
 import { TagChip } from '../components/TagChip';
 import {
   getCachedRoomDreams,
@@ -462,7 +463,12 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             <View style={styles.memberList}>
               {members.map(member => (
                 <View key={member.id} style={styles.memberItem}>
-                  <MoonAvatar size={42} color={member.avatarColor} />
+                  <ProfileAvatar
+                    value={member.profileImageUrl}
+                    name={member.name}
+                    size={42}
+                    fallbackColor={member.avatarColor}
+                  />
                   <View style={styles.memberText}>
                     <Text style={styles.memberName}>
                       {member.id === sessionUserId ? '나' : member.name}
@@ -655,7 +661,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.cardBase,
     borderWidth: 1,
-    borderColor: '#EFEFF3',
+    borderColor: colors.divider,
   },
   titleWrap: {
     flex: 1,
@@ -688,7 +694,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.cardBase,
     borderWidth: 1,
-    borderColor: '#EFEFF3',
+    borderColor: colors.divider,
   },
   roomInfo: {
     minHeight: 64,
@@ -716,7 +722,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBase,
   },
   inviteStatus: {
     marginHorizontal: 24,
@@ -751,7 +757,7 @@ const styles = StyleSheet.create({
   },
   dateDivider: {
     alignSelf: 'center',
-    color: '#B3B3B8',
+    color: colors.textMuted,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
@@ -871,7 +877,7 @@ const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    backgroundColor: 'rgba(40, 35, 63, 0.28)',
   },
   sheet: {
     borderTopLeftRadius: 28,
@@ -905,7 +911,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F3F4',
+    backgroundColor: colors.lavenderMist,
   },
   inputLabel: {
     color: colors.textPrimary,
@@ -945,12 +951,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF1F1',
+    backgroundColor: '#FFF0F4',
     borderWidth: 1,
-    borderColor: '#F1CACA',
+    borderColor: '#F3C2D0',
   },
   dangerActionText: {
-    color: '#B84A4A',
+    color: '#B84A68',
     fontSize: 15,
     fontWeight: '700',
     includeFontPadding: false,

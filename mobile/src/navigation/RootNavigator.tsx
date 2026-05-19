@@ -24,6 +24,7 @@ import type { MainTabParamList, RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const TAB_BAR_BASE_HEIGHT = 64;
+const TAB_BAR_TOP_RADIUS = 30;
 const TAB_BAR_BASE_PADDING_BOTTOM = 8;
 
 const linking: LinkingOptions<RootStackParamList> = {
@@ -85,7 +86,12 @@ function MainTabs() {
           height: TAB_BAR_BASE_HEIGHT + insets.bottom,
           paddingTop: 6,
           paddingBottom: TAB_BAR_BASE_PADDING_BOTTOM + insets.bottom,
+          backgroundColor: colors.cardBase,
+          borderTopWidth: 1,
           borderTopColor: colors.divider,
+          borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
+          borderTopRightRadius: TAB_BAR_TOP_RADIUS,
+          overflow: 'hidden',
         },
         tabBarLabelStyle: {
           fontSize: 12,

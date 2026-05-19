@@ -10,6 +10,7 @@ import {
   stopWatchingTokenRefresh,
 } from './src/services/pushNotifications';
 import { useSessionStore } from './src/store/sessionStore';
+import { colors } from './src/theme/colors';
 
 const queryClient = new QueryClient();
 
@@ -18,7 +19,7 @@ function App() {
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <StatusBar barStyle="dark-content" backgroundColor="#FBFAFD" />
+          <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
           <PushNotificationRegistrar />
           <RootNavigator />
         </SafeAreaProvider>
