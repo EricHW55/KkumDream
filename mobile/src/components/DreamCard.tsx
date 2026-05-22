@@ -53,10 +53,10 @@ export function DreamCard({
   const backTouchStart = useRef<{ x: number; y: number } | null>(null);
   const backTouchMoved = useRef(false);
   const rotation = useSharedValue(0);
-  const horizontalMargin = size === 'full' ? 40 : 32;
-  const cardWidth = Math.min(windowWidth - horizontalMargin, 390);
+  const horizontalMargin = size === 'full' ? 44 : 36;
+  const cardWidth = Math.min(windowWidth - horizontalMargin, 340);
   const cardHeight = Math.round(cardWidth / DREAM_CARD_ASPECT_RATIO);
-  const imageHeight = Math.round(cardWidth * 1.2);
+  const imageHeight = Math.round(cardHeight * 0.54);
   const rooms = getCachedRooms(sessionUserId);
   const roomMembers = rooms.flatMap(room => room.members ?? []);
   const giverName =
@@ -73,21 +73,19 @@ export function DreamCard({
     dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
   const design = normalizeDreamDesign(dream.design);
   const designTheme = CARD_COLOR_THEMES[design.cardColor];
-  const frameBorderColor =
-    design.cardColor === 'midnight' ? designTheme.line : '#050505';
-  const isInkFrame = design.cardColor !== 'midnight';
-  const titleColor = isInkFrame ? '#201C18' : designTheme.text;
-  const metaColor = isInkFrame ? '#6F5E43' : designTheme.accent;
-  const letterColor = isInkFrame ? '#6C604E' : designTheme.secondaryText;
+  const isDarkTheme = design.cardColor === 'midnight';
+  const frameBorderColor = isDarkTheme ? designTheme.line : '#CBBFAE';
+  const titleColor = isDarkTheme ? designTheme.text : '#2D2923';
+  const metaColor = isDarkTheme ? designTheme.accent : '#6F675D';
+  const letterColor = isDarkTheme ? designTheme.secondaryText : '#6F675D';
   const dreamFontStyle = getDreamFontStyle(design.fontStyle);
   const visibleTags = dream.tags.slice(0, 3);
+  const frontDate = formatShortDate(dream.givenAt ?? dream.createdAt);
   const serifTitleFamily = Platform.select({
     ios: 'Georgia',
     android: 'serif',
     default: undefined,
   });
-  const issueDate = formatPostmarkDate(dream.givenAt ?? dream.createdAt);
-
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
   }));
@@ -160,7 +158,7 @@ export function DreamCard({
           pressed && !isImageActionPending && interactionStyles.pressed,
         ]}
       >
-        <Share2 color={colors.primaryDark} size={17} strokeWidth={2.4} />
+        <Share2 color={metaColor} size={17} strokeWidth={2.2} />
       </Pressable>
       <Pressable
         accessibilityLabel="꿈카드 이미지 저장"
@@ -174,7 +172,7 @@ export function DreamCard({
           pressed && !isImageActionPending && interactionStyles.pressed,
         ]}
       >
-        <Download color={colors.primaryDark} size={17} strokeWidth={2.4} />
+        <Download color={metaColor} size={17} strokeWidth={2.2} />
       </Pressable>
     </View>
   );
@@ -238,231 +236,158 @@ export function DreamCard({
                 pressed && interactionStyles.pressedSoft,
               ]}
             >
-              <View
-                style={[
-                  styles.imageWrap,
-                  isInkFrame && styles.inkImageWrap,
-                  {
-                    height: imageHeight,
-                    backgroundColor: designTheme.image,
-                    borderColor: frameBorderColor,
-                  },
-                ]}
-              >
+              <View style={styles.frontAccentRow}>
+                <Text
+                  style={[
+                    styles.frontAccentStar,
+                    isDarkTheme ? styles.darkStarAccent : styles.warmStarAccent,
+                  ]}
+                >
+                  ✦
+                </Text>
+                <Text
+                  style={[
+                    styles.frontAccentText,
+                    dreamFontStyle,
+                    { color: metaColor },
+                  ]}
+                >
+                  잠에서 건져 올린 작은 꿈
+                </Text>
+                <Text style={[styles.frontAccentStar, { color: metaColor }]}>
+                  ✧
+                </Text>
+              </View>
+              <View style={styles.imageMount}>
+                <View
+                  pointerEvents="none"
+                  style={[styles.paperTape, styles.paperTapeLeft]}
+                />
+                <View
+                  pointerEvents="none"
+                  style={[styles.paperTape, styles.paperTapeRight]}
+                />
                 <View
                   pointerEvents="none"
                   style={[
-                    styles.postageStamp,
+                    styles.frontStampMark,
+                    { borderColor: frameBorderColor },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.imageWrap,
                     {
+                      height: imageHeight,
+                      backgroundColor: designTheme.image,
                       borderColor: frameBorderColor,
-                      backgroundColor: designTheme.card,
                     },
                   ]}
                 >
-                  <View
-                    style={[
-                      styles.postageStampInner,
-                      { borderColor: frameBorderColor },
-                    ]}
-                  >
-                    <Text
+                  {hasImage ? (
+                    <>
+                      <Image
+                        source={{
+                          uri:
+                            dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
+                        }}
+                        style={styles.image}
+                      />
+                      <View
+                        pointerEvents="none"
+                        style={styles.imagePaperWash}
+                      />
+                    </>
+                  ) : isImageGenerating ? (
+                    <DreamGenerationAnimation
+                      compact
+                      title="이미지 생성 중"
+                      subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
+                    />
+                  ) : dream.imageStatus === 'failed' ? (
+                    <View
                       style={[
-                        styles.postageStampValue,
-                        {
-                          color: frameBorderColor,
-                          fontFamily: serifTitleFamily,
-                        },
+                        styles.placeholder,
+                        { backgroundColor: designTheme.placeholder },
                       ]}
                     >
-                      {dream.mainMood}
-                    </Text>
-                    <Text
+                      <View
+                        style={[
+                          styles.placeholderStamp,
+                          { borderColor: frameBorderColor },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.failureText,
+                          dreamFontStyle,
+                          { color: designTheme.accent },
+                        ]}
+                      >
+                        이미지 준비 실패
+                      </Text>
+                      <Text
+                        style={[
+                          styles.placeholderHint,
+                          { color: designTheme.secondaryText },
+                        ]}
+                      >
+                        다시 보내거나 새 카드로 시도해 주세요.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View
                       style={[
-                        styles.postageStampLabel,
-                        { color: frameBorderColor },
+                        styles.placeholder,
+                        { backgroundColor: designTheme.placeholder },
                       ]}
                     >
-                      KKUM · POST
-                    </Text>
-                  </View>
+                      <View
+                        style={[
+                          styles.placeholderStamp,
+                          { borderColor: frameBorderColor },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.placeholderText,
+                          dreamFontStyle,
+                          { color: designTheme.accent },
+                        ]}
+                      >
+                        {dream.mainMood}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                {hasImage ? (
-                  <>
-                    <Image
-                      source={{
-                        uri: dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
-                      }}
-                      style={styles.image}
-                    />
-                    <View pointerEvents="none" style={styles.imagePaperWash} />
-                  </>
-                ) : isImageGenerating ? (
-                  <DreamGenerationAnimation
-                    compact
-                    title="이미지 생성 중"
-                    subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
-                  />
-                ) : dream.imageStatus === 'failed' ? (
-                  <View
-                    style={[
-                      styles.placeholder,
-                      { backgroundColor: designTheme.placeholder },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.placeholderStamp,
-                        { borderColor: frameBorderColor },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.failureText,
-                        dreamFontStyle,
-                        { color: designTheme.accent },
-                      ]}
-                    >
-                      이미지 준비 실패
-                    </Text>
-                    <Text
-                      style={[
-                        styles.placeholderHint,
-                        { color: designTheme.secondaryText },
-                      ]}
-                    >
-                      다시 보내거나 새 카드로 시도해 주세요.
-                    </Text>
-                  </View>
-                ) : (
-                  <View
-                    style={[
-                      styles.placeholder,
-                      { backgroundColor: designTheme.placeholder },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.placeholderStamp,
-                        { borderColor: frameBorderColor },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.placeholderText,
-                        dreamFontStyle,
-                        { color: designTheme.accent },
-                      ]}
-                    >
-                      {dream.mainMood}
-                    </Text>
-                  </View>
-                )}
               </View>
               <View style={styles.content}>
-                <View style={styles.wordmarkRow}>
-                  <View
-                    style={[
-                      styles.wordmarkRule,
-                      { backgroundColor: frameBorderColor },
-                    ]}
-                  />
+                <View style={styles.titleRow}>
+                  <Text style={[styles.titleDoodle, { color: metaColor }]}>
+                    ✧
+                  </Text>
+                  {dream.titleVisible ? (
+                    <Text
+                      style={[
+                        styles.title,
+                        dreamFontStyle,
+                        { color: titleColor },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {dream.title}
+                    </Text>
+                  ) : null}
                   <Text
                     style={[
-                      styles.wordmark,
-                      { color: frameBorderColor, fontFamily: serifTitleFamily },
+                      styles.titleDoodle,
+                      isDarkTheme
+                        ? styles.darkStarAccent
+                        : styles.warmStarAccent,
                     ]}
                   >
-                    KKUMDREAM · POSTCARD
+                    ✦
                   </Text>
-                  <View
-                    style={[
-                      styles.wordmarkRule,
-                      { backgroundColor: frameBorderColor },
-                    ]}
-                  />
-                </View>
-                {dream.titleVisible ? (
-                  <Text
-                    style={[
-                      styles.title,
-                      { color: titleColor, fontFamily: serifTitleFamily },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {dream.title}
-                  </Text>
-                ) : null}
-                <StarOrnamentDivider color={frameBorderColor} />
-                <View style={styles.ticketMetaGrid}>
-                  <View style={styles.ticketMetaCell}>
-                    <Text
-                      style={[
-                        styles.ticketMetaLabel,
-                        {
-                          color: titleColor,
-                          fontFamily: serifTitleFamily,
-                        },
-                      ]}
-                    >
-                      FROM
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.ticketMetaValue,
-                        dreamFontStyle,
-                        { color: metaColor },
-                      ]}
-                    >
-                      {giverName}
-                    </Text>
-                  </View>
-                  <View style={styles.ticketMetaCell}>
-                    <Text
-                      style={[
-                        styles.ticketMetaLabel,
-                        {
-                          color: titleColor,
-                          fontFamily: serifTitleFamily,
-                        },
-                      ]}
-                    >
-                      TO
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.ticketMetaValue,
-                        dreamFontStyle,
-                        { color: metaColor },
-                      ]}
-                    >
-                      {receiverName}
-                    </Text>
-                  </View>
-                  <View style={styles.ticketMetaCell}>
-                    <Text
-                      style={[
-                        styles.ticketMetaLabel,
-                        {
-                          color: titleColor,
-                          fontFamily: serifTitleFamily,
-                        },
-                      ]}
-                    >
-                      DATE
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.ticketMetaValue,
-                        dreamFontStyle,
-                        { color: metaColor },
-                      ]}
-                    >
-                      {issueDate}
-                    </Text>
-                  </View>
                 </View>
                 <Text
                   style={[
@@ -474,21 +399,107 @@ export function DreamCard({
                 >
                   {dream.shortMessage}
                 </Text>
-                <StarOrnamentDivider color={frameBorderColor} compact />
-                <View style={styles.tagsRow}>
+                <View style={styles.fromToRow}>
+                  <View
+                    style={[
+                      styles.fromToPaper,
+                      isDarkTheme
+                        ? styles.darkNotePaper
+                        : styles.lightNotePaper,
+                      {
+                        borderColor: frameBorderColor,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.fromToLabel,
+                        {
+                          color: titleColor,
+                          fontFamily: serifTitleFamily,
+                        },
+                      ]}
+                    >
+                      FROM
+                    </Text>
+                    <Text
+                      style={[
+                        styles.fromToValue,
+                        dreamFontStyle,
+                        { color: metaColor },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {giverName}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.fromToArrow,
+                      { color: metaColor, fontFamily: serifTitleFamily },
+                    ]}
+                  >
+                    →
+                  </Text>
+                  <View
+                    style={[
+                      styles.fromToPaper,
+                      isDarkTheme
+                        ? styles.darkNotePaper
+                        : styles.lightNotePaper,
+                      {
+                        borderColor: frameBorderColor,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.fromToLabel,
+                        {
+                          color: titleColor,
+                          fontFamily: serifTitleFamily,
+                        },
+                      ]}
+                    >
+                      TO
+                    </Text>
+                    <Text
+                      style={[
+                        styles.fromToValue,
+                        dreamFontStyle,
+                        { color: metaColor },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {receiverName}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.metaFooter}>
+                  <Text
+                    style={[
+                      styles.frontDate,
+                      { color: metaColor, fontFamily: serifTitleFamily },
+                    ]}
+                  >
+                    {frontDate}
+                  </Text>
                   <View style={styles.tags}>
                     {visibleTags.map(tag => (
                       <View
                         key={tag}
                         style={[
-                          styles.ticketTag,
-                          { borderColor: frameBorderColor },
+                          styles.frontTagChip,
+                          isDarkTheme
+                            ? styles.darkNotePaper
+                            : styles.tagChipPaper,
                         ]}
                       >
                         <Text
                           style={[
-                            styles.ticketTagText,
-                            { color: frameBorderColor },
+                            styles.frontTagText,
+                            dreamFontStyle,
+                            { color: metaColor },
                           ]}
                         >
                           #{tag}
@@ -496,6 +507,14 @@ export function DreamCard({
                       </View>
                     ))}
                   </View>
+                  <Text
+                    style={[
+                      styles.frontWordmark,
+                      { color: metaColor, fontFamily: serifTitleFamily },
+                    ]}
+                  >
+                    ✦ 꿈드림 ✦
+                  </Text>
                 </View>
               </View>
             </Pressable>
@@ -522,93 +541,80 @@ export function DreamCard({
             shadowColor={designTheme.shadow}
             textureColor={designTheme.texture}
           >
-            <ScrollView
-              bounces={false}
-              nestedScrollEnabled
-              onScrollBeginDrag={() => {
-                backTouchMoved.current = true;
-              }}
-              onTouchCancel={resetBackTouch}
-              onTouchEnd={handleBackTouchEnd}
-              onTouchMove={handleBackTouchMove}
-              onTouchStart={handleBackTouchStart}
-              persistentScrollbar
-              showsVerticalScrollIndicator
-              style={styles.backScroll}
-              contentContainerStyle={styles.backContent}
-            >
-              <Text
+            <View style={styles.backLayout}>
+              <View
                 style={[
-                  styles.backTitle,
-                  {
-                    color: designTheme.text,
-                    fontFamily: serifTitleFamily,
-                  },
+                  styles.letterPaper,
+                  isDarkTheme
+                    ? styles.darkLetterPaper
+                    : styles.lightLetterPaper,
+                  { borderColor: frameBorderColor },
                 ]}
               >
-                {dream.title}
-              </Text>
-              <Text
-                style={[
-                  styles.backSenderLine,
-                  dreamFontStyle,
-                  { color: designTheme.accent },
-                ]}
-              >
-                {giverName}이 {receiverName}에게 보낸 꿈
-              </Text>
-              <Text
-                style={[
-                  styles.story,
-                  dreamFontStyle,
-                  { color: designTheme.secondaryText },
-                ]}
-              >
-                {dream.story}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={cardPressHandler}
-                onLongPress={flip}
-                style={({ pressed }) => [
-                  styles.backFlipButton,
-                  pressed && interactionStyles.pressed,
-                ]}
-              >
-                <Text style={[styles.backFlipButtonText, dreamFontStyle]}>
-                  앞면 보기
+                <View pointerEvents="none" style={styles.letterTape} />
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.letterStampMark,
+                    { borderColor: frameBorderColor },
+                  ]}
+                />
+                <Text
+                  pointerEvents="none"
+                  style={[
+                    styles.letterDoodle,
+                    styles.letterDoodleTop,
+                    isDarkTheme ? styles.darkStarAccent : styles.warmStarAccent,
+                  ]}
+                >
+                  ✦
                 </Text>
-              </Pressable>
-            </ScrollView>
+                <Text
+                  pointerEvents="none"
+                  style={[
+                    styles.letterDoodle,
+                    styles.letterDoodleBottom,
+                    { color: metaColor },
+                  ]}
+                >
+                  ✧
+                </Text>
+                <ScrollView
+                  bounces={false}
+                  nestedScrollEnabled
+                  onScrollBeginDrag={() => {
+                    backTouchMoved.current = true;
+                  }}
+                  onTouchCancel={resetBackTouch}
+                  onTouchEnd={handleBackTouchEnd}
+                  onTouchMove={handleBackTouchMove}
+                  onTouchStart={handleBackTouchStart}
+                  persistentScrollbar={false}
+                  showsVerticalScrollIndicator={false}
+                  style={styles.backScroll}
+                  contentContainerStyle={styles.letterContent}
+                >
+                  <Text
+                    style={[
+                      styles.letterStory,
+                      dreamFontStyle,
+                      { color: designTheme.secondaryText },
+                    ]}
+                  >
+                    {dream.story}
+                  </Text>
+                </ScrollView>
+              </View>
+            </View>
           </DreamCardFrame>
         </Animated.View>
-        {renderImageActions()}
+        {!isBackVisible ? renderImageActions() : null}
       </View>
     </View>
   );
 }
 
-function StarOrnamentDivider({
-  color,
-  compact = false,
-}: {
-  color: string;
-  compact?: boolean;
-}) {
-  return (
-    <View style={[styles.ornamentRow, compact && styles.ornamentRowCompact]}>
-      <View style={[styles.ornamentRule, { backgroundColor: color }]} />
-      <Text style={[styles.ornamentStar, { color }]}>✦</Text>
-      <View style={[styles.ornamentRule, { backgroundColor: color }]} />
-      <Text style={[styles.ornamentStar, { color }]}>✧</Text>
-      <View style={[styles.ornamentRule, { backgroundColor: color }]} />
-      <Text style={[styles.ornamentStar, { color }]}>✦</Text>
-      <View style={[styles.ornamentRule, { backgroundColor: color }]} />
-    </View>
-  );
-}
-
-function formatPostmarkDate(value: string | null | undefined): string {
+function formatShortDate(value: string | null | undefined): string {
   if (!value) {
     return '— · —';
   }
@@ -616,24 +622,10 @@ function formatPostmarkDate(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) {
     return '— · —';
   }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  const months = [
-    'JAN',
-    'FEB',
-    'MAR',
-    'APR',
-    'MAY',
-    'JUN',
-    'JUL',
-    'AUG',
-    'SEP',
-    'OCT',
-    'NOV',
-    'DEC',
-  ];
-  const month = months[date.getMonth()];
-  const year = String(date.getFullYear()).slice(-2);
-  return `${day} ${month} ${year}`;
+  return `${year}.${month}.${day}`;
 }
 
 const styles = StyleSheet.create({
@@ -668,14 +660,77 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: 'transparent',
   },
+  frontAccentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    marginBottom: 11,
+  },
+  frontAccentStar: {
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  warmStarAccent: {
+    color: '#FFD66B',
+  },
+  darkStarAccent: {
+    color: '#D9C793',
+  },
+  frontAccentText: {
+    fontSize: 11,
+    fontWeight: '600',
+    includeFontPadding: false,
+    opacity: 0.72,
+  },
+  imageMount: {
+    position: 'relative',
+    marginHorizontal: 2,
+    marginBottom: 13,
+    padding: 4,
+    backgroundColor: 'rgba(255,253,247,0.42)',
+    shadowColor: '#42321E',
+    shadowOpacity: 0.08,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  paperTape: {
+    position: 'absolute',
+    top: -7,
+    zIndex: 4,
+    width: 54,
+    height: 18,
+    borderRadius: 3,
+    backgroundColor: '#F3DFC2',
+    opacity: 0.66,
+  },
+  paperTapeLeft: {
+    left: 20,
+    transform: [{ rotate: '-4deg' }],
+  },
+  paperTapeRight: {
+    right: 22,
+    transform: [{ rotate: '5deg' }],
+  },
+  frontStampMark: {
+    position: 'absolute',
+    right: 17,
+    bottom: -8,
+    zIndex: 5,
+    width: 48,
+    height: 30,
+    borderRadius: 999,
+    borderWidth: 0.7,
+    opacity: 0.16,
+    transform: [{ rotate: '-8deg' }],
+  },
   imageWrap: {
     backgroundColor: colors.lavenderTint,
-    borderRadius: 0,
-    borderWidth: 1,
+    borderRadius: 11,
+    borderWidth: 0.55,
     overflow: 'hidden',
-  },
-  inkImageWrap: {
-    borderWidth: 2,
   },
   image: {
     width: '100%',
@@ -687,7 +742,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: 'rgba(255, 247, 230, 0.18)',
+    backgroundColor: 'rgba(255, 247, 230, 0.22)',
     borderWidth: 0,
   },
   placeholder: {
@@ -703,7 +758,7 @@ const styles = StyleSheet.create({
     bottom: 18,
     left: 18,
     borderWidth: 1,
-    borderRadius: 2,
+    borderRadius: 7,
     opacity: 0.18,
   },
   placeholderText: {
@@ -730,205 +785,235 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 4,
-    paddingTop: 10,
+    paddingHorizontal: 3,
     paddingBottom: 2,
-    gap: 6,
+    gap: 7,
   },
-  wordmarkRow: {
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
-  wordmark: {
-    fontSize: 9.5,
-    fontWeight: '900',
-    letterSpacing: 1.8,
+  titleDoodle: {
+    fontSize: 13,
     includeFontPadding: false,
-  },
-  wordmarkRule: {
-    flex: 1,
-    height: 1,
-    opacity: 0.85,
   },
   message: {
     color: colors.textSecondary,
     fontSize: 12.5,
-    fontWeight: '700',
+    fontWeight: '500',
     includeFontPadding: false,
     lineHeight: 18,
+    opacity: 0.94,
+    textAlign: 'center',
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 25,
-    fontWeight: '900',
-    lineHeight: 29,
-    letterSpacing: -0.3,
-    includeFontPadding: false,
-    marginTop: 2,
-  },
-  ornamentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
-    marginVertical: 2,
-  },
-  ornamentRowCompact: {
-    marginVertical: 1,
-  },
-  ornamentRule: {
-    flex: 1,
-    height: 1,
-    opacity: 0.75,
-  },
-  ornamentStar: {
-    fontSize: 10,
-    lineHeight: 12,
-    includeFontPadding: false,
-    opacity: 0.85,
-  },
-  ticketMetaGrid: {
-    minHeight: 34,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  ticketMetaCell: {
-    flex: 1,
-    gap: 3,
-  },
-  ticketMetaLabel: {
-    fontSize: 9.5,
-    fontWeight: '900',
-    letterSpacing: 1.4,
-    includeFontPadding: false,
-  },
-  ticketMetaValue: {
-    fontSize: 11.5,
+    flexShrink: 1,
+    fontSize: 19,
     fontWeight: '700',
+    lineHeight: 24,
+    letterSpacing: 0,
     includeFontPadding: false,
+    textAlign: 'center',
   },
-  tagsRow: {
+  fromToRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  fromToPaper: {
+    flex: 1,
+    minHeight: 30,
+    borderRadius: 999,
+    borderWidth: 0.45,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  lightNotePaper: {
+    backgroundColor: 'rgba(255,249,238,0.68)',
+  },
+  darkNotePaper: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  fromToCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
+  fromToCellRight: {
+    justifyContent: 'flex-start',
+  },
+  fromToLabel: {
+    fontSize: 7.5,
+    fontWeight: '700',
+    letterSpacing: 0,
+    includeFontPadding: false,
+    opacity: 0.72,
+  },
+  fromToValue: {
+    flexShrink: 1,
+    fontSize: 10.5,
+    fontWeight: '600',
+    includeFontPadding: false,
+  },
+  fromToArrow: {
+    fontSize: 14,
+    fontWeight: '600',
+    includeFontPadding: false,
+    opacity: 0.7,
+  },
+  frontDate: {
+    fontSize: 9.3,
+    fontWeight: '600',
+    letterSpacing: 0,
+    includeFontPadding: false,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  metaFooter: {
+    alignItems: 'center',
+    gap: 7,
+    paddingTop: 1,
   },
   tags: {
-    flex: 1,
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 6,
     flexWrap: 'wrap',
   },
-  ticketTag: {
-    height: 22,
+  frontTagChip: {
+    borderRadius: 999,
     paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    backgroundColor: 'transparent',
+    paddingVertical: 3,
   },
-  ticketTagText: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-    includeFontPadding: false,
+  tagChipPaper: {
+    backgroundColor: '#F4E7D2',
   },
-  postageStamp: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 64,
-    height: 78,
-    padding: 5,
-    borderWidth: 1.6,
-    borderStyle: 'dashed',
-    zIndex: 5,
-    elevation: 5,
-  },
-  postageStampInner: {
-    flex: 1,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-  },
-  postageStampValue: {
-    fontSize: 16,
-    fontWeight: '900',
-    includeFontPadding: false,
-  },
-  postageStampLabel: {
-    marginTop: 4,
-    fontSize: 7,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+  frontTagText: {
+    fontSize: 9.4,
+    fontWeight: '600',
+    letterSpacing: 0,
     includeFontPadding: false,
     opacity: 0.85,
+  },
+  frontWordmark: {
+    fontSize: 9.8,
+    fontWeight: '600',
+    letterSpacing: 0,
+    includeFontPadding: false,
+    opacity: 0.78,
+  },
+  backLayout: {
+    flex: 1,
+    paddingHorizontal: 3,
+    paddingTop: 2,
+    paddingBottom: 3,
+  },
+  letterPaper: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: 18,
+    borderWidth: 0.5,
+    paddingHorizontal: 20,
+    paddingTop: 34,
+    paddingBottom: 24,
+    shadowColor: '#42321E',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  lightLetterPaper: {
+    backgroundColor: 'rgba(255,249,238,0.58)',
+  },
+  darkLetterPaper: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  letterTape: {
+    position: 'absolute',
+    top: 14,
+    left: '50%',
+    marginLeft: -39,
+    width: 78,
+    height: 18,
+    borderRadius: 3,
+    backgroundColor: '#F3DFC2',
+    opacity: 0.45,
+    transform: [{ rotate: '-2deg' }],
+  },
+  letterStampMark: {
+    position: 'absolute',
+    top: 24,
+    right: 17,
+    width: 58,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 0.7,
+    opacity: 0.14,
+    transform: [{ rotate: '-9deg' }],
+  },
+  letterDoodle: {
+    position: 'absolute',
+    fontSize: 14,
+    fontWeight: '700',
+    includeFontPadding: false,
+    opacity: 0.62,
+  },
+  letterDoodleTop: {
+    top: 36,
+    left: 22,
+    transform: [{ rotate: '-10deg' }],
+  },
+  letterDoodleBottom: {
+    right: 24,
+    bottom: 22,
+    transform: [{ rotate: '8deg' }],
+  },
+  letterContent: {
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  letterStory: {
+    color: colors.textSecondary,
+    fontSize: 13.4,
+    fontWeight: '500',
+    lineHeight: 24,
+    includeFontPadding: false,
   },
   backScroll: {
     flex: 1,
   },
-  backContent: {
-    padding: 8,
-    paddingBottom: 72,
-    gap: 14,
-    minHeight: '100%',
-  },
-  backTitle: {
-    color: colors.textPrimary,
-    fontSize: 26,
-    fontWeight: '900',
-    letterSpacing: -0.3,
-    lineHeight: 32,
-    includeFontPadding: false,
-    marginTop: 4,
-  },
-  backSenderLine: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    includeFontPadding: false,
-  },
-  story: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    lineHeight: 26,
-  },
-  backFlipButton: {
-    display: 'none',
-    minHeight: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.lavenderMist,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  backFlipButtonText: {
-    color: colors.primaryDark,
-    fontSize: 14,
-    fontWeight: '700',
-    includeFontPadding: false,
-  },
   imageActions: {
     position: 'absolute',
-    right: 24,
-    bottom: 24,
+    right: 20,
+    bottom: 20,
     flexDirection: 'row',
-    gap: 8,
+    gap: 7,
     zIndex: 10,
     elevation: 10,
   },
   imageActionButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,252,255,0.94)',
-    borderWidth: 1,
-    borderColor: colors.divider,
+    backgroundColor: '#FFF8EE',
+    borderWidth: 0.7,
+    borderColor: '#D8CDBB',
+    shadowColor: '#42321E',
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   imageActionButtonDisabled: {
     opacity: 0.5,

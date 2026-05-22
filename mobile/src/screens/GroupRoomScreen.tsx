@@ -510,6 +510,8 @@ function DreamMessage({
   const visibleTags = dream.tags.slice(0, 3);
   const design = normalizeDreamDesign(dream.design);
   const designTheme = CARD_COLOR_THEMES[design.cardColor];
+  const frameBorderColor =
+    design.cardColor === 'midnight' ? designTheme.line : '#CBBFAE';
   const dreamFontStyle = getDreamFontStyle(design.fontStyle);
 
   return (
@@ -531,7 +533,7 @@ function DreamMessage({
           <DreamCardFrame
             compact
             backgroundColor={designTheme.card}
-            borderColor={designTheme.line}
+            borderColor={frameBorderColor}
             frame={design.cardFrame}
             shadowColor={designTheme.shadow}
             textureColor={designTheme.texture}
@@ -541,7 +543,7 @@ function DreamMessage({
                 styles.previewWrap,
                 {
                   backgroundColor: designTheme.image,
-                  borderColor: designTheme.line,
+                  borderColor: frameBorderColor,
                 },
               ]}
             >
@@ -822,10 +824,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   previewWrap: {
-    height: 188,
+    height: 182,
     backgroundColor: colors.lavenderTint,
-    borderRadius: 6,
-    borderWidth: 1,
+    borderRadius: 8,
+    borderWidth: 1.2,
     overflow: 'hidden',
   },
   previewImage: {
@@ -846,26 +848,26 @@ const styles = StyleSheet.create({
   },
   bubbleText: {
     paddingHorizontal: 3,
-    paddingTop: 11,
-    gap: 8,
+    paddingTop: 9,
+    gap: 7,
   },
   bubbleMeta: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 10.5,
     fontWeight: '700',
     includeFontPadding: false,
   },
   bubbleTitle: {
     color: colors.textPrimary,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    lineHeight: 26,
+    lineHeight: 23,
     includeFontPadding: false,
   },
   bubbleSummary: {
     color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
   },
   tags: {
     flexDirection: 'row',

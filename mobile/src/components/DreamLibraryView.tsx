@@ -25,7 +25,7 @@ import {
 import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
-import { DreamCardFrame } from './DreamCardFrame';
+import { DREAM_CARD_ASPECT_RATIO, DreamCardFrame } from './DreamCardFrame';
 
 type LibraryMode = 'archive' | 'calendar';
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -489,7 +489,11 @@ function MiniDreamCard({
 }) {
   const design = normalizeDreamDesign(dream.design);
   const designTheme = CARD_COLOR_THEMES[design.cardColor];
+  const frameBorderColor =
+    design.cardColor === 'midnight' ? designTheme.line : '#CBBFAE';
   const dreamFontStyle = getDreamFontStyle(design.fontStyle);
+  const cardHeight = Math.round(width / DREAM_CARD_ASPECT_RATIO);
+  const imageHeight = Math.round(cardHeight * 0.56);
 
   return (
     <Pressable
@@ -504,9 +508,9 @@ function MiniDreamCard({
       <DreamCardFrame
         compact
         backgroundColor={designTheme.card}
-        borderColor={designTheme.line}
+        borderColor={frameBorderColor}
         frame={design.cardFrame}
-        height={178}
+        height={cardHeight}
         shadowColor={designTheme.shadow}
         textureColor={designTheme.texture}
       >
@@ -515,7 +519,8 @@ function MiniDreamCard({
             styles.miniImage,
             {
               backgroundColor: designTheme.image,
-              borderColor: designTheme.line,
+              borderColor: frameBorderColor,
+              height: imageHeight,
             },
           ]}
         >
@@ -729,8 +734,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    borderRadius: 5,
-    borderWidth: 1,
+    borderRadius: 7,
+    borderWidth: 1.2,
   },
   miniImageAsset: {
     width: '100%',
@@ -745,18 +750,18 @@ const styles = StyleSheet.create({
   miniBody: {
     flex: 1,
     paddingHorizontal: 2,
-    paddingTop: 8,
-    gap: 7,
+    paddingTop: 7,
+    gap: 6,
   },
   miniTitle: {
     color: colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
-    lineHeight: 18,
+    lineHeight: 17,
   },
   miniMeta: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 10.5,
     fontWeight: '700',
     includeFontPadding: false,
   },
@@ -1012,13 +1017,15 @@ const styles = StyleSheet.create({
   },
   detailButton: {
     minHeight: 48,
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.lavenderTint,
+    borderWidth: 1,
+    borderColor: '#D8CDBB',
   },
   detailButtonText: {
-    color: '#FFFFFF',
+    color: colors.primary,
     fontSize: 15,
     fontWeight: '700',
     includeFontPadding: false,

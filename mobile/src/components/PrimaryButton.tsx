@@ -19,7 +19,8 @@ export function PrimaryButton({ children, disabled, onPress }: Props) {
         styles.button,
         disabled && styles.disabled,
         pressed && !disabled && interactionStyles.pressed,
-      ]}>
+      ]}
+    >
       <Text style={styles.label}>{children}</Text>
     </Pressable>
   );
@@ -28,17 +29,25 @@ export function PrimaryButton({ children, disabled, onPress }: Props) {
 const styles = StyleSheet.create({
   button: {
     minHeight: 52,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
+    borderRadius: 18,
+    backgroundColor: colors.lavenderTint,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: '#D8CDBB',
+    shadowColor: '#42321E',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   disabled: {
-    backgroundColor: colors.textMuted,
+    backgroundColor: '#E4DDD1',
+    opacity: 0.7,
   },
   label: {
-    color: '#FFFFFF',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '700',
   },

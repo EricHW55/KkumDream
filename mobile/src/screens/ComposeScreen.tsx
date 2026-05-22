@@ -44,6 +44,7 @@ import {
   CARD_FRAME_OPTIONS,
   DEFAULT_DREAM_DESIGN,
   FONT_STYLE_OPTIONS,
+  getDreamFontStyle,
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
@@ -500,7 +501,12 @@ export function ComposeScreen({ navigation }: Props) {
           />
 
           <Text style={styles.label}>무드</Text>
-          <View style={styles.moodGrid}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.horizontalPicker}
+            contentContainerStyle={styles.moodScroller}
+          >
             {moods.map(item => (
               <Text
                 key={item}
@@ -510,7 +516,7 @@ export function ComposeScreen({ navigation }: Props) {
                 {item}
               </Text>
             ))}
-          </View>
+          </ScrollView>
 
           <Text style={styles.label}>어체</Text>
           <View style={styles.toneGrid}>
@@ -604,13 +610,21 @@ export function ComposeScreen({ navigation }: Props) {
                       <View style={styles.framePreview}>
                         <DreamCardFrame
                           compact
-                          backgroundColor="#FFFDF6"
-                          borderColor="#A89473"
+                          backgroundColor={isSelected ? '#FFF8EC' : '#FFFDF6'}
+                          borderColor={isSelected ? colors.primary : '#A89473'}
                           frame={option.value}
-                          height={46}
+                          height={88}
+                          style={styles.framePreviewCard}
                           textureColor="#8A7A61"
                         >
                           <View style={styles.framePreviewImage} />
+                          <View style={styles.framePreviewLine} />
+                          <View
+                            style={[
+                              styles.framePreviewLine,
+                              styles.framePreviewLineShort,
+                            ]}
+                          />
                         </DreamCardFrame>
                       </View>
                       <Text
@@ -621,13 +635,21 @@ export function ComposeScreen({ navigation }: Props) {
                       >
                         {option.label}
                       </Text>
+                      <Text style={styles.frameOptionDescription}>
+                        {option.description}
+                      </Text>
                     </Pressable>
                   );
                 })}
               </View>
 
               <Text style={styles.designLabel}>카드 색감</Text>
-              <View style={styles.colorGrid}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.horizontalPicker}
+                contentContainerStyle={styles.colorScroller}
+              >
                 {CARD_COLOR_OPTIONS.map(option => {
                   const isSelected = option.value === selectedDesign.cardColor;
                   return (
@@ -672,7 +694,7 @@ export function ComposeScreen({ navigation }: Props) {
                     </Pressable>
                   );
                 })}
-              </View>
+              </ScrollView>
 
               <Text style={styles.designLabel}>글씨체</Text>
               <View style={styles.fontGrid}>
@@ -692,6 +714,7 @@ export function ComposeScreen({ navigation }: Props) {
                       <Text
                         style={[
                           styles.fontOptionTitle,
+                          getDreamFontStyle(option.value),
                           isSelected && styles.fontOptionTitleActive,
                         ]}
                       >
@@ -801,13 +824,21 @@ export function ComposeScreen({ navigation }: Props) {
                     <View style={styles.framePreview}>
                       <DreamCardFrame
                         compact
-                        backgroundColor="#FFFDF6"
-                        borderColor="#A89473"
+                        backgroundColor={isSelected ? '#FFF8EC' : '#FFFDF6'}
+                        borderColor={isSelected ? colors.primary : '#A89473'}
                         frame={option.value}
-                        height={46}
+                        height={88}
+                        style={styles.framePreviewCard}
                         textureColor="#8A7A61"
                       >
                         <View style={styles.framePreviewImage} />
+                        <View style={styles.framePreviewLine} />
+                        <View
+                          style={[
+                            styles.framePreviewLine,
+                            styles.framePreviewLineShort,
+                          ]}
+                        />
                       </DreamCardFrame>
                     </View>
                     <Text
@@ -818,13 +849,21 @@ export function ComposeScreen({ navigation }: Props) {
                     >
                       {option.label}
                     </Text>
+                    <Text style={styles.frameOptionDescription}>
+                      {option.description}
+                    </Text>
                   </Pressable>
                 );
               })}
             </View>
 
             <Text style={styles.designLabel}>카드 색감</Text>
-            <View style={styles.colorGrid}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalPicker}
+              contentContainerStyle={styles.colorScroller}
+            >
               {CARD_COLOR_OPTIONS.map(option => {
                 const isSelected = option.value === selectedDesign.cardColor;
                 return (
@@ -869,7 +908,7 @@ export function ComposeScreen({ navigation }: Props) {
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
 
             <Text style={styles.designLabel}>글씨체</Text>
             <View style={styles.fontGrid}>
@@ -889,6 +928,7 @@ export function ComposeScreen({ navigation }: Props) {
                     <Text
                       style={[
                         styles.fontOptionTitle,
+                        getDreamFontStyle(option.value),
                         isSelected && styles.fontOptionTitleActive,
                       ]}
                     >
@@ -1272,12 +1312,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
-  moodGrid: {
+  horizontalPicker: {
+    flexGrow: 0,
+  },
+  moodScroller: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
+    paddingRight: 6,
   },
   mood: {
+    minWidth: 72,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 999,
@@ -1396,14 +1440,14 @@ const styles = StyleSheet.create({
   frameGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   frameOption: {
     width: '48%',
-    minHeight: 86,
+    minHeight: 154,
     borderRadius: 16,
-    padding: 9,
-    gap: 7,
+    padding: 11,
+    gap: 6,
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.divider,
@@ -1413,26 +1457,46 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   framePreview: {
-    height: 46,
+    height: 92,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  framePreviewCard: {
+    width: 58,
   },
   framePreviewImage: {
-    flex: 1,
-    borderRadius: 3,
-    backgroundColor: 'rgba(168, 148, 115, 0.16)',
+    height: 42,
+    borderRadius: 4,
+    backgroundColor: 'rgba(168, 148, 115, 0.17)',
+  },
+  framePreviewLine: {
+    marginTop: 6,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(168, 148, 115, 0.3)',
+  },
+  framePreviewLineShort: {
+    width: '62%',
   },
   frameOptionText: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     includeFontPadding: false,
   },
   frameOptionTextActive: {
     color: colors.primaryDark,
   },
-  colorGrid: {
+  frameOptionDescription: {
+    color: colors.textMuted,
+    fontSize: 10.5,
+    fontWeight: '600',
+    lineHeight: 14,
+  },
+  colorScroller: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
+    paddingRight: 6,
   },
   colorOption: {
     minHeight: 42,

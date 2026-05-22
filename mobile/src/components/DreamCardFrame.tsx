@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, ClipPath, Defs, G, Line, Path } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, G, Path } from 'react-native-svg';
 
 import type { DreamCardFrame as DreamCardFrameType } from '../types/dream';
 
@@ -18,72 +18,50 @@ type Props = {
   textureColor: string;
 };
 
-export const DREAM_CARD_ASPECT_RATIO = 390 / 772;
+export const DREAM_CARD_ASPECT_RATIO = 0.61;
 
-const FRAME_WIDTH = 390;
-const FRAME_HEIGHT = 772;
-const TICKET_TOP_CUTOUTS = [18, 66, 114, 162, 210, 258, 306, 354];
-const TICKET_BOTTOM_CUTOUTS = [42, 92, 142, 192, 242, 292, 342];
-
-const paperFibers = [
-  'M 28 58 C 92 51 144 67 205 58 S 308 49 362 61',
-  'M 22 132 C 85 120 143 142 201 130 S 302 119 366 133',
-  'M 38 214 C 104 202 156 226 222 214 S 315 202 354 217',
-  'M 24 302 C 96 288 151 313 216 300 S 312 287 366 303',
-  'M 36 402 C 98 389 156 414 222 401 S 312 390 356 404',
-  'M 22 512 C 96 498 153 524 218 510 S 314 500 368 514',
-  'M 36 636 C 104 622 162 648 229 635 S 318 622 356 638',
-  'M 54 32 C 48 134 58 242 52 344 S 50 585 58 744',
-  'M 188 25 C 180 133 192 244 184 348 S 182 588 191 748',
-  'M 330 40 C 322 148 334 270 326 374 S 324 596 333 740',
-];
-
+const FRAME_WIDTH = 340;
+const FRAME_HEIGHT = 510;
 const paperSpecks = [
-  [46, 66, 1.2],
-  [128, 44, 0.9],
-  [284, 82, 1],
-  [348, 168, 0.8],
-  [75, 256, 1],
-  [251, 238, 1.1],
-  [143, 346, 0.9],
-  [326, 418, 1.2],
-  [48, 506, 0.8],
-  [221, 578, 1],
-  [312, 670, 0.9],
-  [111, 724, 1.1],
+  [44, 48, 1.1],
+  [118, 36, 0.8],
+  [248, 64, 0.9],
+  [304, 128, 0.8],
+  [62, 188, 0.9],
+  [226, 176, 1],
+  [124, 254, 0.8],
+  [288, 308, 1.1],
+  [48, 366, 0.8],
+  [196, 420, 0.9],
+  [278, 462, 0.8],
+  [104, 486, 1],
 ] as const;
 
-const paperFoldLines = [
-  'M 70 0 C 62 188 75 358 66 772',
-  'M 196 0 C 190 178 202 368 194 772',
-  'M 326 0 C 318 190 330 374 320 772',
-  'M 0 584 C 96 572 180 590 260 580 S 344 573 390 590',
+const paperScuffs = [
+  'M 18 18 C 42 12 62 18 84 15',
+  'M 248 16 C 270 12 292 18 318 14',
+  'M 20 492 C 48 486 70 492 98 488',
+  'M 236 492 C 262 486 288 492 318 488',
+  'M 20 76 C 25 94 18 112 24 130',
+  'M 318 76 C 312 98 322 118 316 138',
+  'M 21 392 C 28 408 18 430 25 448',
+  'M 318 386 C 310 408 324 428 316 448',
+  'M 42 34 L 54 30 M 286 34 L 298 30',
+  'M 42 474 L 54 480 M 286 474 L 298 480',
 ] as const;
 
-const cornerStarPath =
-  'M 0 -7 L 1.6 -1.8 L 7 0 L 1.6 1.8 L 0 7 L -1.6 1.8 L -7 0 L -1.6 -1.8 Z';
+const cornerMarks = [
+  'M 30 34 C 36 27 44 27 50 34',
+  'M 290 34 C 296 27 304 27 310 34',
+  'M 30 476 C 36 483 44 483 50 476',
+  'M 290 476 C 296 483 304 483 310 476',
+] as const;
 
-const cornerOrnaments: { x: number; y: number; rotation?: number }[] = [
-  { x: 30, y: 30 },
-  { x: 360, y: 30, rotation: 22 },
-  { x: 30, y: 742 },
-  { x: 360, y: 742, rotation: 22 },
-];
-
-const inkStains: { x: number; y: number; r: number; opacity: number }[] = [
-  { x: 48, y: 188, r: 2.4, opacity: 0.22 },
-  { x: 332, y: 116, r: 1.6, opacity: 0.18 },
-  { x: 308, y: 462, r: 2.8, opacity: 0.16 },
-  { x: 78, y: 612, r: 1.4, opacity: 0.2 },
-  { x: 274, y: 698, r: 2.2, opacity: 0.18 },
-  { x: 156, y: 462, r: 1.2, opacity: 0.2 },
-];
-
-const crosshatchLines = [
-  'M 12 14 L 26 14 M 12 18 L 26 18',
-  'M 364 16 L 378 16 M 364 20 L 378 20',
-  'M 12 754 L 26 754 M 12 758 L 26 758',
-  'M 364 754 L 378 754 M 364 758 L 378 758',
+const ornamentDots = [
+  [32, 30],
+  [308, 30],
+  [32, 480],
+  [308, 480],
 ] as const;
 
 export function DreamCardFrame({
@@ -101,6 +79,7 @@ export function DreamCardFrame({
 }: Props) {
   const shapePath = getFramePath(frame);
   const innerPath = getInnerFramePath(frame);
+  const accentPath = getAccentFramePath(frame);
   const clipId = `dream-card-frame-${frame}`;
 
   return (
@@ -123,165 +102,114 @@ export function DreamCardFrame({
       >
         <Defs>
           <ClipPath id={clipId}>
-            <Path d={shapePath} fillRule="evenodd" />
+            <Path d={shapePath} clipRule="evenodd" fillRule="evenodd" />
           </ClipPath>
         </Defs>
+
         <Path d={shapePath} fill={backgroundColor} fillRule="evenodd" />
+
         <G
           clipPath={`url(#${clipId})`}
-          opacity={
-            minimal ? (compact ? 0.06 : 0.1) : compact ? 0.12 : 0.18
-          }
+          opacity={minimal ? (compact ? 0.05 : 0.09) : compact ? 0.1 : 0.16}
         >
-          {paperFibers.map(fiber => (
-            <Path
-              key={fiber}
-              d={fiber}
-              fill="none"
-              stroke={textureColor}
-              strokeLinecap="round"
-              strokeWidth={0.7}
-            />
-          ))}
           {paperSpecks.map(([cx, cy, r]) => (
             <Circle
               key={`${cx}-${cy}`}
               cx={cx}
               cy={cy}
               fill={textureColor}
-              opacity={0.38}
+              opacity={0.34}
               r={r}
             />
           ))}
         </G>
+
         {minimal ? null : (
           <>
-            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.12 : 0.2}>
-              {paperFoldLines.map(line => (
-                <Path
-                  key={line}
-                  d={line}
-                  fill="none"
-                  stroke={textureColor}
-                  strokeLinecap="round"
-                  strokeWidth={0.65}
-                />
-              ))}
-            </G>
-            <G clipPath={`url(#${clipId})`}>
-              {inkStains.map(stain => (
-                <Circle
-                  key={`${stain.x}-${stain.y}`}
-                  cx={stain.x}
-                  cy={stain.y}
-                  fill={borderColor}
-                  opacity={stain.opacity}
-                  r={stain.r}
-                />
-              ))}
-            </G>
-            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.4 : 0.55}>
-              {crosshatchLines.map(line => (
+            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.1 : 0.16}>
+              {paperScuffs.map(line => (
                 <Path
                   key={line}
                   d={line}
                   fill="none"
                   stroke={borderColor}
                   strokeLinecap="round"
-                  strokeWidth={compact ? 0.6 : 1}
+                  strokeWidth={compact ? 0.35 : 0.5}
                 />
               ))}
             </G>
-            <G clipPath={`url(#${clipId})`}>
-              {cornerOrnaments.map(ornament => (
-                <G
-                  key={`${ornament.x}-${ornament.y}`}
-                  transform={`translate(${ornament.x} ${ornament.y}) rotate(${ornament.rotation ?? 0})`}
-                >
-                  <Path
-                    d={cornerStarPath}
-                    fill={borderColor}
-                    opacity={compact ? 0.55 : 0.7}
-                  />
-                </G>
+            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.14 : 0.22}>
+              {cornerMarks.map(mark => (
+                <Path
+                  key={mark}
+                  d={mark}
+                  fill="none"
+                  stroke={borderColor}
+                  strokeLinecap="round"
+                  strokeWidth={compact ? 0.42 : 0.62}
+                />
+              ))}
+              {ornamentDots.map(([cx, cy]) => (
+                <Circle
+                  key={`${cx}-${cy}`}
+                  cx={cx}
+                  cy={cy}
+                  fill={borderColor}
+                  r={compact ? 0.9 : 1.3}
+                />
               ))}
             </G>
           </>
         )}
+
         <Path
           d={innerPath}
           fill="none"
-          opacity={frame === 'ticket' ? 1 : compact ? 0.42 : 0.5}
+          opacity={compact ? 0.2 : 0.3}
           stroke={borderColor}
-          strokeDasharray={frame === 'classic' ? '4 5' : undefined}
+          strokeDasharray={frame === 'classic' ? '3 7' : undefined}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth={
-            frame === 'ticket' ? (compact ? 1.5 : 2.2) : compact ? 1.5 : 1.8
-          }
+          strokeWidth={compact ? 0.5 : 0.7}
         />
         <Path
-          d={innerPath}
+          d={accentPath}
           fill="none"
-          opacity={compact ? 0.16 : 0.24}
+          opacity={compact ? 0.07 : 0.11}
           stroke={borderColor}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth={0.75}
+          strokeWidth={0.45}
         />
-        {frame === 'ticket' ? (
-          <>
-            <Line
-              opacity={0.95}
-              stroke={borderColor}
-              strokeDasharray="2 7"
-              strokeLinecap="round"
-              strokeWidth={compact ? 1.6 : 2.6}
-              x1={20}
-              x2={370}
-              y1={568}
-              y2={568}
-            />
-            <Line
-              opacity={0.95}
-              stroke={borderColor}
-              strokeDasharray="2 7"
-              strokeLinecap="round"
-              strokeWidth={compact ? 1.6 : 2.6}
-              x1={20}
-              x2={370}
-              y1={640}
-              y2={640}
-            />
-          </>
-        ) : null}
+
         <Path
           d={shapePath}
           fill="none"
+          clipRule="evenodd"
           fillRule="evenodd"
           stroke={borderColor}
           strokeLinejoin="round"
-          strokeWidth={
-            frame === 'ticket' ? (compact ? 2 : 3.4) : compact ? 2 : 2.6
-          }
+          strokeWidth={compact ? 0.7 : 0.95}
         />
         <Path
           d={shapePath}
           fill="none"
+          clipRule="evenodd"
           fillRule="evenodd"
-          opacity={compact ? 0.16 : 0.26}
+          opacity={compact ? 0.06 : 0.09}
           stroke={borderColor}
           strokeLinejoin="round"
-          strokeWidth={0.9}
+          strokeWidth={0.35}
         />
       </Svg>
+
       <View
         style={[
           styles.content,
           height !== undefined && styles.fixedContent,
           compact ? styles.compactContent : styles.contentInset,
           frame === 'ticket' &&
-            (compact ? styles.compactTicketContent : styles.ticketContentInset),
+            (compact ? styles.compactTicketInset : styles.ticketInset),
           frame === 'tag' &&
             (compact ? styles.compactTagInset : styles.tagInset),
           contentStyle,
@@ -295,58 +223,99 @@ export function DreamCardFrame({
 
 function getFramePath(frame: DreamCardFrameType) {
   if (frame === 'ticket') {
-    const topBites = TICKET_TOP_CUTOUTS.map(cx => circlePath(cx, 0, 16)).join(
-      ' ',
-    );
-    const bottomBites = TICKET_BOTTOM_CUTOUTS.map(cx =>
-      circlePath(cx, FRAME_HEIGHT, 17),
-    ).join(' ');
-    return `${rectPath(
-      0,
-      0,
-      FRAME_WIDTH,
-      FRAME_HEIGHT,
-    )} ${topBites} ${bottomBites} ${circlePath(0, 560, 17)} ${circlePath(
-      FRAME_WIDTH,
-      560,
-      17,
-    )}`;
+    return [
+      'M 18 0',
+      'H 96',
+      'C 104 0 108 8 114 8',
+      'C 121 8 124 0 132 0',
+      'H 216',
+      'C 224 0 228 8 234 8',
+      'C 241 8 244 0 252 0',
+      'H 322',
+      'Q 340 0 340 18',
+      'V 166',
+      'C 333 170 333 178 340 182',
+      'V 492',
+      'Q 340 510 322 510',
+      'H 236',
+      'C 230 510 226 502 220 502',
+      'C 213 502 210 510 202 510',
+      'H 22',
+      'Q 0 510 0 488',
+      'V 332',
+      'C 7 328 7 320 0 316',
+      'V 18',
+      'Q 0 0 18 0',
+      'Z',
+    ].join(' ');
   }
 
   if (frame === 'beveled') {
-    return 'M 40 0 H 350 L 390 40 V 732 L 350 772 H 40 L 0 732 V 40 Z';
+    return 'M 24 0 H 316 L 340 24 V 486 L 316 510 H 24 L 0 486 V 24 Z';
   }
 
   if (frame === 'tag') {
     return (
-      'M 62 0 H 328 L 390 62 V 732 Q 390 772 350 772 H 40 Q 0 772 0 732 V 62 Z ' +
-      circlePath(195, 32, 10)
+      'M 52 0 H 288 L 340 52 V 488 Q 340 510 318 510 H 22 Q 0 510 0 488 V 52 Z ' +
+      circlePath(170, 26, 8)
     );
   }
 
-  return roundedRectPath(0, 0, FRAME_WIDTH, FRAME_HEIGHT, 22);
+  return roundedRectPath(0, 0, FRAME_WIDTH, FRAME_HEIGHT, 18);
 }
 
 function getInnerFramePath(frame: DreamCardFrameType) {
   if (frame === 'beveled') {
-    return 'M 46 24 H 344 L 366 46 V 726 L 344 748 H 46 L 24 726 V 46 Z';
+    return 'M 34 18 H 306 L 322 34 V 476 L 306 492 H 34 L 18 476 V 34 Z';
   }
 
   if (frame === 'tag') {
-    return 'M 68 28 H 322 L 362 68 V 724 Q 362 748 338 748 H 52 Q 28 748 28 724 V 68 Z';
+    return 'M 58 24 H 282 L 318 60 V 476 Q 318 492 302 492 H 38 Q 22 492 22 476 V 60 Z';
   }
 
   if (frame === 'ticket') {
-    return rectPath(20, 34, 350, 468);
+    return [
+      'M 28 24',
+      'H 312',
+      'Q 320 24 320 32',
+      'V 478',
+      'Q 320 486 312 486',
+      'H 28',
+      'Q 20 486 20 478',
+      'V 32',
+      'Q 20 24 28 24',
+      'Z',
+    ].join(' ');
   }
 
-  return roundedRectPath(24, 24, 342, 724, 12);
+  return roundedRectPath(20, 20, 300, 470, 12);
 }
 
-function rectPath(x: number, y: number, width: number, height: number) {
-  const right = x + width;
-  const bottom = y + height;
-  return [`M ${x} ${y}`, `H ${right}`, `V ${bottom}`, `H ${x}`, 'Z'].join(' ');
+function getAccentFramePath(frame: DreamCardFrameType) {
+  if (frame === 'beveled') {
+    return 'M 42 30 H 298 L 310 42 V 468 L 298 480 H 42 L 30 468 V 42 Z';
+  }
+
+  if (frame === 'tag') {
+    return 'M 66 36 H 274 L 306 68 V 466 Q 306 480 292 480 H 48 Q 34 480 34 466 V 68 Z';
+  }
+
+  if (frame === 'ticket') {
+    return [
+      'M 38 38',
+      'H 302',
+      'Q 308 38 308 44',
+      'V 466',
+      'Q 308 472 302 472',
+      'H 38',
+      'Q 32 472 32 466',
+      'V 44',
+      'Q 32 38 38 38',
+      'Z',
+    ].join(' ');
+  }
+
+  return roundedRectPath(30, 30, 280, 450, 9);
 }
 
 function roundedRectPath(
@@ -385,9 +354,10 @@ const styles = StyleSheet.create({
   root: {
     position: 'relative',
     width: '100%',
+    aspectRatio: DREAM_CARD_ASPECT_RATIO,
   },
   shadow: {
-    shadowOpacity: 0.14,
+    shadowOpacity: 0.1,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
@@ -400,6 +370,7 @@ const styles = StyleSheet.create({
     left: 0,
   },
   content: {
+    flex: 1,
     position: 'relative',
     zIndex: 1,
   },
@@ -407,27 +378,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentInset: {
-    padding: 22,
+    paddingHorizontal: 24,
+    paddingVertical: 26,
   },
-  ticketContentInset: {
-    paddingTop: 34,
-    paddingRight: 20,
-    paddingBottom: 28,
-    paddingLeft: 20,
-  },
-  compactContent: {
-    padding: 9,
-  },
-  compactTicketContent: {
-    paddingTop: 11,
-    paddingRight: 6,
-    paddingBottom: 9,
-    paddingLeft: 6,
+  ticketInset: {
+    paddingTop: 25,
+    paddingRight: 23,
+    paddingBottom: 25,
+    paddingLeft: 23,
   },
   tagInset: {
-    paddingTop: 34,
+    paddingTop: 42,
+  },
+  compactContent: {
+    paddingHorizontal: 8,
+    paddingVertical: 9,
+  },
+  compactTicketInset: {
+    paddingTop: 9,
+    paddingRight: 7,
+    paddingBottom: 9,
+    paddingLeft: 7,
   },
   compactTagInset: {
-    paddingTop: 14,
+    paddingTop: 13,
   },
 });

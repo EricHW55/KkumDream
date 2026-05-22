@@ -37,14 +37,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Svg, {
-  Circle,
-  ClipPath,
-  Defs,
-  G,
-  Line,
-  Path,
-} from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, G, Line, Path } from 'react-native-svg';
 
 import { colors } from '../theme/colors';
 import { radius, spacing } from '../theme/spacing';
@@ -218,8 +211,6 @@ export function DreamTicketCard({
         ]}
       >
         <TicketBackdrop
-          cardWidth={cardWidth}
-          cardHeight={cardHeight}
           paper={side === 'front' ? TICKET.paper : TICKET.paperBack}
         />
         <View style={[styles.cardContent, { padding: paddingForSize(size) }]}>
@@ -380,10 +371,7 @@ function FrontFace({ card, dims, formattedDate }: FaceProps) {
       {dims.showCopy && card.tags.length > 0 ? (
         <View style={styles.tagsRow}>
           {card.tags.slice(0, 3).map(tag => (
-            <View
-              key={tag}
-              style={[styles.tag, { borderColor: TICKET.ink }]}
-            >
+            <View key={tag} style={[styles.tag, { borderColor: TICKET.ink }]}>
               <Text
                 style={[
                   styles.tagText,
@@ -479,10 +467,7 @@ function BackFace({ actionSlot, card, dims, formattedDate }: BackProps) {
           ]}
         >
           {card.imageUrl ? (
-            <Image
-              source={{ uri: card.imageUrl }}
-              style={styles.thumbImage}
-            />
+            <Image source={{ uri: card.imageUrl }} style={styles.thumbImage} />
           ) : (
             <Text style={[styles.thumbMood, { color: TICKET.inkSoft }]}>
               {card.mainMood ?? '꿈'}
@@ -529,10 +514,7 @@ function BackFace({ actionSlot, card, dims, formattedDate }: BackProps) {
       {card.tags.length > 0 ? (
         <View style={styles.tagsRow}>
           {card.tags.map(tag => (
-            <View
-              key={tag}
-              style={[styles.tag, { borderColor: TICKET.ink }]}
-            >
+            <View key={tag} style={[styles.tag, { borderColor: TICKET.ink }]}>
               <Text
                 style={[
                   styles.tagText,
@@ -572,8 +554,10 @@ function BackFace({ actionSlot, card, dims, formattedDate }: BackProps) {
       ) : (
         <View style={styles.actionSlot}>
           <View style={styles.actionPlaceholder}>
-            <Text style={[styles.actionPlaceholderText, { color: TICKET.inkMuted }]}>
-              ♡    ↗    ↓
+            <Text
+              style={[styles.actionPlaceholderText, { color: TICKET.inkMuted }]}
+            >
+              ♡ ↗ ↓
             </Text>
           </View>
         </View>
@@ -611,12 +595,7 @@ function IllustrationWindow({
         <Image source={{ uri: imageUrl }} style={styles.illustrationImage} />
       ) : (
         <View style={styles.illustrationFallback}>
-          <Text
-            style={[
-              styles.illustrationStar,
-              { color: TICKET.star },
-            ]}
-          >
+          <Text style={[styles.illustrationStar, { color: TICKET.star }]}>
             ✦
           </Text>
           <Text
@@ -725,15 +704,7 @@ function MetaPair({
 // Paper backdrop SVG (ticket shape + texture)
 // ============================================================================
 
-function TicketBackdrop({
-  cardWidth,
-  cardHeight,
-  paper,
-}: {
-  cardWidth: number;
-  cardHeight: number;
-  paper: string;
-}) {
+function TicketBackdrop({ paper }: { paper: string }) {
   const clipId = 'dream-ticket-clip';
   const w = 200;
   const h = Math.round(w / ASPECT_RATIO);
