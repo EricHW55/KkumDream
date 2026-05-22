@@ -14,11 +14,13 @@ export type Mood =
   | '추억'
   | '기괴함';
 export type DreamCardColor = 'ivory' | 'lilac' | 'peach' | 'mint' | 'midnight';
+export type DreamCardFrame = 'ticket' | 'beveled' | 'tag' | 'classic';
 export type DreamFontStyle = 'rounded' | 'serif' | 'clean';
 export type DreamStoryLength = 'short' | 'standard' | 'long';
 
 export interface DreamDesign {
   cardColor: DreamCardColor;
+  cardFrame: DreamCardFrame;
   fontStyle: DreamFontStyle;
 }
 

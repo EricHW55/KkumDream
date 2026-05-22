@@ -23,7 +23,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '몽환',
     tags: ['몽환', '친구', '비행'],
-    design: { cardColor: 'lilac', fontStyle: 'rounded' },
+    design: { cardColor: 'lilac', cardFrame: 'ticket', fontStyle: 'rounded' },
     status: 'opened',
     imageStatus: 'ready',
     createdAt: now,
@@ -51,7 +51,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '코믹',
     tags: ['코믹', '학교', '고양이'],
-    design: { cardColor: 'peach', fontStyle: 'clean' },
+    design: { cardColor: 'peach', cardFrame: 'beveled', fontStyle: 'clean' },
     status: 'given',
     imageStatus: 'queued',
     createdAt: now,
@@ -78,7 +78,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '잔잔',
     tags: ['비', '도시', '창문'],
-    design: { cardColor: 'midnight', fontStyle: 'serif' },
+    design: { cardColor: 'midnight', cardFrame: 'tag', fontStyle: 'serif' },
     status: 'opened',
     imageStatus: 'ready',
     createdAt: now,
@@ -105,7 +105,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '상상',
     tags: ['달', '책방', '별'],
-    design: { cardColor: 'ivory', fontStyle: 'serif' },
+    design: { cardColor: 'ivory', cardFrame: 'classic', fontStyle: 'serif' },
     status: 'given',
     imageStatus: 'ready',
     createdAt: now,
@@ -132,7 +132,7 @@ export const mockDreams: Dream[] = [
     thumbnailUrl: null,
     mainMood: '몽환',
     tags: ['바다', '계단', '기억'],
-    design: { cardColor: 'mint', fontStyle: 'rounded' },
+    design: { cardColor: 'mint', cardFrame: 'ticket', fontStyle: 'rounded' },
     status: 'given',
     imageStatus: 'ready',
     createdAt: now,
@@ -154,8 +154,7 @@ export function buildMockDraft(
       '꿈속에서 가장 선명했던 장면만 조용히 남겼어요. 작은 이미지들이 천천히 이어지고, 그 안의 감정은 누군가에게 건넬 수 있는 문장처럼 빛났습니다.',
     standard:
       '꿈속에서 익숙한 장면은 천천히 낯선 정원으로 바뀌었다. 손에 쥔 작은 카드가 빛나자 기억하던 풍경들이 조용히 펼쳐졌고, 그 끝에는 누군가에게 건네고 싶은 한 문장이 남았다.',
-    long:
-      '꿈속에서 익숙한 장면은 천천히 낯선 정원으로 바뀌었다. 손에 쥔 작은 카드가 빛나자 잊고 있던 풍경들이 조용히 펼쳐졌고, 발걸음을 옮길 때마다 공기 속의 색이 조금씩 달라졌다. 그 길의 끝에는 누군가에게 건네고 싶은 말이 남아 있었고, 오늘의 마음은 그 문장을 따라 부드럽게 이어졌다.',
+    long: '꿈속에서 익숙한 장면은 천천히 낯선 정원으로 바뀌었다. 손에 쥔 작은 카드가 빛나자 잊고 있던 풍경들이 조용히 펼쳐졌고, 발걸음을 옮길 때마다 공기 속의 색이 조금씩 달라졌다. 그 길의 끝에는 누군가에게 건네고 싶은 말이 남아 있었고, 오늘의 마음은 그 문장을 따라 부드럽게 이어졌다.',
   };
   return {
     ...mockDreams[0],
@@ -167,8 +166,7 @@ export function buildMockDraft(
     rawInput,
     title: '밤하늘에 접어 둔 꿈',
     summary: `${rawInput.slice(0, 40)}...`,
-    story:
-      '꿈속에서 익숙한 장면은 천천히 낯선 정원으로 바뀌었다. 손에 쥔 작은 카드가 빛나자 기억하던 풍경들이 조용히 펼쳐졌고, 그 끝에는 누군가에게 건네고 싶은 한 문장이 남았다.',
+    story: storyByLength[storyLength],
     mainMood: mood,
     tags: [mood, '기억', '선물'],
     design,
@@ -177,6 +175,5 @@ export function buildMockDraft(
     givenAt: null,
     readAt: null,
     openedBackAt: null,
-    ...{ story: storyByLength[storyLength] },
   };
 }

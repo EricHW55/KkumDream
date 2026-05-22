@@ -24,11 +24,11 @@ import {
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
 import { saveDreamImage, shareDreamImage } from '../native/dreamImageActions';
-import { radius } from '../theme/spacing';
 import type { Dream } from '../types/dream';
 import { getCachedRooms } from '../data/dreamRepository';
 import { getDisplayMember } from '../data/members';
 import { useSessionStore } from '../store/sessionStore';
+import { DreamCardFrame } from './DreamCardFrame';
 import { DreamGenerationAnimation } from './DreamGenerationAnimation';
 import { TagChip } from './TagChip';
 
@@ -52,7 +52,7 @@ export function DreamCard({
   const backTouchMoved = useRef(false);
   const rotation = useSharedValue(0);
   const cardHeight = size === 'full' ? 560 : 430;
-  const imageHeight = size === 'full' ? 300 : 250;
+  const imageHeight = size === 'full' ? 296 : 228;
   const rooms = getCachedRooms(sessionUserId);
   const roomMembers = rooms.flatMap(room => room.members ?? []);
   const giverName =
@@ -200,131 +200,137 @@ export function DreamCard({
           style={[
             styles.card,
             styles.face,
-            {
-              height: cardHeight,
-              backgroundColor: designTheme.card,
-              shadowColor: designTheme.shadow,
-            },
+            { height: cardHeight },
             isBackVisible ? styles.faceHidden : styles.faceVisible,
             frontStyle,
           ]}
         >
-          <Pressable
-            onPress={cardPressHandler}
-            onLongPress={flip}
-            style={({ pressed }) => [
-              styles.facePressable,
-              pressed && interactionStyles.pressedSoft,
-            ]}
+          <DreamCardFrame
+            backgroundColor={designTheme.card}
+            borderColor={designTheme.line}
+            frame={design.cardFrame}
+            height={cardHeight}
+            shadowColor={designTheme.shadow}
+            textureColor={designTheme.texture}
           >
-            <View
-              style={[
-                styles.imageWrap,
-                {
-                  height: imageHeight,
-                  backgroundColor: designTheme.image,
-                },
+            <Pressable
+              onPress={cardPressHandler}
+              onLongPress={flip}
+              style={({ pressed }) => [
+                styles.facePressable,
+                pressed && interactionStyles.pressedSoft,
               ]}
             >
-              {hasImage ? (
-                <Image
-                  source={{
-                    uri: dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
-                  }}
-                  style={styles.image}
-                />
-              ) : isImageGenerating ? (
-                <DreamGenerationAnimation
-                  compact
-                  title="이미지 생성 중"
-                  subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
-                />
-              ) : dream.imageStatus === 'failed' ? (
-                <View
-                  style={[
-                    styles.placeholder,
-                    { backgroundColor: designTheme.placeholder },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.failureText,
-                      dreamFontStyle,
-                      { color: designTheme.accent },
-                    ]}
-                  >
-                    이미지 준비 실패
-                  </Text>
-                  <Text
-                    style={[
-                      styles.placeholderHint,
-                      { color: designTheme.secondaryText },
-                    ]}
-                  >
-                    다시 보내거나 새 카드로 시도해 주세요.
-                  </Text>
-                </View>
-              ) : (
-                <View
-                  style={[
-                    styles.placeholder,
-                    { backgroundColor: designTheme.placeholder },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.placeholderText,
-                      dreamFontStyle,
-                      { color: designTheme.accent },
-                    ]}
-                  >
-                    {dream.mainMood}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.content}>
-              <Text
+              <View
                 style={[
-                  styles.senderLine,
-                  dreamFontStyle,
-                  { color: designTheme.accent },
+                  styles.imageWrap,
+                  {
+                    height: imageHeight,
+                    backgroundColor: designTheme.image,
+                    borderColor: designTheme.line,
+                  },
                 ]}
               >
-                {giverName} → {receiverName}
-              </Text>
-              <Text
-                style={[
-                  styles.message,
-                  dreamFontStyle,
-                  { color: designTheme.secondaryText },
-                ]}
-              >
-                {dream.shortMessage}
-              </Text>
-              {dream.titleVisible ? (
+                {hasImage ? (
+                  <Image
+                    source={{
+                      uri: dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
+                    }}
+                    style={styles.image}
+                  />
+                ) : isImageGenerating ? (
+                  <DreamGenerationAnimation
+                    compact
+                    title="이미지 생성 중"
+                    subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
+                  />
+                ) : dream.imageStatus === 'failed' ? (
+                  <View
+                    style={[
+                      styles.placeholder,
+                      { backgroundColor: designTheme.placeholder },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.failureText,
+                        dreamFontStyle,
+                        { color: designTheme.accent },
+                      ]}
+                    >
+                      이미지 준비 실패
+                    </Text>
+                    <Text
+                      style={[
+                        styles.placeholderHint,
+                        { color: designTheme.secondaryText },
+                      ]}
+                    >
+                      다시 보내거나 새 카드로 시도해 주세요.
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.placeholder,
+                      { backgroundColor: designTheme.placeholder },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.placeholderText,
+                        dreamFontStyle,
+                        { color: designTheme.accent },
+                      ]}
+                    >
+                      {dream.mainMood}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.content}>
                 <Text
                   style={[
-                    styles.title,
+                    styles.senderLine,
                     dreamFontStyle,
-                    { color: designTheme.text },
+                    { color: designTheme.accent },
                   ]}
                 >
-                  {dream.title}
+                  {giverName} → {receiverName}
                 </Text>
-              ) : null}
-              <View style={styles.tags}>
-                {dream.tags.map(tag => (
-                  <TagChip
-                    key={tag}
-                    label={tag}
-                    backgroundColor={designTheme.tagBackground}
-                    textColor={designTheme.tagText}
-                  />
-                ))}
+                <Text
+                  style={[
+                    styles.message,
+                    dreamFontStyle,
+                    { color: designTheme.secondaryText },
+                  ]}
+                >
+                  {dream.shortMessage}
+                </Text>
+                {dream.titleVisible ? (
+                  <Text
+                    style={[
+                      styles.title,
+                      dreamFontStyle,
+                      { color: designTheme.text },
+                    ]}
+                  >
+                    {dream.title}
+                  </Text>
+                ) : null}
+                <View style={styles.tags}>
+                  {dream.tags.map(tag => (
+                    <TagChip
+                      key={tag}
+                      label={tag}
+                      backgroundColor={designTheme.tagBackground}
+                      textColor={designTheme.tagText}
+                    />
+                  ))}
+                </View>
               </View>
-            </View>
-          </Pressable>
+            </Pressable>
+          </DreamCardFrame>
         </Animated.View>
 
         <Animated.View
@@ -333,16 +339,19 @@ export function DreamCard({
             styles.card,
             styles.face,
             styles.backFace,
-            {
-              height: cardHeight,
-              backgroundColor: designTheme.back,
-              shadowColor: designTheme.shadow,
-            },
+            { height: cardHeight },
             isBackVisible ? styles.faceVisible : styles.faceHidden,
             backStyle,
           ]}
         >
-          <View style={styles.facePressable}>
+          <DreamCardFrame
+            backgroundColor={designTheme.back}
+            borderColor={designTheme.line}
+            frame={design.cardFrame}
+            height={cardHeight}
+            shadowColor={designTheme.shadow}
+            textureColor={designTheme.texture}
+          >
             <ScrollView
               bounces={false}
               nestedScrollEnabled
@@ -399,7 +408,7 @@ export function DreamCard({
                 </Text>
               </Pressable>
             </ScrollView>
-          </View>
+          </DreamCardFrame>
         </Animated.View>
         {renderImageActions()}
       </View>
@@ -419,14 +428,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    borderRadius: radius.card,
-    backgroundColor: colors.cardIvory,
-    overflow: 'hidden',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+    backgroundColor: 'transparent',
   },
   face: {
     width: '100%',
@@ -444,10 +446,13 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: colors.cardBase,
+    backgroundColor: 'transparent',
   },
   imageWrap: {
     backgroundColor: colors.lavenderTint,
+    borderRadius: 7,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
@@ -483,8 +488,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 18,
-    gap: 12,
+    paddingHorizontal: 4,
+    paddingTop: 14,
+    paddingBottom: 4,
+    gap: 10,
   },
   message: {
     color: colors.textSecondary,
@@ -514,8 +521,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backContent: {
-    padding: 24,
-    paddingBottom: 34,
+    padding: 8,
+    paddingBottom: 24,
     gap: 18,
     minHeight: '100%',
   },
@@ -554,8 +561,8 @@ const styles = StyleSheet.create({
   },
   imageActions: {
     position: 'absolute',
-    right: 14,
-    bottom: 14,
+    right: 24,
+    bottom: 24,
     flexDirection: 'row',
     gap: 8,
     zIndex: 10,

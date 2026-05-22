@@ -28,6 +28,7 @@ import {
   updateDream,
 } from '../api/dreams';
 import { DreamCard } from '../components/DreamCard';
+import { DreamCardFrame } from '../components/DreamCardFrame';
 import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -40,6 +41,7 @@ import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import {
   CARD_COLOR_OPTIONS,
+  CARD_FRAME_OPTIONS,
   DEFAULT_DREAM_DESIGN,
   FONT_STYLE_OPTIONS,
   normalizeDreamDesign,
@@ -117,8 +119,7 @@ export function ComposeScreen({ navigation }: Props) {
   const [rawInput, setRawInput] = useState('');
   const [mood, setMood] = useState('몽환');
   const [tone, setTone] = useState<ToneValue>('warm');
-  const [storyLength, setStoryLength] =
-    useState<DreamStoryLength>('standard');
+  const [storyLength, setStoryLength] = useState<DreamStoryLength>('standard');
   const [selectedDesign, setSelectedDesign] =
     useState<DreamDesign>(DEFAULT_DREAM_DESIGN);
   const [draft, setDraft] = useState<Dream | null>(null);
@@ -197,6 +198,9 @@ export function ComposeScreen({ navigation }: Props) {
   const selectedColorOption =
     CARD_COLOR_OPTIONS.find(item => item.value === selectedDesign.cardColor) ??
     CARD_COLOR_OPTIONS[0];
+  const selectedFrameOption =
+    CARD_FRAME_OPTIONS.find(item => item.value === selectedDesign.cardFrame) ??
+    CARD_FRAME_OPTIONS[0];
   const selectedFontOption =
     FONT_STYLE_OPTIONS.find(item => item.value === selectedDesign.fontStyle) ??
     FONT_STYLE_OPTIONS[0];
@@ -248,6 +252,10 @@ export function ComposeScreen({ navigation }: Props) {
 
   const updateCardColor = (cardColor: DreamDesign['cardColor']) => {
     updateSelectedDesign({ ...selectedDesign, cardColor });
+  };
+
+  const updateCardFrame = (cardFrame: DreamDesign['cardFrame']) => {
+    updateSelectedDesign({ ...selectedDesign, cardFrame });
   };
 
   const updateFontStyle = (fontStyle: DreamDesign['fontStyle']) => {
@@ -477,187 +485,234 @@ export function ComposeScreen({ navigation }: Props) {
     >
       {!draft ? (
         <>
-      <Text style={styles.label}>오늘 꾼 꿈</Text>
-      <TextInput
-        autoCorrect={false}
-        spellCheck={false}
-        defaultValue={rawInput}
-        onChangeText={setRawInput}
-        multiline
-        maxLength={500}
-        textAlignVertical="top"
-        placeholder="꿈에서 본 장면을 짧게 적어보세요."
-        placeholderTextColor={colors.textMuted}
-        style={styles.input}
-      />
+          <Text style={styles.label}>오늘 꾼 꿈</Text>
+          <TextInput
+            autoCorrect={false}
+            spellCheck={false}
+            defaultValue={rawInput}
+            onChangeText={setRawInput}
+            multiline
+            maxLength={500}
+            textAlignVertical="top"
+            placeholder="꿈에서 본 장면을 짧게 적어보세요."
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+          />
 
-      <Text style={styles.label}>무드</Text>
-      <View style={styles.moodGrid}>
-        {moods.map(item => (
-          <Text
-            key={item}
-            onPress={() => setMood(item)}
-            style={[styles.mood, item === mood && styles.moodActive]}
-          >
-            {item}
-          </Text>
-        ))}
-      </View>
-
-      <Text style={styles.label}>어체</Text>
-      <View style={styles.toneGrid}>
-        {toneOptions.map(item => {
-          const isSelected = item.value === tone;
-          return (
-            <Pressable
-              key={item.value}
-              accessibilityRole="button"
-              onPress={() => setTone(item.value)}
-              style={({ pressed }) => [
-                styles.toneOption,
-                isSelected && styles.toneOptionActive,
-                pressed && interactionStyles.pressedSoft,
-              ]}
-            >
+          <Text style={styles.label}>무드</Text>
+          <View style={styles.moodGrid}>
+            {moods.map(item => (
               <Text
-                style={[styles.toneLabel, isSelected && styles.toneLabelActive]}
+                key={item}
+                onPress={() => setMood(item)}
+                style={[styles.mood, item === mood && styles.moodActive]}
               >
-                {item.label}
+                {item}
               </Text>
-              <Text style={styles.toneDescription}>{item.description}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      <Text style={styles.toneHint}>{selectedTone.description}</Text>
-
-      <Text style={styles.label}>분량</Text>
-      <View style={styles.lengthBar}>
-        {lengthOptions.map(item => {
-          const isSelected = item.value === storyLength;
-          return (
-            <Pressable
-              key={item.value}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
-              onPress={() => setStoryLength(item.value)}
-              style={({ pressed }) => [
-                styles.lengthOption,
-                isSelected && styles.lengthOptionActive,
-                pressed && interactionStyles.pressedSoft,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.lengthLabel,
-                  isSelected && styles.lengthLabelActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      <Text style={styles.toneHint}>{selectedLength.description}</Text>
-
-      {draft ? (
-      <View style={styles.designPanel}>
-        <View style={styles.designHeader}>
-          <Palette color={colors.primary} size={19} strokeWidth={2.4} />
-          <View style={styles.flex}>
-            <Text style={styles.designTitle}>카드 디자인</Text>
-            <Text style={styles.designSummary}>
-              {selectedColorOption.label} · {selectedFontOption.label}
-            </Text>
+            ))}
           </View>
-        </View>
 
-        <Text style={styles.designLabel}>카드 색감</Text>
-        <View style={styles.colorGrid}>
-          {CARD_COLOR_OPTIONS.map(option => {
-            const isSelected = option.value === selectedDesign.cardColor;
-            return (
-              <Pressable
-                key={option.value}
-                accessibilityRole="button"
-                accessibilityLabel={`${option.label} 카드 색감`}
-                onPress={() => updateCardColor(option.value)}
-                style={({ pressed }) => [
-                  styles.colorOption,
-                  isSelected && styles.colorOptionActive,
-                  pressed && interactionStyles.pressed,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.colorSwatch,
-                    { backgroundColor: option.swatch },
-                    option.value === 'midnight' && styles.darkSwatch,
+          <Text style={styles.label}>어체</Text>
+          <View style={styles.toneGrid}>
+            {toneOptions.map(item => {
+              const isSelected = item.value === tone;
+              return (
+                <Pressable
+                  key={item.value}
+                  accessibilityRole="button"
+                  onPress={() => setTone(item.value)}
+                  style={({ pressed }) => [
+                    styles.toneOption,
+                    isSelected && styles.toneOptionActive,
+                    pressed && interactionStyles.pressedSoft,
                   ]}
                 >
-                  {isSelected ? (
-                    <Check
-                      color={
-                        option.value === 'midnight'
-                          ? '#FFFFFF'
-                          : colors.primaryDark
-                      }
-                      size={15}
-                      strokeWidth={3}
-                    />
-                  ) : null}
+                  <Text
+                    style={[
+                      styles.toneLabel,
+                      isSelected && styles.toneLabelActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  <Text style={styles.toneDescription}>{item.description}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.toneHint}>{selectedTone.description}</Text>
+
+          <Text style={styles.label}>분량</Text>
+          <View style={styles.lengthBar}>
+            {lengthOptions.map(item => {
+              const isSelected = item.value === storyLength;
+              return (
+                <Pressable
+                  key={item.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  onPress={() => setStoryLength(item.value)}
+                  style={({ pressed }) => [
+                    styles.lengthOption,
+                    isSelected && styles.lengthOptionActive,
+                    pressed && interactionStyles.pressedSoft,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.lengthLabel,
+                      isSelected && styles.lengthLabelActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.toneHint}>{selectedLength.description}</Text>
+
+          {draft ? (
+            <View style={styles.designPanel}>
+              <View style={styles.designHeader}>
+                <Palette color={colors.primary} size={19} strokeWidth={2.4} />
+                <View style={styles.flex}>
+                  <Text style={styles.designTitle}>카드 디자인</Text>
+                  <Text style={styles.designSummary}>
+                    {selectedFrameOption.label} · {selectedColorOption.label} ·{' '}
+                    {selectedFontOption.label}
+                  </Text>
                 </View>
-                <Text
-                  style={[
-                    styles.colorOptionText,
-                    isSelected && styles.colorOptionTextActive,
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+              </View>
 
-        <Text style={styles.designLabel}>글씨체</Text>
-        <View style={styles.fontGrid}>
-          {FONT_STYLE_OPTIONS.map(option => {
-            const isSelected = option.value === selectedDesign.fontStyle;
-            return (
-              <Pressable
-                key={option.value}
-                accessibilityRole="button"
-                onPress={() => updateFontStyle(option.value)}
-                style={({ pressed }) => [
-                  styles.fontOption,
-                  isSelected && styles.fontOptionActive,
-                  pressed && interactionStyles.pressedSoft,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.fontOptionTitle,
-                    isSelected && styles.fontOptionTitleActive,
-                  ]}
-                >
-                  {option.label}
-                </Text>
-                <Text style={styles.fontOptionDescription}>
-                  {option.description}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-      ) : null}
+              <Text style={styles.designLabel}>카드틀</Text>
+              <View style={styles.frameGrid}>
+                {CARD_FRAME_OPTIONS.map(option => {
+                  const isSelected = option.value === selectedDesign.cardFrame;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${option.label} 카드틀`}
+                      onPress={() => updateCardFrame(option.value)}
+                      style={({ pressed }) => [
+                        styles.frameOption,
+                        isSelected && styles.frameOptionActive,
+                        pressed && interactionStyles.pressedSoft,
+                      ]}
+                    >
+                      <View style={styles.framePreview}>
+                        <DreamCardFrame
+                          compact
+                          backgroundColor="#FFFDF6"
+                          borderColor="#A89473"
+                          frame={option.value}
+                          height={46}
+                          textureColor="#8A7A61"
+                        >
+                          <View style={styles.framePreviewImage} />
+                        </DreamCardFrame>
+                      </View>
+                      <Text
+                        style={[
+                          styles.frameOptionText,
+                          isSelected && styles.frameOptionTextActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-      <PrimaryButton disabled={!canGenerate} onPress={createPreview}>
-        {isGenerating ? '꿈카드 빚는 중...' : '카드 미리보기 만들기'}
-      </PrimaryButton>
-      {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
+              <Text style={styles.designLabel}>카드 색감</Text>
+              <View style={styles.colorGrid}>
+                {CARD_COLOR_OPTIONS.map(option => {
+                  const isSelected = option.value === selectedDesign.cardColor;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${option.label} 카드 색감`}
+                      onPress={() => updateCardColor(option.value)}
+                      style={({ pressed }) => [
+                        styles.colorOption,
+                        isSelected && styles.colorOptionActive,
+                        pressed && interactionStyles.pressed,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.colorSwatch,
+                          { backgroundColor: option.swatch },
+                          option.value === 'midnight' && styles.darkSwatch,
+                        ]}
+                      >
+                        {isSelected ? (
+                          <Check
+                            color={
+                              option.value === 'midnight'
+                                ? '#FFFFFF'
+                                : colors.primaryDark
+                            }
+                            size={15}
+                            strokeWidth={3}
+                          />
+                        ) : null}
+                      </View>
+                      <Text
+                        style={[
+                          styles.colorOptionText,
+                          isSelected && styles.colorOptionTextActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.designLabel}>글씨체</Text>
+              <View style={styles.fontGrid}>
+                {FONT_STYLE_OPTIONS.map(option => {
+                  const isSelected = option.value === selectedDesign.fontStyle;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="button"
+                      onPress={() => updateFontStyle(option.value)}
+                      style={({ pressed }) => [
+                        styles.fontOption,
+                        isSelected && styles.fontOptionActive,
+                        pressed && interactionStyles.pressedSoft,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.fontOptionTitle,
+                          isSelected && styles.fontOptionTitleActive,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                      <Text style={styles.fontOptionDescription}>
+                        {option.description}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+
+          <PrimaryButton disabled={!canGenerate} onPress={createPreview}>
+            {isGenerating ? '꿈카드 빚는 중...' : '카드 미리보기 만들기'}
+          </PrimaryButton>
+          {actionError ? (
+            <Text style={styles.errorText}>{actionError}</Text>
+          ) : null}
         </>
       ) : null}
       {draft ? (
@@ -721,9 +776,51 @@ export function ComposeScreen({ navigation }: Props) {
               <View style={styles.flex}>
                 <Text style={styles.designTitle}>카드 디자인</Text>
                 <Text style={styles.designSummary}>
-                  {selectedColorOption.label} · {selectedFontOption.label}
+                  {selectedFrameOption.label} · {selectedColorOption.label} ·{' '}
+                  {selectedFontOption.label}
                 </Text>
               </View>
+            </View>
+
+            <Text style={styles.designLabel}>카드틀</Text>
+            <View style={styles.frameGrid}>
+              {CARD_FRAME_OPTIONS.map(option => {
+                const isSelected = option.value === selectedDesign.cardFrame;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${option.label} 카드틀`}
+                    onPress={() => updateCardFrame(option.value)}
+                    style={({ pressed }) => [
+                      styles.frameOption,
+                      isSelected && styles.frameOptionActive,
+                      pressed && interactionStyles.pressedSoft,
+                    ]}
+                  >
+                    <View style={styles.framePreview}>
+                      <DreamCardFrame
+                        compact
+                        backgroundColor="#FFFDF6"
+                        borderColor="#A89473"
+                        frame={option.value}
+                        height={46}
+                        textureColor="#8A7A61"
+                      >
+                        <View style={styles.framePreviewImage} />
+                      </DreamCardFrame>
+                    </View>
+                    <Text
+                      style={[
+                        styles.frameOptionText,
+                        isSelected && styles.frameOptionTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <Text style={styles.designLabel}>카드 색감</Text>
@@ -834,7 +931,9 @@ export function ComposeScreen({ navigation }: Props) {
               {isGiving ? '보내는 중...' : '보내기'}
             </PrimaryButton>
           )}
-          {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
+          {actionError ? (
+            <Text style={styles.errorText}>{actionError}</Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -1293,6 +1392,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     includeFontPadding: false,
+  },
+  frameGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  frameOption: {
+    width: '48%',
+    minHeight: 86,
+    borderRadius: 16,
+    padding: 9,
+    gap: 7,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  frameOptionActive: {
+    backgroundColor: colors.lavenderMist,
+    borderColor: colors.primary,
+  },
+  framePreview: {
+    height: 46,
+  },
+  framePreviewImage: {
+    flex: 1,
+    borderRadius: 3,
+    backgroundColor: 'rgba(168, 148, 115, 0.16)',
+  },
+  frameOptionText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  frameOptionTextActive: {
+    color: colors.primaryDark,
   },
   colorGrid: {
     flexDirection: 'row',

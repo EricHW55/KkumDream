@@ -25,6 +25,7 @@ import {
 import { interactionStyles } from '../theme/interactions';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
+import { DreamCardFrame } from './DreamCardFrame';
 
 type LibraryMode = 'archive' | 'calendar';
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -495,58 +496,74 @@ function MiniDreamCard({
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
-        styles.miniCard,
-        {
-          width,
-          backgroundColor: designTheme.card,
-          shadowColor: designTheme.shadow,
-        },
+        styles.miniCardButton,
+        { width },
         pressed && interactionStyles.pressedSoft,
       ]}
     >
-      <View style={[styles.miniImage, { backgroundColor: designTheme.image }]}>
-        {dream.thumbnailUrl || dream.imageUrl ? (
-          <Image
-            source={{ uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined }}
-            style={styles.miniImageAsset}
-          />
-        ) : (
+      <DreamCardFrame
+        compact
+        backgroundColor={designTheme.card}
+        borderColor={designTheme.line}
+        frame={design.cardFrame}
+        height={178}
+        shadowColor={designTheme.shadow}
+        textureColor={designTheme.texture}
+      >
+        <View
+          style={[
+            styles.miniImage,
+            {
+              backgroundColor: designTheme.image,
+              borderColor: designTheme.line,
+            },
+          ]}
+        >
+          {dream.thumbnailUrl || dream.imageUrl ? (
+            <Image
+              source={{
+                uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
+              }}
+              style={styles.miniImageAsset}
+            />
+          ) : (
+            <Text
+              style={[
+                styles.miniMood,
+                dreamFontStyle,
+                { color: designTheme.accent },
+              ]}
+            >
+              {isImagePending(dream) ? '이미지 생성 중' : dream.mainMood}
+            </Text>
+          )}
+        </View>
+        <View style={styles.miniBody}>
           <Text
             style={[
-              styles.miniMood,
+              styles.miniTitle,
               dreamFontStyle,
-              { color: designTheme.accent },
+              { color: designTheme.text },
             ]}
+            numberOfLines={2}
           >
-            {isImagePending(dream) ? '이미지 생성 중' : dream.mainMood}
+            {dream.title}
           </Text>
-        )}
-      </View>
-      <View style={[styles.miniBody, { backgroundColor: designTheme.card }]}>
-        <Text
-          style={[
-            styles.miniTitle,
-            dreamFontStyle,
-            { color: designTheme.text },
-          ]}
-          numberOfLines={2}
-        >
-          {dream.title}
-        </Text>
-        <Text
-          style={[
-            styles.miniMeta,
-            dreamFontStyle,
-            { color: designTheme.secondaryText },
-          ]}
-          numberOfLines={1}
-        >
-          {dream.tags
-            .slice(0, 2)
-            .map(tag => `#${tag}`)
-            .join(' ')}
-        </Text>
-      </View>
+          <Text
+            style={[
+              styles.miniMeta,
+              dreamFontStyle,
+              { color: designTheme.secondaryText },
+            ]}
+            numberOfLines={1}
+          >
+            {dream.tags
+              .slice(0, 2)
+              .map(tag => `#${tag}`)
+              .join(' ')}
+          </Text>
+        </View>
+      </DreamCardFrame>
     </Pressable>
   );
 }
@@ -704,22 +721,16 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  miniCard: {
-    minHeight: 170,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: colors.cardBase,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+  miniCardButton: {
+    minHeight: 178,
   },
   miniImage: {
-    height: 94,
+    height: 88,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    borderRadius: 5,
+    borderWidth: 1,
   },
   miniImageAsset: {
     width: '100%',
@@ -732,7 +743,9 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   miniBody: {
-    padding: 10,
+    flex: 1,
+    paddingHorizontal: 2,
+    paddingTop: 8,
     gap: 7,
   },
   miniTitle: {

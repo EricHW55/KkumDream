@@ -18,7 +18,9 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-DEFAULT_DESIGN = """'{"card_color": "ivory", "font_style": "rounded"}'::jsonb"""
+DEFAULT_DESIGN = (
+    """'{"card_color": "ivory", "card_frame": "classic", "font_style": "rounded"}'::jsonb"""
+)
 
 
 def upgrade() -> None:

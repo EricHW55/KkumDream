@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MoonAvatar } from '../components/MoonAvatar';
+import { DreamCardFrame } from '../components/DreamCardFrame';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { TagChip } from '../components/TagChip';
 import {
@@ -69,16 +70,14 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
-  const {
-    data: rooms = getCachedRooms(sessionUserId),
-    refetch: refetchRooms,
-  } = useQuery({
-    queryKey: roomsQueryKey,
-    queryFn: () => loadRooms(token, sessionUserId),
-    initialData: () => getCachedRooms(sessionUserId),
-    staleTime: 0,
-    refetchOnMount: 'always',
-  });
+  const { data: rooms = getCachedRooms(sessionUserId), refetch: refetchRooms } =
+    useQuery({
+      queryKey: roomsQueryKey,
+      queryFn: () => loadRooms(token, sessionUserId),
+      initialData: () => getCachedRooms(sessionUserId),
+      staleTime: 0,
+      refetchOnMount: 'always',
+    });
   const cachedRoom = rooms.find(item => item.id === route.params.groupId);
   const room = roomOverride ?? cachedRoom;
   const title = room?.name ?? route.params.groupName ?? '꿈방';
@@ -100,7 +99,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   });
   const members =
     (room?.members ?? []).length > 0
-      ? (room?.members ?? [])
+      ? room?.members ?? []
       : (room?.memberIds ?? []).map(memberId =>
           getDisplayMember(memberId, sessionUserId),
         );
@@ -174,7 +173,11 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       );
       setIsSettingsVisible(false);
     } catch (error) {
-      setRoomError(error instanceof Error ? error.message : '꿈방 설정을 저장하지 못했어요.');
+      setRoomError(
+        error instanceof Error
+          ? error.message
+          : '꿈방 설정을 저장하지 못했어요.',
+      );
     } finally {
       setIsSavingRoom(false);
     }
@@ -199,7 +202,9 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       setIsSettingsVisible(false);
       navigation.goBack();
     } catch (error) {
-      setRoomError(error instanceof Error ? error.message : '꿈방을 나가지 못했어요.');
+      setRoomError(
+        error instanceof Error ? error.message : '꿈방을 나가지 못했어요.',
+      );
     } finally {
       setIsLeavingRoom(false);
     }
@@ -227,18 +232,15 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       });
     } catch (error) {
       setInviteStatus(
-        error instanceof Error ? error.message : '초대 코드를 공유하지 못했어요.',
+        error instanceof Error
+          ? error.message
+          : '초대 코드를 공유하지 못했어요.',
       );
     }
   };
 
   return (
-    <View
-      style={[
-        styles.root,
-        { paddingTop: Math.max(insets.top + 12, 42) },
-      ]}
-    >
+    <View style={[styles.root, { paddingTop: Math.max(insets.top + 12, 42) }]}>
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로가기"
@@ -265,7 +267,11 @@ export function GroupRoomScreen({ navigation, route }: Props) {
               pressed && interactionStyles.pressed,
             ]}
           >
-            <UsersRound color={colors.textPrimary} size={21} strokeWidth={2.4} />
+            <UsersRound
+              color={colors.textPrimary}
+              size={21}
+              strokeWidth={2.4}
+            />
           </Pressable>
           <Pressable
             accessibilityLabel="방 설정"
@@ -348,7 +354,9 @@ export function GroupRoomScreen({ navigation, route }: Props) {
           </View>
         }
         ListHeaderComponent={
-          dreams.length > 0 ? <Text style={styles.dateDivider}>오늘</Text> : null
+          dreams.length > 0 ? (
+            <Text style={styles.dateDivider}>오늘</Text>
+          ) : null
         }
         renderItem={({ item }) => (
           <DreamMessage
@@ -396,7 +404,9 @@ export function GroupRoomScreen({ navigation, route }: Props) {
               placeholderTextColor={colors.textMuted}
               style={styles.sheetInput}
             />
-            {roomError ? <Text style={styles.errorText}>{roomError}</Text> : null}
+            {roomError ? (
+              <Text style={styles.errorText}>{roomError}</Text>
+            ) : null}
             <Pressable
               accessibilityRole="button"
               disabled={isSavingRoom}
@@ -515,87 +525,95 @@ function DreamMessage({
           style={({ pressed }) => [
             styles.dreamBubble,
             isMine && styles.myDreamBubble,
-            {
-              backgroundColor: designTheme.card,
-              shadowColor: designTheme.shadow,
-            },
             pressed && interactionStyles.pressedSoft,
           ]}
         >
-          <View
-            style={[
-              styles.previewWrap,
-              { backgroundColor: designTheme.image },
-            ]}
+          <DreamCardFrame
+            compact
+            backgroundColor={designTheme.card}
+            borderColor={designTheme.line}
+            frame={design.cardFrame}
+            shadowColor={designTheme.shadow}
+            textureColor={designTheme.texture}
           >
-            {dream.thumbnailUrl || dream.imageUrl ? (
-              <Image
-                source={{
-                  uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
-                }}
-                style={styles.previewImage}
-              />
-            ) : isImagePending(dream) ? (
-              <DreamGenerationAnimation compact title="이미지 생성 중" />
-            ) : (
-              <View
-                style={[
-                  styles.previewPlaceholder,
-                  { backgroundColor: designTheme.placeholder },
-                ]}
-              >
-                <Text
+            <View
+              style={[
+                styles.previewWrap,
+                {
+                  backgroundColor: designTheme.image,
+                  borderColor: designTheme.line,
+                },
+              ]}
+            >
+              {dream.thumbnailUrl || dream.imageUrl ? (
+                <Image
+                  source={{
+                    uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
+                  }}
+                  style={styles.previewImage}
+                />
+              ) : isImagePending(dream) ? (
+                <DreamGenerationAnimation compact title="이미지 생성 중" />
+              ) : (
+                <View
                   style={[
-                    styles.previewMood,
-                    dreamFontStyle,
-                    { color: designTheme.accent },
+                    styles.previewPlaceholder,
+                    { backgroundColor: designTheme.placeholder },
                   ]}
                 >
-                  {dream.mainMood}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={[styles.bubbleText, { backgroundColor: designTheme.card }]}>
-            <Text
-              style={[
-                styles.bubbleMeta,
-                dreamFontStyle,
-                { color: designTheme.secondaryText },
-              ]}
-            >
-              {formatSentAt(dream.givenAt ?? dream.createdAt)}
-            </Text>
-            <Text
-              style={[
-                styles.bubbleTitle,
-                dreamFontStyle,
-                { color: designTheme.text },
-              ]}
-            >
-              {dream.title}
-            </Text>
-            <Text
-              style={[
-                styles.bubbleSummary,
-                dreamFontStyle,
-                { color: designTheme.secondaryText },
-              ]}
-              numberOfLines={2}
-            >
-              {dream.summary}
-            </Text>
-            <View style={styles.tags}>
-              {visibleTags.map(tag => (
-                <TagChip
-                  key={tag}
-                  label={tag}
-                  backgroundColor={designTheme.tagBackground}
-                  textColor={designTheme.tagText}
-                />
-              ))}
+                  <Text
+                    style={[
+                      styles.previewMood,
+                      dreamFontStyle,
+                      { color: designTheme.accent },
+                    ]}
+                  >
+                    {dream.mainMood}
+                  </Text>
+                </View>
+              )}
             </View>
-          </View>
+            <View style={styles.bubbleText}>
+              <Text
+                style={[
+                  styles.bubbleMeta,
+                  dreamFontStyle,
+                  { color: designTheme.secondaryText },
+                ]}
+              >
+                {formatSentAt(dream.givenAt ?? dream.createdAt)}
+              </Text>
+              <Text
+                style={[
+                  styles.bubbleTitle,
+                  dreamFontStyle,
+                  { color: designTheme.text },
+                ]}
+              >
+                {dream.title}
+              </Text>
+              <Text
+                style={[
+                  styles.bubbleSummary,
+                  dreamFontStyle,
+                  { color: designTheme.secondaryText },
+                ]}
+                numberOfLines={2}
+              >
+                {dream.summary}
+              </Text>
+              <View style={styles.tags}>
+                {visibleTags.map(tag => (
+                  <TagChip
+                    key={tag}
+                    label={tag}
+                    backgroundColor={designTheme.tagBackground}
+                    textColor={designTheme.tagText}
+                  />
+                ))}
+              </View>
+            </View>
+          </DreamCardFrame>
         </Pressable>
       </View>
       {isMine ? <Avatar color={sender.avatarColor} /> : null}
@@ -798,21 +816,17 @@ const styles = StyleSheet.create({
     marginRight: 2,
   },
   dreamBubble: {
-    overflow: 'hidden',
-    borderRadius: 22,
-    backgroundColor: colors.cardBase,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    backgroundColor: 'transparent',
   },
   myDreamBubble: {
-    backgroundColor: colors.lavenderMist,
+    backgroundColor: 'transparent',
   },
   previewWrap: {
     height: 188,
     backgroundColor: colors.lavenderTint,
+    borderRadius: 6,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   previewImage: {
     width: '100%',
@@ -831,7 +845,8 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   bubbleText: {
-    padding: 16,
+    paddingHorizontal: 3,
+    paddingTop: 11,
     gap: 8,
   },
   bubbleMeta: {
