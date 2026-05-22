@@ -12,6 +12,7 @@ type Props = {
   contentStyle?: StyleProp<ViewStyle>;
   frame: DreamCardFrameType;
   height?: number;
+  minimal?: boolean;
   shadowColor?: string;
   style?: StyleProp<ViewStyle>;
   textureColor: string;
@@ -93,6 +94,7 @@ export function DreamCardFrame({
   contentStyle,
   frame,
   height,
+  minimal = false,
   shadowColor,
   style,
   textureColor,
@@ -125,7 +127,12 @@ export function DreamCardFrame({
           </ClipPath>
         </Defs>
         <Path d={shapePath} fill={backgroundColor} fillRule="evenodd" />
-        <G clipPath={`url(#${clipId})`} opacity={compact ? 0.12 : 0.18}>
+        <G
+          clipPath={`url(#${clipId})`}
+          opacity={
+            minimal ? (compact ? 0.06 : 0.1) : compact ? 0.12 : 0.18
+          }
+        >
           {paperFibers.map(fiber => (
             <Path
               key={fiber}
@@ -147,56 +154,60 @@ export function DreamCardFrame({
             />
           ))}
         </G>
-        <G clipPath={`url(#${clipId})`} opacity={compact ? 0.12 : 0.2}>
-          {paperFoldLines.map(line => (
-            <Path
-              key={line}
-              d={line}
-              fill="none"
-              stroke={textureColor}
-              strokeLinecap="round"
-              strokeWidth={0.65}
-            />
-          ))}
-        </G>
-        <G clipPath={`url(#${clipId})`}>
-          {inkStains.map(stain => (
-            <Circle
-              key={`${stain.x}-${stain.y}`}
-              cx={stain.x}
-              cy={stain.y}
-              fill={borderColor}
-              opacity={stain.opacity}
-              r={stain.r}
-            />
-          ))}
-        </G>
-        <G clipPath={`url(#${clipId})`} opacity={compact ? 0.4 : 0.55}>
-          {crosshatchLines.map(line => (
-            <Path
-              key={line}
-              d={line}
-              fill="none"
-              stroke={borderColor}
-              strokeLinecap="round"
-              strokeWidth={compact ? 0.6 : 1}
-            />
-          ))}
-        </G>
-        <G clipPath={`url(#${clipId})`}>
-          {cornerOrnaments.map(ornament => (
-            <G
-              key={`${ornament.x}-${ornament.y}`}
-              transform={`translate(${ornament.x} ${ornament.y}) rotate(${ornament.rotation ?? 0})`}
-            >
-              <Path
-                d={cornerStarPath}
-                fill={borderColor}
-                opacity={compact ? 0.55 : 0.7}
-              />
+        {minimal ? null : (
+          <>
+            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.12 : 0.2}>
+              {paperFoldLines.map(line => (
+                <Path
+                  key={line}
+                  d={line}
+                  fill="none"
+                  stroke={textureColor}
+                  strokeLinecap="round"
+                  strokeWidth={0.65}
+                />
+              ))}
             </G>
-          ))}
-        </G>
+            <G clipPath={`url(#${clipId})`}>
+              {inkStains.map(stain => (
+                <Circle
+                  key={`${stain.x}-${stain.y}`}
+                  cx={stain.x}
+                  cy={stain.y}
+                  fill={borderColor}
+                  opacity={stain.opacity}
+                  r={stain.r}
+                />
+              ))}
+            </G>
+            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.4 : 0.55}>
+              {crosshatchLines.map(line => (
+                <Path
+                  key={line}
+                  d={line}
+                  fill="none"
+                  stroke={borderColor}
+                  strokeLinecap="round"
+                  strokeWidth={compact ? 0.6 : 1}
+                />
+              ))}
+            </G>
+            <G clipPath={`url(#${clipId})`}>
+              {cornerOrnaments.map(ornament => (
+                <G
+                  key={`${ornament.x}-${ornament.y}`}
+                  transform={`translate(${ornament.x} ${ornament.y}) rotate(${ornament.rotation ?? 0})`}
+                >
+                  <Path
+                    d={cornerStarPath}
+                    fill={borderColor}
+                    opacity={compact ? 0.55 : 0.7}
+                  />
+                </G>
+              ))}
+            </G>
+          </>
+        )}
         <Path
           d={innerPath}
           fill="none"

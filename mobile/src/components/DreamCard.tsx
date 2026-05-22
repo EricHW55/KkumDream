@@ -518,6 +518,7 @@ export function DreamCard({
             borderColor={frameBorderColor}
             frame={design.cardFrame}
             height={cardHeight}
+            minimal
             shadowColor={designTheme.shadow}
             textureColor={designTheme.texture}
           >
@@ -536,31 +537,6 @@ export function DreamCard({
               style={styles.backScroll}
               contentContainerStyle={styles.backContent}
             >
-              <View style={styles.wordmarkRow}>
-                <View
-                  style={[
-                    styles.wordmarkRule,
-                    { backgroundColor: frameBorderColor },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.wordmark,
-                    {
-                      color: frameBorderColor,
-                      fontFamily: serifTitleFamily,
-                    },
-                  ]}
-                >
-                  꿈을 글로 옮긴 편지
-                </Text>
-                <View
-                  style={[
-                    styles.wordmarkRule,
-                    { backgroundColor: frameBorderColor },
-                  ]}
-                />
-              </View>
               <Text
                 style={[
                   styles.backTitle,
@@ -581,7 +557,6 @@ export function DreamCard({
               >
                 {giverName}이 {receiverName}에게 보낸 꿈
               </Text>
-              <StarOrnamentDivider color={frameBorderColor} />
               <Text
                 style={[
                   styles.story,
@@ -590,17 +565,6 @@ export function DreamCard({
                 ]}
               >
                 {dream.story}
-              </Text>
-              <Text
-                style={[
-                  styles.backSignature,
-                  {
-                    color: designTheme.accent,
-                    fontFamily: serifTitleFamily,
-                  },
-                ]}
-              >
-                — {giverName} 드림
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -906,8 +870,8 @@ const styles = StyleSheet.create({
   },
   backContent: {
     padding: 8,
-    paddingBottom: 24,
-    gap: 18,
+    paddingBottom: 72,
+    gap: 14,
     minHeight: '100%',
   },
   backTitle: {
@@ -930,14 +894,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 26,
-  },
-  backSignature: {
-    marginTop: 12,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textAlign: 'right',
-    includeFontPadding: false,
   },
   backFlipButton: {
     display: 'none',
