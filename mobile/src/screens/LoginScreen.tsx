@@ -6,10 +6,12 @@ import Svg, { Path } from 'react-native-svg';
 import { loginWithGoogleIdToken } from '../api/auth';
 import { getGoogleIdToken } from '../auth/googleSignIn';
 import { MoonAvatar } from '../components/MoonAvatar';
+import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { GOOGLE_WEB_CLIENT_ID } from '../config/env';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -46,6 +48,7 @@ export function LoginScreen() {
         },
       ]}
     >
+      <PaperTextureOverlay />
       <View style={styles.brand}>
         <MoonAvatar size={74} color={colors.primary} />
         <Text style={styles.title}>꿈드림</Text>
@@ -55,8 +58,8 @@ export function LoginScreen() {
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>로그인</Text>
         <Text style={styles.panelText}>
-          Google 계정으로 로그인하면 이 기기에 세션이 저장되어 다음 실행부터 바로
-          들어올 수 있어요.
+          Google 계정으로 로그인하면 이 기기에 세션이 저장되어 다음 실행부터
+          바로 들어올 수 있어요.
         </Text>
 
         <Pressable
@@ -127,12 +130,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 42,
     fontWeight: '700',
     includeFontPadding: false,
   },
   subtitle: {
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -147,12 +152,14 @@ const styles = StyleSheet.create({
   },
   panelTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 24,
     fontWeight: '700',
     includeFontPadding: false,
   },
   panelText: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     lineHeight: 21,
     fontWeight: '600',
@@ -173,17 +180,20 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
   },
   setupText: {
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     lineHeight: 19,
   },
   errorText: {
     color: colors.error,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     lineHeight: 19,
     fontWeight: '700',

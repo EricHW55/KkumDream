@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MoonAvatar } from '../components/MoonAvatar';
 import { DreamCardFrame } from '../components/DreamCardFrame';
+import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { TagChip } from '../components/TagChip';
 import {
@@ -48,6 +49,7 @@ import {
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupRoom'>;
@@ -241,6 +243,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.root, { paddingTop: Math.max(insets.top + 12, 42) }]}>
+      <PaperTextureOverlay />
       <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로가기"
@@ -690,6 +693,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 22,
     fontWeight: '700',
     includeFontPadding: false,
@@ -697,6 +701,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 4,
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -748,12 +753,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginTop: 8,
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '700',
     includeFontPadding: false,
   },
   infoLabel: {
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '700',
     includeFontPadding: false,
@@ -761,6 +768,7 @@ const styles = StyleSheet.create({
   inviteCode: {
     marginTop: 5,
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 17,
     fontWeight: '700',
     includeFontPadding: false,
@@ -778,6 +786,7 @@ const styles = StyleSheet.create({
   dateDivider: {
     alignSelf: 'center',
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
@@ -810,6 +819,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 2,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     includeFontPadding: false,
@@ -859,6 +869,7 @@ const styles = StyleSheet.create({
   },
   bubbleTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 23,
@@ -866,6 +877,7 @@ const styles = StyleSheet.create({
   },
   bubbleSummary: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -881,6 +893,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 20,
     fontWeight: '700',
     includeFontPadding: false,
@@ -888,6 +901,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 8,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -911,6 +925,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 22,
     fontWeight: '700',
     includeFontPadding: false,
@@ -918,6 +933,7 @@ const styles = StyleSheet.create({
   sheetSubtitle: {
     marginTop: 5,
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '600',
     includeFontPadding: false,
@@ -932,6 +948,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     includeFontPadding: false,
@@ -943,6 +960,7 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
     backgroundColor: colors.background,
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     paddingHorizontal: 16,
     fontSize: 17,
     fontWeight: '700',
@@ -959,6 +977,7 @@ const styles = StyleSheet.create({
   },
   primaryActionText: {
     color: '#FFFFFF',
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
@@ -974,12 +993,14 @@ const styles = StyleSheet.create({
   },
   dangerActionText: {
     color: '#B84A68',
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     fontWeight: '700',
     includeFontPadding: false,
   },
   errorText: {
     color: colors.error,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
@@ -1001,6 +1022,7 @@ const styles = StyleSheet.create({
   },
   memberName: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1008,6 +1030,7 @@ const styles = StyleSheet.create({
   memberRole: {
     marginTop: 4,
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '700',
     includeFontPadding: false,

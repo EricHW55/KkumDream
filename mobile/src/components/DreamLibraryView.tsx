@@ -23,6 +23,7 @@ import {
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
 import { DREAM_CARD_ASPECT_RATIO, DreamCardFrame } from './DreamCardFrame';
@@ -665,6 +666,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 28,
     fontWeight: '700',
     includeFontPadding: false,
@@ -672,6 +674,7 @@ const styles = StyleSheet.create({
   description: {
     marginTop: 8,
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
@@ -697,6 +700,7 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     includeFontPadding: false,
@@ -718,6 +722,7 @@ const styles = StyleSheet.create({
   },
   emptyDreamText: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,

@@ -28,6 +28,7 @@ import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
 import { unregisterPushToken } from '../services/pushNotifications';
+import { fontFamily } from '../theme/typography';
 
 const PROFILE_EDITOR_MAX_HEIGHT = 560;
 const PROFILE_EDITOR_COLLAPSED_GAP = -12;
@@ -155,7 +156,9 @@ export function ProfileScreen() {
       setClaimToken('');
       setClaimStatus(`"${dream.title}" 카드를 받은 카드함에 담았어요.`);
     } catch (error) {
-      setClaimStatus(error instanceof Error ? error.message : '카드를 받지 못했어요.');
+      setClaimStatus(
+        error instanceof Error ? error.message : '카드를 받지 못했어요.',
+      );
     } finally {
       setIsClaiming(false);
     }
@@ -206,11 +209,15 @@ export function ProfileScreen() {
       );
       updateUser(nextUser);
       setPendingProfileImage(null);
-      setProfileAvatarValue(normalizeProfileAvatarValue(nextUser.profileImageUrl));
+      setProfileAvatarValue(
+        normalizeProfileAvatarValue(nextUser.profileImageUrl),
+      );
       setIsProfileEditorOpen(false);
       setStatusText('내 정보를 저장했어요.');
     } catch (error) {
-      setStatusText(error instanceof Error ? error.message : '내 정보를 저장하지 못했어요.');
+      setStatusText(
+        error instanceof Error ? error.message : '내 정보를 저장하지 못했어요.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -237,7 +244,9 @@ export function ProfileScreen() {
               />
             </View>
             <View style={styles.profileText}>
-              <Text style={styles.name}>{user?.nickname ?? '꿈드림 사용자'}</Text>
+              <Text style={styles.name}>
+                {user?.nickname ?? '꿈드림 사용자'}
+              </Text>
               <Text style={styles.meta}>
                 {user?.email ?? '구글 계정 이메일 없음'}
               </Text>
@@ -256,7 +265,9 @@ export function ProfileScreen() {
             </Pressable>
           </View>
 
-          {statusText ? <Text style={styles.statusText}>{statusText}</Text> : null}
+          {statusText ? (
+            <Text style={styles.statusText}>{statusText}</Text>
+          ) : null}
 
           {isProfileEditorMounted ? (
             <Animated.View
@@ -348,7 +359,11 @@ export function ProfileScreen() {
                     ]}
                   >
                     <View style={styles.uploadAvatarIcon}>
-                      <Plus color={colors.primary} size={24} strokeWidth={2.5} />
+                      <Plus
+                        color={colors.primary}
+                        size={24}
+                        strokeWidth={2.5}
+                      />
                     </View>
                     <Text style={styles.avatarOptionLabel}>사진 추가</Text>
                   </Pressable>
@@ -375,7 +390,8 @@ export function ProfileScreen() {
         <View style={styles.panel}>
           <Text style={styles.sectionHeading}>꿈카드 받기</Text>
           <Text style={styles.sectionDescription}>
-            누군가 카톡 등으로 보낸 꿈카드 링크를 여기에 붙여넣으면 받은 카드함에 담을 수 있어요.
+            누군가 카톡 등으로 보낸 꿈카드 링크를 여기에 붙여넣으면 받은
+            카드함에 담을 수 있어요.
           </Text>
           <TextInput
             autoCapitalize="none"
@@ -387,7 +403,9 @@ export function ProfileScreen() {
             placeholderTextColor={colors.textMuted}
             style={styles.input}
           />
-          {claimStatus ? <Text style={styles.statusText}>{claimStatus}</Text> : null}
+          {claimStatus ? (
+            <Text style={styles.statusText}>{claimStatus}</Text>
+          ) : null}
           <Pressable
             accessibilityRole="button"
             disabled={isClaiming}
@@ -398,7 +416,9 @@ export function ProfileScreen() {
               pressed && !isClaiming && interactionStyles.pressed,
             ]}
           >
-            <Text style={styles.saveText}>{isClaiming ? '받는 중...' : '카드 받기'}</Text>
+            <Text style={styles.saveText}>
+              {isClaiming ? '받는 중...' : '카드 받기'}
+            </Text>
           </Pressable>
         </View>
 
@@ -423,6 +443,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 18,
@@ -438,12 +459,14 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
   },
   sectionDescription: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 19,
@@ -468,12 +491,14 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 18,
     fontWeight: '700',
   },
   meta: {
     marginTop: 6,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
   },
   editProfileButton: {
@@ -489,6 +514,7 @@ const styles = StyleSheet.create({
   },
   editProfileButtonText: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '800',
     includeFontPadding: false,
@@ -501,6 +527,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     includeFontPadding: false,
@@ -512,6 +539,7 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
     backgroundColor: colors.background,
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     paddingHorizontal: 14,
     fontSize: 16,
     fontWeight: '700',
@@ -549,6 +577,7 @@ const styles = StyleSheet.create({
   },
   avatarOptionLabel: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 10,
     fontWeight: '700',
     includeFontPadding: false,
@@ -558,6 +587,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
@@ -574,6 +604,7 @@ const styles = StyleSheet.create({
   },
   saveText: {
     color: '#FFFFFF',
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     fontWeight: '700',
     includeFontPadding: false,
@@ -588,6 +619,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#FFFFFF',
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,

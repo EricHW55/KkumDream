@@ -21,6 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DreamCard } from '../components/DreamCard';
+import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import {
   addDreamComment,
   deleteDreamComment,
@@ -37,6 +38,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 import type {
   DreamComment,
   Dream,
@@ -103,9 +105,8 @@ export function DreamDetailScreen({ route }: Props) {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(initialComments);
   const [reactionError, setReactionError] = useState<string | null>(null);
-  const [pendingReaction, setPendingReaction] = useState<DreamReactionType | null>(
-    null,
-  );
+  const [pendingReaction, setPendingReaction] =
+    useState<DreamReactionType | null>(null);
   const commentsQueryKey = ['dreams', dream.id, 'comments', token] as const;
   const reactionsQueryKey = ['dreams', dream.id, 'reactions', token] as const;
   const { data: remoteComments = [] } = useQuery({
@@ -147,8 +148,7 @@ export function DreamDetailScreen({ route }: Props) {
     enabled: Boolean(token),
     initialData: dream,
     staleTime: 0,
-    refetchInterval: query =>
-      isImagePending(query.state.data) ? 3000 : false,
+    refetchInterval: query => (isImagePending(query.state.data) ? 3000 : false),
   });
 
   useEffect(() => {
@@ -268,7 +268,8 @@ export function DreamDetailScreen({ route }: Props) {
             id: `local-comment-${Date.now()}`,
             dreamId: dream.id,
             authorId: currentUserId,
-            authorNickname: user?.nickname ?? getDisplayMember(currentUserId).name,
+            authorNickname:
+              user?.nickname ?? getDisplayMember(currentUserId).name,
             authorProfileImageUrl: user?.profileImageUrl ?? null,
             content,
             isOwnerMain: dream.receiverId === currentUserId,
@@ -277,7 +278,9 @@ export function DreamDetailScreen({ route }: Props) {
         ]);
       }
     } catch (error) {
-      setCommentError(error instanceof Error ? error.message : '댓글을 등록하지 못했어요.');
+      setCommentError(
+        error instanceof Error ? error.message : '댓글을 등록하지 못했어요.',
+      );
       return;
     } finally {
       setIsSubmittingComment(false);
@@ -294,14 +297,15 @@ export function DreamDetailScreen({ route }: Props) {
         { paddingBottom: Math.max(insets.bottom + 44, 88) },
       ]}
     >
+      <PaperTextureOverlay />
       <DreamCard dream={dream} size="full" onBackOpen={onBackOpen} />
 
       <View style={styles.reactionBox}>
         <View style={styles.reactionRow}>
           {DREAM_REACTION_TYPES.map(reactionType => {
-            const summary =
-              reactionSummary.find(item => item.reactionType === reactionType) ??
-              { reactionType, count: 0, reacted: false };
+            const summary = reactionSummary.find(
+              item => item.reactionType === reactionType,
+            ) ?? { reactionType, count: 0, reacted: false };
             const meta = reactionMeta[reactionType];
             const isPending = pendingReaction === reactionType;
             const disabled = !token || isPending;
@@ -322,7 +326,9 @@ export function DreamDetailScreen({ route }: Props) {
               >
                 <Icon
                   size={16}
-                  color={summary.reacted ? colors.primary : colors.textSecondary}
+                  color={
+                    summary.reacted ? colors.primary : colors.textSecondary
+                  }
                   fill={summary.reacted ? colors.primary : 'transparent'}
                 />
                 <Text
@@ -409,7 +415,9 @@ export function DreamDetailScreen({ route }: Props) {
             </Pressable>
           </View>
         )}
-        {commentError ? <Text style={styles.errorText}>{commentError}</Text> : null}
+        {commentError ? (
+          <Text style={styles.errorText}>{commentError}</Text>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -500,6 +508,7 @@ const styles = StyleSheet.create({
   },
   reactionLabel: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     includeFontPadding: false,
@@ -509,6 +518,7 @@ const styles = StyleSheet.create({
   },
   reactionCount: {
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     includeFontPadding: false,
@@ -542,6 +552,7 @@ const styles = StyleSheet.create({
   },
   commentTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 17,
     fontWeight: '700',
   },
@@ -562,6 +573,7 @@ const styles = StyleSheet.create({
   },
   commentAuthor: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -571,6 +583,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     color: colors.primaryDark,
     backgroundColor: colors.cardBase,
+    fontFamily: fontFamily.handwritten,
     fontSize: 11,
     fontWeight: '700',
     includeFontPadding: false,
@@ -578,6 +591,7 @@ const styles = StyleSheet.create({
   commentText: {
     marginTop: 6,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     lineHeight: 23,
   },
@@ -592,6 +606,7 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
     backgroundColor: colors.cardBase,
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     lineHeight: 22,
     paddingHorizontal: 14,
@@ -613,6 +628,7 @@ const styles = StyleSheet.create({
   },
   commentSubmitText: {
     color: '#FFFFFF',
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     includeFontPadding: false,
@@ -624,12 +640,14 @@ const styles = StyleSheet.create({
   },
   commentNoticeText: {
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
   },
   errorText: {
     color: colors.error,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,

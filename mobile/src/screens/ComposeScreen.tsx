@@ -31,6 +31,7 @@ import { DreamCard } from '../components/DreamCard';
 import { DreamCardFrame } from '../components/DreamCardFrame';
 import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
 import { MoonAvatar } from '../components/MoonAvatar';
+import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { getCachedRooms, loadRooms } from '../data/dreamRepository';
 import { LOCAL_MOCK_USER_ID } from '../data/currentUser';
@@ -48,6 +49,7 @@ import {
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 import type { Dream, DreamDesign, DreamStoryLength } from '../types/dream';
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
@@ -484,6 +486,7 @@ export function ComposeScreen({ navigation }: Props) {
         { paddingBottom: Math.max(insets.bottom + 40, 84) },
       ]}
     >
+      <PaperTextureOverlay />
       {!draft ? (
         <>
           <Text style={styles.label}>오늘 꾼 꿈</Text>
@@ -1297,6 +1300,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1309,6 +1313,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBase,
     padding: 16,
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     lineHeight: 24,
   },
@@ -1329,6 +1334,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBase,
     borderWidth: 1,
     borderColor: colors.divider,
+    fontFamily: fontFamily.handwritten,
     fontWeight: '700',
   },
   moodActive: {
@@ -1357,6 +1363,7 @@ const styles = StyleSheet.create({
   },
   toneLabel: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1367,6 +1374,7 @@ const styles = StyleSheet.create({
   toneDescription: {
     marginTop: 7,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,
@@ -1374,6 +1382,7 @@ const styles = StyleSheet.create({
   toneHint: {
     marginTop: -6,
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,
@@ -1398,6 +1407,7 @@ const styles = StyleSheet.create({
   },
   lengthLabel: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1420,6 +1430,7 @@ const styles = StyleSheet.create({
   },
   designTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1427,12 +1438,14 @@ const styles = StyleSheet.create({
   designSummary: {
     marginTop: 4,
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '700',
     includeFontPadding: false,
   },
   designLabel: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1480,6 +1493,7 @@ const styles = StyleSheet.create({
   },
   frameOptionText: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1489,6 +1503,7 @@ const styles = StyleSheet.create({
   },
   frameOptionDescription: {
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 10.5,
     fontWeight: '600',
     lineHeight: 14,
@@ -1529,6 +1544,7 @@ const styles = StyleSheet.create({
   },
   colorOptionText: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1564,6 +1580,7 @@ const styles = StyleSheet.create({
   fontOptionDescription: {
     marginTop: 5,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 17,
@@ -1580,6 +1597,7 @@ const styles = StyleSheet.create({
   },
   previewTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 18,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1587,6 +1605,7 @@ const styles = StyleSheet.create({
   previewMeta: {
     marginTop: 5,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 18,

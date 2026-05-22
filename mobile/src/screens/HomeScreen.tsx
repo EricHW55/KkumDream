@@ -41,6 +41,7 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 import type { GroupRoom } from '../types/group';
 
 type Navigation = CompositeNavigationProp<
@@ -64,16 +65,14 @@ export function HomeScreen() {
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [isRoomActionPending, setIsRoomActionPending] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
-  const {
-    data: rooms = getCachedRooms(sessionUserId),
-    refetch: refetchRooms,
-  } = useQuery({
-    queryKey: roomsQueryKey,
-    queryFn: () => loadRooms(token, sessionUserId),
-    initialData: () => getCachedRooms(sessionUserId),
-    staleTime: 0,
-    refetchOnMount: 'always',
-  });
+  const { data: rooms = getCachedRooms(sessionUserId), refetch: refetchRooms } =
+    useQuery({
+      queryKey: roomsQueryKey,
+      queryFn: () => loadRooms(token, sessionUserId),
+      initialData: () => getCachedRooms(sessionUserId),
+      staleTime: 0,
+      refetchOnMount: 'always',
+    });
 
   useFocusEffect(
     useCallback(() => {
@@ -116,7 +115,9 @@ export function HomeScreen() {
       setCreatedRoom(room);
       setRoomSheetMode('created');
     } catch (error) {
-      setRoomError(error instanceof Error ? error.message : '꿈방을 만들지 못했어요.');
+      setRoomError(
+        error instanceof Error ? error.message : '꿈방을 만들지 못했어요.',
+      );
     } finally {
       setIsRoomActionPending(false);
     }
@@ -150,7 +151,11 @@ export function HomeScreen() {
       setIsRoomSheetVisible(false);
       openRoom(room);
     } catch (error) {
-      setRoomError(error instanceof Error ? error.message : '초대코드를 확인하지 못했어요.');
+      setRoomError(
+        error instanceof Error
+          ? error.message
+          : '초대코드를 확인하지 못했어요.',
+      );
     } finally {
       setIsRoomActionPending(false);
     }
@@ -178,7 +183,9 @@ export function HomeScreen() {
       });
     } catch (error) {
       setInviteStatus(
-        error instanceof Error ? error.message : '초대 코드를 공유하지 못했어요.',
+        error instanceof Error
+          ? error.message
+          : '초대 코드를 공유하지 못했어요.',
       );
     }
   };
@@ -225,7 +232,10 @@ export function HomeScreen() {
         data={rooms}
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.list, rooms.length === 0 && styles.emptyList]}
+        contentContainerStyle={[
+          styles.list,
+          rooms.length === 0 && styles.emptyList,
+        ]}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Text style={styles.emptyTitle}>현재 가입된 꿈방이 없습니다.</Text>
@@ -293,7 +303,9 @@ export function HomeScreen() {
               </Pressable>
             </View>
 
-            {roomError ? <Text style={styles.errorText}>{roomError}</Text> : null}
+            {roomError ? (
+              <Text style={styles.errorText}>{roomError}</Text>
+            ) : null}
 
             {roomSheetMode === 'menu' ? (
               <>
@@ -358,7 +370,9 @@ export function HomeScreen() {
                   style={({ pressed }) => [
                     styles.primaryAction,
                     isRoomActionPending && styles.disabledAction,
-                    pressed && !isRoomActionPending && interactionStyles.pressed,
+                    pressed &&
+                      !isRoomActionPending &&
+                      interactionStyles.pressed,
                   ]}
                 >
                   <Text style={styles.primaryActionText}>
@@ -448,7 +462,8 @@ export function HomeScreen() {
                   onPress={joinRoom}
                   style={({ pressed }) => [
                     styles.primaryAction,
-                    (!joinCode.trim() || isRoomActionPending) && styles.disabledAction,
+                    (!joinCode.trim() || isRoomActionPending) &&
+                      styles.disabledAction,
                     pressed &&
                       joinCode.trim() &&
                       !isRoomActionPending &&
@@ -520,10 +535,7 @@ function GroupRoomItem({
           {uploaders.map((member, index) => (
             <View
               key={member.id}
-              style={[
-                styles.memberDot,
-                index > 0 && styles.stackedMemberDot,
-              ]}
+              style={[styles.memberDot, index > 0 && styles.stackedMemberDot]}
             >
               <RoomMemberAvatar member={member} size={27} />
             </View>
@@ -559,7 +571,11 @@ function RoomMemberAvatar({
   member,
   size,
 }: {
-  member: { avatarColor: string; name: string; profileImageUrl?: string | null };
+  member: {
+    avatarColor: string;
+    name: string;
+    profileImageUrl?: string | null;
+  };
   size: number;
 }) {
   return (
@@ -589,6 +605,7 @@ const styles = StyleSheet.create({
   },
   wordmark: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 34,
     fontWeight: '700',
     includeFontPadding: false,
@@ -596,6 +613,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 8,
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     fontWeight: '700',
     includeFontPadding: false,
@@ -638,6 +656,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 20,
     fontWeight: '700',
     includeFontPadding: false,
@@ -645,6 +664,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 8,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -672,6 +692,7 @@ const styles = StyleSheet.create({
   },
   addRoomTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 17,
     fontWeight: '700',
     includeFontPadding: false,
@@ -679,6 +700,7 @@ const styles = StyleSheet.create({
   addRoomSubtitle: {
     marginTop: 5,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 18,
@@ -700,6 +722,7 @@ const styles = StyleSheet.create({
   },
   roomName: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 24,
     fontWeight: '700',
     includeFontPadding: false,
@@ -707,6 +730,7 @@ const styles = StyleSheet.create({
   roomMeta: {
     marginTop: 8,
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 21,

@@ -19,7 +19,10 @@ function App() {
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+          <StatusBar
+            barStyle="dark-content"
+            backgroundColor={colors.background}
+          />
           <PushNotificationRegistrar />
           <RootNavigator />
         </SafeAreaProvider>

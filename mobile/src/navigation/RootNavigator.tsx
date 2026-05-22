@@ -6,8 +6,10 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Home, Inbox, Send, UserRound } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ClaimDreamScreen } from '../screens/ClaimDreamScreen';
 import { ComposeScreen } from '../screens/ComposeScreen';
 import { DreamDetailScreen } from '../screens/DreamDetailScreen';
@@ -19,6 +21,7 @@ import { OutboxScreen } from '../screens/OutboxScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
+import { fontFamily } from '../theme/typography';
 import type { MainTabParamList, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -65,6 +68,19 @@ function ProfileTabIcon({ color, size }: TabIconProps) {
   return <UserRound color={color} size={size} />;
 }
 
+function TabBarPaperBackground() {
+  return (
+    <View pointerEvents="none" style={styles.tabBarBackground}>
+      <View style={styles.tabBarFadeWide} />
+      <View style={styles.tabBarFadeMid} />
+      <View style={styles.tabBarFadeNear} />
+      <View style={styles.tabBarSurface}>
+        <PaperTextureOverlay subtle />
+      </View>
+    </View>
+  );
+}
+
 const theme = {
   ...DefaultTheme,
   colors: {
@@ -86,17 +102,20 @@ function MainTabs() {
           height: TAB_BAR_BASE_HEIGHT + insets.bottom,
           paddingTop: 6,
           paddingBottom: TAB_BAR_BASE_PADDING_BOTTOM + insets.bottom,
-          backgroundColor: colors.cardBase,
-          borderTopWidth: 1,
-          borderTopColor: colors.divider,
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
           borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
           borderTopRightRadius: TAB_BAR_TOP_RADIUS,
-          overflow: 'hidden',
+          elevation: 0,
+          overflow: 'visible',
+          shadowOpacity: 0,
         },
         tabBarLabelStyle: {
+          fontFamily: fontFamily.handwritten,
           fontSize: 12,
           fontWeight: '600',
         },
+        tabBarBackground: TabBarPaperBackground,
         headerShown: false,
       }}
     >
@@ -194,3 +213,60 @@ export function RootNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBarBackground: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    overflow: 'visible',
+  },
+  tabBarFadeWide: {
+    position: 'absolute',
+    top: -18,
+    right: 18,
+    left: 18,
+    height: 18,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: colors.cardBase,
+    opacity: 0.08,
+  },
+  tabBarFadeMid: {
+    position: 'absolute',
+    top: -11,
+    right: 10,
+    left: 10,
+    height: 16,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: colors.cardBase,
+    opacity: 0.18,
+  },
+  tabBarFadeNear: {
+    position: 'absolute',
+    top: -5,
+    right: 4,
+    left: 4,
+    height: 14,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: colors.cardBase,
+    opacity: 0.34,
+  },
+  tabBarSurface: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
+    borderTopRightRadius: TAB_BAR_TOP_RADIUS,
+    overflow: 'hidden',
+    backgroundColor: colors.cardBase,
+    borderTopWidth: 0.6,
+    borderTopColor: 'rgba(216, 205, 187, 0.58)',
+  },
+});

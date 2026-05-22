@@ -9,10 +9,12 @@ import { loginWithGoogleIdToken } from '../api/auth';
 import { claimDream } from '../api/dreams';
 import { getGoogleIdToken } from '../auth/googleSignIn';
 import { MoonAvatar } from '../components/MoonAvatar';
+import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ClaimDream'>;
 
@@ -22,7 +24,10 @@ export function ClaimDreamScreen({ navigation, route }: Props) {
   const token = useSessionStore(state => state.token);
   const userId = useSessionStore(state => state.userId);
   const setSession = useSessionStore(state => state.setSession);
-  const claimToken = useMemo(() => extractClaimToken(route.params), [route.params]);
+  const claimToken = useMemo(
+    () => extractClaimToken(route.params),
+    [route.params],
+  );
   const [statusText, setStatusText] = useState('꿈카드를 확인하는 중이에요.');
   const [errorText, setErrorText] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
@@ -48,11 +53,15 @@ export function ClaimDreamScreen({ navigation, route }: Props) {
         }
         setClaimedDreamId(dream.id);
         setStatusText('꿈카드를 받았어요.');
-        queryClient.invalidateQueries({ queryKey: ['dreams', 'inbox', userId] });
+        queryClient.invalidateQueries({
+          queryKey: ['dreams', 'inbox', userId],
+        });
         navigation.replace('DreamDetail', { dream });
       } catch (error) {
         if (!cancelled) {
-          setErrorText(error instanceof Error ? error.message : '꿈카드를 받지 못했어요.');
+          setErrorText(
+            error instanceof Error ? error.message : '꿈카드를 받지 못했어요.',
+          );
         }
       } finally {
         if (!cancelled) {
@@ -65,7 +74,15 @@ export function ClaimDreamScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [claimToken, claimedDreamId, hasAttemptedClaim, navigation, queryClient, token, userId]);
+  }, [
+    claimToken,
+    claimedDreamId,
+    hasAttemptedClaim,
+    navigation,
+    queryClient,
+    token,
+    userId,
+  ]);
 
   const login = async () => {
     setErrorText(null);
@@ -75,7 +92,9 @@ export function ClaimDreamScreen({ navigation, route }: Props) {
       const session = await loginWithGoogleIdToken(idToken);
       setSession(session.accessToken, session.user);
     } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Google 로그인에 실패했어요.');
+      setErrorText(
+        error instanceof Error ? error.message : 'Google 로그인에 실패했어요.',
+      );
     } finally {
       setIsLoggingIn(false);
     }
@@ -99,6 +118,7 @@ export function ClaimDreamScreen({ navigation, route }: Props) {
         },
       ]}
     >
+      <PaperTextureOverlay />
       <View style={styles.panel}>
         <MoonAvatar size={70} color={colors.primary} />
         <Text style={styles.title}>꿈카드 받기</Text>
@@ -192,12 +212,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 26,
     fontWeight: '700',
     includeFontPadding: false,
   },
   description: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     lineHeight: 22,
     fontWeight: '600',
@@ -211,6 +233,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.error,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     lineHeight: 19,
     fontWeight: '700',
@@ -226,6 +249,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#FFFFFF',
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
@@ -240,6 +264,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: colors.primary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     includeFontPadding: false,

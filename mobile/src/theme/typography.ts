@@ -1,22 +1,18 @@
 /**
  * Typography tokens for KKUMDREAM.
  *
- * Korean UI font preference: Pretendard or SUIT. These are not bundled
- * with React Native by default — to use them in production, add the
- * .otf/.ttf files under android/app/src/main/assets/fonts and to the
- * iOS project, then drop the Platform fallback below.
- *
- * Until bundled the system fallback (`undefined` fontFamily) is used,
- * which on iOS resolves to SF Pro and on Android to Roboto.
+ * Korean UI font preference now leans toward a warm handwritten feel.
+ * Bundled custom Korean handwriting fonts can replace these platform
+ * fallbacks later without changing component code.
  */
 
 import { Platform, type TextStyle } from 'react-native';
 
 export const fontFamily = {
-  /** Korean UI — Pretendard/SUIT when bundled. Falls back to system. */
+  /** Korean UI — soft handwritten fallback. */
   korean: Platform.select<string | undefined>({
-    ios: 'Pretendard',
-    android: 'Pretendard',
+    ios: 'Marker Felt',
+    android: 'casual',
     default: undefined,
   }),
   /** English metadata — monospaced ticket print. */
@@ -41,11 +37,7 @@ export const fontFamily = {
 
 type TypoStyle = Pick<
   TextStyle,
-  | 'fontFamily'
-  | 'fontSize'
-  | 'fontWeight'
-  | 'lineHeight'
-  | 'letterSpacing'
+  'fontFamily' | 'fontSize' | 'fontWeight' | 'lineHeight' | 'letterSpacing'
 >;
 
 /**

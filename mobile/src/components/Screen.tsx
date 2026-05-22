@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../theme/colors';
+import { PaperTextureOverlay } from './PaperTextureOverlay';
 
 export function Screen({ children }: PropsWithChildren) {
   const insets = useSafeAreaInsets();
@@ -16,6 +17,7 @@ export function Screen({ children }: PropsWithChildren) {
         },
       ]}
     >
+      <PaperTextureOverlay />
       {children}
     </View>
   );

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 
 type Props = PropsWithChildren<{
   onPress: () => void;
@@ -48,6 +49,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.primary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
   },
