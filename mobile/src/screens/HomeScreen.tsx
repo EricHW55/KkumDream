@@ -30,8 +30,6 @@ import { ProfileAvatar } from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
 import {
   createGroupRoom,
-  getCachedDream,
-  getCachedRoomDreams,
   getCachedRooms,
   joinGroupRoom,
   loadRooms,
@@ -490,26 +488,11 @@ function GroupRoomItem({
   sessionUserId?: string | null;
   onPress: () => void;
 }) {
-  const latestDream = room.latestDreamId
-    ? getCachedDream(room.latestDreamId, sessionUserId)
-    : null;
-  const roomDreams = getCachedRoomDreams(room.id, sessionUserId);
-  const recentGiverIds = Array.from(
-    new Set(
-      roomDreams
-        .slice()
-        .reverse()
-        .map(dream => dream.giverId),
-    ),
-  );
   const todayGiverIds = room.todayGiverIds ?? [];
-  const visibleGiverIds =
-    todayGiverIds.length > 0 ? todayGiverIds : recentGiverIds;
-  const uploaders = visibleGiverIds
+  const uploaders = todayGiverIds
     .slice(0, 3)
     .map(giverId => resolveRoomMember(room, giverId, sessionUserId));
-  const latestGiverId =
-    latestDream?.giverId ?? todayGiverIds[0] ?? recentGiverIds[0] ?? null;
+  const latestGiverId = todayGiverIds[0] ?? null;
   const latestUploader = latestGiverId
     ? resolveRoomMember(room, latestGiverId, sessionUserId)
     : null;

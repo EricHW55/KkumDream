@@ -25,7 +25,7 @@ class DreamImageActionsModule(private val reactContext: ReactApplicationContext)
   fun saveImage(imageUrl: String, fileName: String?, promise: Promise) {
     Thread {
           try {
-            val image = downloadImage(imageUrl)
+            val image = readImage(imageUrl)
             val displayName = buildFileName(fileName, image.mimeType)
             val resolver = reactContext.contentResolver
             val values =
@@ -65,7 +65,7 @@ class DreamImageActionsModule(private val reactContext: ReactApplicationContext)
   fun shareImage(imageUrl: String, fileName: String?, promise: Promise) {
     Thread {
           try {
-            val image = downloadImage(imageUrl)
+            val image = readImage(imageUrl)
             val displayName = buildFileName(fileName, image.mimeType)
             val shareDir = File(reactContext.cacheDir, "shared_dream_images")
             if (!shareDir.exists()) {
@@ -97,7 +97,32 @@ class DreamImageActionsModule(private val reactContext: ReactApplicationContext)
         .start()
   }
 
-  private fun downloadImage(imageUrl: String): DownloadedImage {
+  private fun readImage(imageUrl: String): DreamImage {
+    val uri = Uri.parse(imageUrl)
+    return when (uri.scheme?.lowercase(Locale.US)) {
+      null -> {
+        val file = File(imageUrl)
+        if (!file.exists()) {
+          throw IllegalStateException("Invalid image file path")
+        }
+        DreamImage(file.readBytes(), mimeTypeForSource(imageUrl, null))
+      }
+      "file" -> {
+        val file = File(uri.path ?: throw IllegalStateException("Invalid image file URI"))
+        DreamImage(file.readBytes(), mimeTypeForSource(imageUrl, null))
+      }
+      "content" -> {
+        val mimeType = reactContext.contentResolver.getType(uri)
+        val bytes =
+            reactContext.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: throw IllegalStateException("Could not open image URI")
+        DreamImage(bytes, mimeTypeForSource(imageUrl, mimeType))
+      }
+      else -> downloadImage(imageUrl)
+    }
+  }
+
+  private fun downloadImage(imageUrl: String): DreamImage {
     val connection = URL(imageUrl).openConnection() as HttpURLConnection
     connection.connectTimeout = 15000
     connection.readTimeout = 20000
@@ -111,10 +136,25 @@ class DreamImageActionsModule(private val reactContext: ReactApplicationContext)
           connection.contentType?.substringBefore(";")?.lowercase(Locale.US)
               ?: "image/jpeg"
       val bytes = connection.inputStream.use { it.readBytes() }
-      return DownloadedImage(bytes, normalizeImageMimeType(mimeType))
+      return DreamImage(bytes, normalizeImageMimeType(mimeType))
     } finally {
       connection.disconnect()
     }
+  }
+
+  private fun mimeTypeForSource(source: String, detectedMimeType: String?): String {
+    detectedMimeType?.let {
+      return normalizeImageMimeType(it.substringBefore(";").lowercase(Locale.US))
+    }
+    val cleanSource = source.substringBefore("?").lowercase(Locale.US)
+    val mimeType =
+        when {
+          cleanSource.endsWith(".png") -> "image/png"
+          cleanSource.endsWith(".webp") -> "image/webp"
+          cleanSource.endsWith(".jpg") || cleanSource.endsWith(".jpeg") -> "image/jpeg"
+          else -> "image/png"
+        }
+    return normalizeImageMimeType(mimeType)
   }
 
   private fun buildFileName(fileName: String?, mimeType: String): String {
@@ -144,5 +184,5 @@ class DreamImageActionsModule(private val reactContext: ReactApplicationContext)
     }
   }
 
-  private data class DownloadedImage(val bytes: ByteArray, val mimeType: String)
+  private data class DreamImage(val bytes: ByteArray, val mimeType: String)
 }
