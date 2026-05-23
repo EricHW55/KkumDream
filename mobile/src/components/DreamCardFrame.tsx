@@ -72,6 +72,15 @@ const ornamentDots = [
   [308, 480],
 ] as const;
 
+const agedLetterMarks = [
+  'M 17 56 C 28 50 40 56 50 51',
+  'M 292 52 C 306 46 318 54 326 47',
+  'M 11 286 C 20 296 13 310 22 320',
+  'M 316 214 C 326 226 318 238 327 250',
+  'M 38 494 C 58 486 74 494 94 488',
+  'M 232 500 C 248 492 268 499 286 492',
+] as const;
+
 export function DreamCardFrame({
   backgroundColor,
   borderColor,
@@ -156,6 +165,34 @@ export function DreamCardFrame({
                 />
               ))}
             </G>
+            {frame === 'ticket' ? (
+              <G clipPath={`url(#${clipId})`} opacity={compact ? 0.1 : 0.16}>
+                {agedLetterMarks.map(line => (
+                  <Path
+                    key={line}
+                    d={line}
+                    fill="none"
+                    stroke={textureColor}
+                    strokeLinecap="round"
+                    strokeWidth={compact ? 0.55 : 0.75}
+                  />
+                ))}
+                <Circle
+                  cx={52}
+                  cy={84}
+                  fill={textureColor}
+                  opacity={0.14}
+                  r={compact ? 5 : 8}
+                />
+                <Circle
+                  cx={286}
+                  cy={420}
+                  fill={textureColor}
+                  opacity={0.12}
+                  r={compact ? 8 : 13}
+                />
+              </G>
+            ) : null}
             <G clipPath={`url(#${clipId})`} opacity={compact ? 0.1 : 0.15}>
               {cornerMarks.map(mark => (
                 <Path
@@ -269,7 +306,7 @@ function getFramePath(frame: DreamCardFrameType) {
   }
 
   if (frame === 'beveled') {
-    return 'M 24 0 H 316 L 340 24 V 486 L 316 510 H 24 L 0 486 V 24 Z';
+    return movieTicketPath();
   }
 
   if (frame === 'tag') {
@@ -284,7 +321,7 @@ function getFramePath(frame: DreamCardFrameType) {
 
 function getInnerFramePath(frame: DreamCardFrameType) {
   if (frame === 'beveled') {
-    return 'M 34 18 H 306 L 322 34 V 476 L 306 492 H 34 L 18 476 V 34 Z';
+    return roundedRectPath(24, 24, 292, 462, 10);
   }
 
   if (frame === 'tag') {
@@ -311,7 +348,7 @@ function getInnerFramePath(frame: DreamCardFrameType) {
 
 function getAccentFramePath(frame: DreamCardFrameType) {
   if (frame === 'beveled') {
-    return 'M 42 30 H 298 L 310 42 V 468 L 298 480 H 42 L 30 468 V 42 Z';
+    return roundedRectPath(36, 40, 268, 430, 7);
   }
 
   if (frame === 'tag') {
@@ -356,6 +393,128 @@ function roundedRectPath(
     `V ${y + radius}`,
     `Q ${x} ${y} ${x + radius} ${y}`,
     'Z',
+  ].join(' ');
+}
+
+function movieTicketPath() {
+  const notchRadiusX = 15;
+  const notchDepth = 13;
+  const notchCenters = [48, 96, 144, 196, 244, 292];
+  const sideNotchY = 326;
+  const sideNotchRadius = 14;
+  const topNotches = notchCenters
+    .map(cx => topNotchPath(cx, notchRadiusX, notchDepth))
+    .join(' ');
+  const bottomNotches = [...notchCenters]
+    .reverse()
+    .map(cx => bottomNotchPath(cx, notchRadiusX, notchDepth))
+    .join(' ');
+
+  return [
+    `M ${notchRadiusX} 0`,
+    topNotches,
+    `H ${FRAME_WIDTH - notchRadiusX}`,
+    topRightCornerNotchPath(notchRadiusX, notchDepth),
+    `V ${sideNotchY - sideNotchRadius}`,
+    rightSideNotchPath(sideNotchY, sideNotchRadius),
+    `V ${FRAME_HEIGHT - notchDepth}`,
+    bottomRightCornerNotchPath(notchRadiusX, notchDepth),
+    bottomNotches,
+    `H ${notchRadiusX}`,
+    bottomLeftCornerNotchPath(notchRadiusX, notchDepth),
+    `V ${sideNotchY + sideNotchRadius}`,
+    leftSideNotchPath(sideNotchY, sideNotchRadius),
+    `V ${notchDepth}`,
+    topLeftCornerNotchPath(notchRadiusX, notchDepth),
+    'Z',
+  ].join(' ');
+}
+
+function topNotchPath(cx: number, radiusX: number, depth: number) {
+  const handleX = radiusX * 0.55;
+  const handleY = depth * 0.55;
+
+  return [
+    `H ${cx - radiusX}`,
+    `C ${cx - radiusX} ${handleY} ${cx - handleX} ${depth} ${cx} ${depth}`,
+    `C ${cx + handleX} ${depth} ${cx + radiusX} ${handleY} ${cx + radiusX} 0`,
+  ].join(' ');
+}
+
+function bottomNotchPath(cx: number, radiusX: number, depth: number) {
+  const handleX = radiusX * 0.55;
+  const handleY = depth * 0.55;
+
+  return [
+    `H ${cx + radiusX}`,
+    `C ${cx + radiusX} ${FRAME_HEIGHT - handleY} ${cx + handleX} ${
+      FRAME_HEIGHT - depth
+    } ${cx} ${FRAME_HEIGHT - depth}`,
+    `C ${cx - handleX} ${FRAME_HEIGHT - depth} ${cx - radiusX} ${
+      FRAME_HEIGHT - handleY
+    } ${cx - radiusX} ${FRAME_HEIGHT}`,
+  ].join(' ');
+}
+
+function topRightCornerNotchPath(radiusX: number, depth: number) {
+  const handleX = radiusX * 0.55;
+  const handleY = depth * 0.55;
+
+  return [
+    `C ${FRAME_WIDTH - radiusX} ${handleY} ${
+      FRAME_WIDTH - handleX
+    } ${depth} ${FRAME_WIDTH} ${depth}`,
+  ].join(' ');
+}
+
+function bottomRightCornerNotchPath(radiusX: number, depth: number) {
+  const handleX = radiusX * 0.55;
+  const handleY = depth * 0.55;
+
+  return [
+    `C ${FRAME_WIDTH - handleX} ${FRAME_HEIGHT - depth} ${
+      FRAME_WIDTH - radiusX
+    } ${FRAME_HEIGHT - handleY} ${FRAME_WIDTH - radiusX} ${FRAME_HEIGHT}`,
+  ].join(' ');
+}
+
+function bottomLeftCornerNotchPath(radiusX: number, depth: number) {
+  const handleX = radiusX * 0.55;
+  const handleY = depth * 0.55;
+
+  return [
+    `C ${radiusX} ${FRAME_HEIGHT - handleY} ${handleX} ${
+      FRAME_HEIGHT - depth
+    } 0 ${FRAME_HEIGHT - depth}`,
+  ].join(' ');
+}
+
+function topLeftCornerNotchPath(radiusX: number, depth: number) {
+  const handleX = radiusX * 0.55;
+  const handleY = depth * 0.55;
+
+  return [`C ${handleX} ${depth} ${radiusX} ${handleY} ${radiusX} 0`].join(' ');
+}
+
+function rightSideNotchPath(cy: number, radius: number) {
+  const handle = radius * 0.55;
+
+  return [
+    `C ${FRAME_WIDTH - handle} ${cy - radius} ${FRAME_WIDTH - radius} ${
+      cy - handle
+    } ${FRAME_WIDTH - radius} ${cy}`,
+    `C ${FRAME_WIDTH - radius} ${cy + handle} ${FRAME_WIDTH - handle} ${
+      cy + radius
+    } ${FRAME_WIDTH} ${cy + radius}`,
+  ].join(' ');
+}
+
+function leftSideNotchPath(cy: number, radius: number) {
+  const handle = radius * 0.55;
+
+  return [
+    `C ${handle} ${cy + radius} ${radius} ${cy + handle} ${radius} ${cy}`,
+    `C ${radius} ${cy - handle} ${handle} ${cy - radius} 0 ${cy - radius}`,
   ].join(' ');
 }
 

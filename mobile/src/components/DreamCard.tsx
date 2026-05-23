@@ -84,6 +84,7 @@ export function DreamCard({
     dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
   const design = normalizeDreamDesign(dream.design);
   const designTheme = CARD_COLOR_THEMES[design.cardColor];
+  const isMovieTicketFrame = design.cardFrame === 'beveled';
   const isDarkTheme = design.cardColor === 'midnight';
   const frameBorderColor = isDarkTheme ? designTheme.line : '#CBBFAE';
   const titleColor = isDarkTheme ? designTheme.text : '#2D2923';
@@ -97,6 +98,18 @@ export function DreamCard({
     android: 'serif',
     default: undefined,
   });
+  const ticketMetaFamily = Platform.select({
+    ios: 'Menlo',
+    android: 'monospace',
+    default: 'monospace',
+  });
+  const frontTitleFamily = serifTitleFamily;
+  const frontBodyFamily = isMovieTicketFrame
+    ? ticketMetaFamily
+    : serifTitleFamily;
+  const ticketTagText = visibleTags.length
+    ? visibleTags.map(tag => `#${tag}`).join(' ')
+    : '-';
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
   }));
@@ -222,6 +235,84 @@ export function DreamCard({
     resetBackTouch();
   };
 
+  const renderImageScene = (customStyle?: StyleProp<ViewStyle>) => (
+    <View
+      style={[
+        styles.imageWrap,
+        customStyle,
+        {
+          height: imageHeight,
+          backgroundColor: designTheme.image,
+          borderColor: isMovieTicketFrame ? titleColor : frameBorderColor,
+        },
+      ]}
+    >
+      {hasImage ? (
+        <>
+          <Image
+            source={{
+              uri: dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
+            }}
+            style={styles.image}
+          />
+          <View pointerEvents="none" style={styles.imagePaperWash} />
+        </>
+      ) : isImageGenerating ? (
+        <DreamGenerationAnimation
+          compact
+          title="이미지 생성 중"
+          subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
+        />
+      ) : dream.imageStatus === 'failed' ? (
+        <View
+          style={[
+            styles.placeholder,
+            { backgroundColor: designTheme.placeholder },
+          ]}
+        >
+          <View
+            style={[styles.placeholderStamp, { borderColor: frameBorderColor }]}
+          />
+          <Text
+            style={[
+              styles.failureText,
+              { color: designTheme.accent, fontFamily: frontTitleFamily },
+            ]}
+          >
+            이미지 준비 실패
+          </Text>
+          <Text
+            style={[
+              styles.placeholderHint,
+              { color: designTheme.secondaryText, fontFamily: frontBodyFamily },
+            ]}
+          >
+            다시 보내거나 새 카드로 시도해 주세요.
+          </Text>
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.placeholder,
+            { backgroundColor: designTheme.placeholder },
+          ]}
+        >
+          <View
+            style={[styles.placeholderStamp, { borderColor: frameBorderColor }]}
+          />
+          <Text
+            style={[
+              styles.placeholderText,
+              { color: designTheme.accent, fontFamily: frontTitleFamily },
+            ]}
+          >
+            {dream.mainMood}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.pressable, { width: requestedCardWidth }]}>
       <View
@@ -266,144 +357,66 @@ export function DreamCard({
                   pressed && interactionStyles.pressedSoft,
                 ]}
               >
-                <View style={styles.frontAccentRow}>
-                  <Text
-                    style={[
-                      styles.frontAccentStar,
-                      isDarkTheme
-                        ? styles.darkStarAccent
-                        : styles.warmStarAccent,
-                    ]}
-                  >
-                    ✦
-                  </Text>
-                  <Text
-                    style={[
-                      styles.frontAccentText,
-                      dreamFontStyle,
-                      { color: metaColor },
-                    ]}
-                  >
-                    잠에서 건져 올린 작은 꿈
-                  </Text>
-                  <Text style={[styles.frontAccentStar, { color: metaColor }]}>
-                    ✧
-                  </Text>
-                </View>
-                <View style={styles.imageMount}>
-                  <PaperTape
-                    crease="left"
-                    style={[styles.paperTape, styles.paperTapeLeft]}
-                  />
-                  <PaperTape
-                    crease="right"
-                    style={[styles.paperTape, styles.paperTapeRight]}
-                  />
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.frontStampMark,
-                      { borderColor: frameBorderColor },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.imageWrap,
-                      {
-                        height: imageHeight,
-                        backgroundColor: designTheme.image,
-                        borderColor: frameBorderColor,
-                      },
-                    ]}
-                  >
-                    {hasImage ? (
-                      <>
-                        <Image
-                          source={{
-                            uri:
-                              dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
-                          }}
-                          style={styles.image}
-                        />
-                        <View
-                          pointerEvents="none"
-                          style={styles.imagePaperWash}
-                        />
-                      </>
-                    ) : isImageGenerating ? (
-                      <DreamGenerationAnimation
-                        compact
-                        title="이미지 생성 중"
-                        subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
-                      />
-                    ) : dream.imageStatus === 'failed' ? (
-                      <View
-                        style={[
-                          styles.placeholder,
-                          { backgroundColor: designTheme.placeholder },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.placeholderStamp,
-                            { borderColor: frameBorderColor },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.failureText,
-                            dreamFontStyle,
-                            { color: designTheme.accent },
-                          ]}
-                        >
-                          이미지 준비 실패
-                        </Text>
-                        <Text
-                          style={[
-                            styles.placeholderHint,
-                            { color: designTheme.secondaryText },
-                          ]}
-                        >
-                          다시 보내거나 새 카드로 시도해 주세요.
-                        </Text>
-                      </View>
-                    ) : (
-                      <View
-                        style={[
-                          styles.placeholder,
-                          { backgroundColor: designTheme.placeholder },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.placeholderStamp,
-                            { borderColor: frameBorderColor },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.placeholderText,
-                            dreamFontStyle,
-                            { color: designTheme.accent },
-                          ]}
-                        >
-                          {dream.mainMood}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-                <View style={styles.content}>
-                  <View style={styles.titleRow}>
-                    <Text style={[styles.titleDoodle, { color: metaColor }]}>
+                {isMovieTicketFrame ? null : (
+                  <View style={styles.frontAccentRow}>
+                    <Text
+                      style={[
+                        styles.frontAccentStar,
+                        isDarkTheme
+                          ? styles.darkStarAccent
+                          : styles.warmStarAccent,
+                      ]}
+                    >
+                      ✦
+                    </Text>
+                    <Text
+                      style={[
+                        styles.frontAccentText,
+                        { color: metaColor, fontFamily: frontBodyFamily },
+                      ]}
+                    >
+                      잠에서 건져 올린 작은 꿈
+                    </Text>
+                    <Text
+                      style={[styles.frontAccentStar, { color: metaColor }]}
+                    >
                       ✧
                     </Text>
+                  </View>
+                )}
+                <View style={styles.imageMount}>
+                  {isMovieTicketFrame ? null : (
+                    <>
+                      <PaperTape
+                        crease="left"
+                        style={[styles.paperTape, styles.paperTapeLeft]}
+                      />
+                      <PaperTape
+                        crease="right"
+                        style={[styles.paperTape, styles.paperTapeRight]}
+                      />
+                      <View
+                        pointerEvents="none"
+                        style={[
+                          styles.frontStampMark,
+                          { borderColor: frameBorderColor },
+                        ]}
+                      />
+                    </>
+                  )}
+                  {renderImageScene(
+                    isMovieTicketFrame
+                      ? styles.movieTicketImageWrap
+                      : undefined,
+                  )}
+                </View>
+                {isMovieTicketFrame ? (
+                  <View style={styles.movieTicketContent}>
                     {dream.titleVisible ? (
                       <Text
                         style={[
-                          styles.title,
-                          dreamFontStyle,
-                          { color: titleColor },
+                          styles.movieTicketTitle,
+                          { color: titleColor, fontFamily: frontTitleFamily },
                         ]}
                         numberOfLines={2}
                       >
@@ -412,143 +425,264 @@ export function DreamCard({
                     ) : null}
                     <Text
                       style={[
-                        styles.titleDoodle,
-                        isDarkTheme
-                          ? styles.darkStarAccent
-                          : styles.warmStarAccent,
+                        styles.movieTicketSubtitle,
+                        { color: titleColor, fontFamily: frontBodyFamily },
                       ]}
+                      numberOfLines={2}
                     >
-                      ✦
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.message,
-                      dreamFontStyle,
-                      { color: letterColor },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {dream.shortMessage}
-                  </Text>
-                  <View style={styles.fromToRow}>
-                    <View
-                      style={[
-                        styles.fromToPaper,
-                        isDarkTheme
-                          ? styles.darkNotePaper
-                          : styles.lightNotePaper,
-                        {
-                          borderColor: frameBorderColor,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.fromToLabel,
-                          {
-                            color: titleColor,
-                            fontFamily: serifTitleFamily,
-                          },
-                        ]}
-                      >
-                        FROM
-                      </Text>
-                      <Text
-                        style={[
-                          styles.fromToValue,
-                          dreamFontStyle,
-                          { color: metaColor },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {giverName}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.fromToArrow,
-                        { color: metaColor, fontFamily: serifTitleFamily },
-                      ]}
-                    >
-                      →
+                      {dream.shortMessage}
                     </Text>
                     <View
                       style={[
-                        styles.fromToPaper,
-                        isDarkTheme
-                          ? styles.darkNotePaper
-                          : styles.lightNotePaper,
-                        {
-                          borderColor: frameBorderColor,
-                        },
+                        styles.movieTicketDivider,
+                        { borderColor: titleColor },
                       ]}
-                    >
-                      <Text
-                        style={[
-                          styles.fromToLabel,
-                          {
-                            color: titleColor,
-                            fontFamily: serifTitleFamily,
-                          },
-                        ]}
-                      >
-                        TO
-                      </Text>
-                      <Text
-                        style={[
-                          styles.fromToValue,
-                          dreamFontStyle,
-                          { color: metaColor },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {receiverName}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.metaFooter}>
-                    <Text
-                      style={[
-                        styles.frontDate,
-                        { color: metaColor, fontFamily: serifTitleFamily },
-                      ]}
-                    >
-                      {frontDate}
-                    </Text>
-                    <View style={styles.tags}>
-                      {visibleTags.map(tag => (
-                        <View
-                          key={tag}
+                    />
+                    <View style={styles.movieTicketGrid}>
+                      <View style={styles.movieTicketInfoCell}>
+                        <Text
                           style={[
-                            styles.frontTagChip,
-                            isDarkTheme
-                              ? styles.darkNotePaper
-                              : styles.tagChipPaper,
+                            styles.movieTicketLabel,
+                            { color: titleColor, fontFamily: frontBodyFamily },
                           ]}
                         >
-                          <Text
-                            style={[
-                              styles.frontTagText,
-                              dreamFontStyle,
-                              { color: metaColor },
-                            ]}
-                          >
-                            #{tag}
-                          </Text>
-                        </View>
-                      ))}
+                          FROM :
+                        </Text>
+                        <Text
+                          style={[
+                            styles.movieTicketValue,
+                            { color: titleColor, fontFamily: frontBodyFamily },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {giverName}
+                        </Text>
+                      </View>
+                      <View style={styles.movieTicketInfoCell}>
+                        <Text
+                          style={[
+                            styles.movieTicketLabel,
+                            { color: titleColor, fontFamily: frontBodyFamily },
+                          ]}
+                        >
+                          TO :
+                        </Text>
+                        <Text
+                          style={[
+                            styles.movieTicketValue,
+                            { color: titleColor, fontFamily: frontBodyFamily },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {receiverName}
+                        </Text>
+                      </View>
+                      <View style={styles.movieTicketInfoCell}>
+                        <Text
+                          style={[
+                            styles.movieTicketLabel,
+                            { color: titleColor, fontFamily: frontBodyFamily },
+                          ]}
+                        >
+                          DATE :
+                        </Text>
+                        <Text
+                          style={[
+                            styles.movieTicketValue,
+                            { color: titleColor, fontFamily: frontBodyFamily },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {frontDate}
+                        </Text>
+                      </View>
+                      <View style={styles.movieTicketInfoCell}>
+                        <Text
+                          style={[
+                            styles.movieTicketLabel,
+                            { color: titleColor, fontFamily: frontBodyFamily },
+                          ]}
+                        >
+                          TAG :
+                        </Text>
+                        <Text
+                          style={[
+                            styles.movieTicketValue,
+                            { color: titleColor, fontFamily: frontBodyFamily },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {ticketTagText}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.movieTicketFooter}>
+                      <Text
+                        style={[
+                          styles.movieTicketWordmark,
+                          { color: metaColor, fontFamily: frontBodyFamily },
+                        ]}
+                      >
+                        ✦ 꿈드림 ✦
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.content}>
+                    <View style={styles.titleRow}>
+                      <Text style={[styles.titleDoodle, { color: metaColor }]}>
+                        ✧
+                      </Text>
+                      {dream.titleVisible ? (
+                        <Text
+                          style={[
+                            styles.title,
+                            { color: titleColor, fontFamily: frontTitleFamily },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {dream.title}
+                        </Text>
+                      ) : null}
+                      <Text
+                        style={[
+                          styles.titleDoodle,
+                          isDarkTheme
+                            ? styles.darkStarAccent
+                            : styles.warmStarAccent,
+                        ]}
+                      >
+                        ✦
+                      </Text>
                     </View>
                     <Text
                       style={[
-                        styles.frontWordmark,
-                        { color: metaColor, fontFamily: serifTitleFamily },
+                        styles.message,
+                        { color: letterColor, fontFamily: frontBodyFamily },
                       ]}
+                      numberOfLines={2}
                     >
-                      ✦ 꿈드림 ✦
+                      {dream.shortMessage}
                     </Text>
+                    <View style={styles.fromToRow}>
+                      <View
+                        style={[
+                          styles.fromToPaper,
+                          isDarkTheme
+                            ? styles.darkNotePaper
+                            : styles.lightNotePaper,
+                          {
+                            borderColor: frameBorderColor,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.fromToLabel,
+                            {
+                              color: titleColor,
+                              fontFamily: serifTitleFamily,
+                            },
+                          ]}
+                        >
+                          FROM
+                        </Text>
+                        <Text
+                          style={[
+                            styles.fromToValue,
+                            { color: metaColor, fontFamily: frontBodyFamily },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {giverName}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.fromToArrow,
+                          { color: metaColor, fontFamily: serifTitleFamily },
+                        ]}
+                      >
+                        →
+                      </Text>
+                      <View
+                        style={[
+                          styles.fromToPaper,
+                          isDarkTheme
+                            ? styles.darkNotePaper
+                            : styles.lightNotePaper,
+                          {
+                            borderColor: frameBorderColor,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.fromToLabel,
+                            {
+                              color: titleColor,
+                              fontFamily: serifTitleFamily,
+                            },
+                          ]}
+                        >
+                          TO
+                        </Text>
+                        <Text
+                          style={[
+                            styles.fromToValue,
+                            { color: metaColor, fontFamily: frontBodyFamily },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {receiverName}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.metaFooter}>
+                      <Text
+                        style={[
+                          styles.frontDate,
+                          { color: metaColor, fontFamily: serifTitleFamily },
+                        ]}
+                      >
+                        {frontDate}
+                      </Text>
+                      <View style={styles.tags}>
+                        {visibleTags.map(tag => (
+                          <View
+                            key={tag}
+                            style={[
+                              styles.frontTagChip,
+                              isDarkTheme
+                                ? styles.darkNotePaper
+                                : styles.tagChipPaper,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.frontTagText,
+                                {
+                                  color: metaColor,
+                                  fontFamily: frontBodyFamily,
+                                },
+                              ]}
+                            >
+                              #{tag}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                      <Text
+                        style={[
+                          styles.frontWordmark,
+                          { color: metaColor, fontFamily: serifTitleFamily },
+                        ]}
+                      >
+                        ✦ 꿈드림 ✦
+                      </Text>
+                    </View>
                   </View>
-                </View>
+                )}
               </Pressable>
             </DreamCardFrame>
           </Animated.View>
@@ -856,6 +990,10 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     overflow: 'hidden',
   },
+  movieTicketImageWrap: {
+    borderRadius: 3,
+    borderWidth: 1.6,
+  },
   image: {
     width: '100%',
     height: '100%',
@@ -912,6 +1050,71 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
     paddingBottom: 2,
     gap: 7,
+  },
+  movieTicketContent: {
+    flex: 1,
+    paddingHorizontal: 5,
+    paddingTop: 1,
+  },
+  movieTicketTitle: {
+    fontSize: 19,
+    fontWeight: '900',
+    lineHeight: 23,
+    letterSpacing: 0,
+    includeFontPadding: false,
+    textAlign: 'left',
+  },
+  movieTicketSubtitle: {
+    marginTop: 4,
+    fontSize: 10.5,
+    fontWeight: '800',
+    lineHeight: 14,
+    letterSpacing: 0,
+    includeFontPadding: false,
+    textAlign: 'left',
+  },
+  movieTicketDivider: {
+    marginTop: 6,
+    marginBottom: 7,
+    borderTopWidth: 1.2,
+    borderStyle: 'dotted',
+    opacity: 0.74,
+  },
+  movieTicketGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 22,
+    rowGap: 12,
+  },
+  movieTicketInfoCell: {
+    width: '45%',
+  },
+  movieTicketLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0,
+    includeFontPadding: false,
+  },
+  movieTicketValue: {
+    marginTop: 4,
+    fontSize: 11.5,
+    fontWeight: '800',
+    lineHeight: 15,
+    letterSpacing: 0,
+    includeFontPadding: false,
+  },
+  movieTicketFooter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: 5,
+  },
+  movieTicketWordmark: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0,
+    includeFontPadding: false,
+    opacity: 0.82,
   },
   titleRow: {
     flexDirection: 'row',

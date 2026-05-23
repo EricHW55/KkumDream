@@ -54,24 +54,24 @@ export const CARD_FRAME_OPTIONS: {
   description: string;
 }[] = [
   {
+    value: 'classic',
+    label: '기본 엽서',
+    description: '둥근 사각형의 기본 카드틀',
+  },
+  {
     value: 'ticket',
-    label: '뜯은 편지',
-    description: '살짝 파인 종이 가장자리',
+    label: '낡은 편지',
+    description: '오래 간직한 듯 닳은 종이 가장자리',
   },
   {
     value: 'beveled',
-    label: '스크랩북',
-    description: '모서리를 작게 오려 붙인 느낌',
+    label: '영화 티켓',
+    description: '위아래가 둥글게 파인 티켓형 카드틀',
   },
   {
     value: 'tag',
     label: '선물 태그',
     description: '작은 선물에 묶인 종이 태그',
-  },
-  {
-    value: 'classic',
-    label: '기본 엽서',
-    description: '둥근 사각형의 기본 카드틀',
   },
 ];
 
