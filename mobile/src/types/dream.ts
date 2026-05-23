@@ -13,7 +13,13 @@ export type Mood =
   | '따뜻함'
   | '추억'
   | '기괴함';
-export type DreamCardColor = 'ivory' | 'lilac' | 'peach' | 'mint' | 'midnight';
+export type DreamCardColor =
+  | 'beige'
+  | 'ivory'
+  | 'lilac'
+  | 'peach'
+  | 'mint'
+  | 'midnight';
 export type DreamCardFrame = 'ticket' | 'beveled' | 'tag' | 'classic';
 export type DreamFontStyle = 'rounded' | 'serif' | 'clean';
 export type DreamStoryLength = 'short' | 'standard' | 'long';

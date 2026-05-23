@@ -8,7 +8,7 @@ import type {
 } from '../types/dream';
 
 export const DEFAULT_DREAM_DESIGN: DreamDesign = {
-  cardColor: 'ivory',
+  cardColor: 'beige',
   cardFrame: 'classic',
   fontStyle: 'rounded',
 };
@@ -18,6 +18,7 @@ export const CARD_COLOR_OPTIONS: {
   label: string;
   swatch: string;
 }[] = [
+  { value: 'beige', label: '베이지', swatch: '#EFE1C7' },
   { value: 'ivory', label: '아이보리', swatch: '#FFFDF7' },
   { value: 'lilac', label: '라일락', swatch: '#F4F0FF' },
   { value: 'peach', label: '피치', swatch: '#FFF2E7' },
@@ -91,6 +92,20 @@ export const CARD_COLOR_THEMES: Record<
     shadow: string;
   }
 > = {
+  beige: {
+    card: '#EFE1C7',
+    back: '#E8D8BA',
+    image: '#F4E9D8',
+    placeholder: '#F4E9D8',
+    text: '#2D2923',
+    secondaryText: '#6E604F',
+    accent: '#8D775B',
+    tagBackground: '#DEC9A6',
+    tagText: '#3A342C',
+    line: '#B69F7E',
+    texture: '#8F7A5E',
+    shadow: '#3E2F1E',
+  },
   ivory: {
     card: '#FFFDF7',
     back: '#FBF6EA',
@@ -106,10 +121,10 @@ export const CARD_COLOR_THEMES: Record<
     shadow: '#42321E',
   },
   lilac: {
-    card: '#FFFDF7',
+    card: '#F4F0FF',
     back: '#F6F0FA',
-    image: '#EDE7FB',
-    placeholder: '#F4F0FF',
+    image: '#F4E9D8',
+    placeholder: '#F4E9D8',
     text: '#2D2923',
     secondaryText: '#6F675D',
     accent: '#7468B8',
@@ -120,10 +135,10 @@ export const CARD_COLOR_THEMES: Record<
     shadow: '#42321E',
   },
   peach: {
-    card: '#FFFDF7',
+    card: '#FFF2E7',
     back: '#FFF5EC',
-    image: '#F6E0C8',
-    placeholder: '#FFF2E7',
+    image: '#F4E9D8',
+    placeholder: '#F4E9D8',
     text: '#2D2923',
     secondaryText: '#6F675D',
     accent: '#9A6E52',
@@ -134,10 +149,10 @@ export const CARD_COLOR_THEMES: Record<
     shadow: '#42321E',
   },
   mint: {
-    card: '#FFFDF7',
+    card: '#F1FAF5',
     back: '#F1FAF5',
-    image: '#E1F0E8',
-    placeholder: '#F1FAF5',
+    image: '#F4E9D8',
+    placeholder: '#F4E9D8',
     text: '#2D2923',
     secondaryText: '#6F675D',
     accent: '#5E7D6E',

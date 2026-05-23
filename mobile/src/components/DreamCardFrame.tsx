@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Circle, ClipPath, Defs, G, Path } from 'react-native-svg';
+import Svg, {
+  Circle,
+  ClipPath,
+  Defs,
+  G,
+  Image as SvgImage,
+  Path,
+} from 'react-native-svg';
 
+import paperTexture from '../assets/textures/paper_texture.webp';
 import type { DreamCardFrame as DreamCardFrameType } from '../types/dream';
 
 type Props = {
@@ -107,10 +115,20 @@ export function DreamCardFrame({
         </Defs>
 
         <Path d={shapePath} fill={backgroundColor} fillRule="evenodd" />
+        <SvgImage
+          clipPath={`url(#${clipId})`}
+          height={FRAME_HEIGHT}
+          href={paperTexture}
+          opacity={minimal ? (compact ? 0.06 : 0.08) : compact ? 0.08 : 0.12}
+          preserveAspectRatio="xMidYMid slice"
+          width={FRAME_WIDTH}
+          x={0}
+          y={0}
+        />
 
         <G
           clipPath={`url(#${clipId})`}
-          opacity={minimal ? (compact ? 0.05 : 0.09) : compact ? 0.1 : 0.16}
+          opacity={minimal ? (compact ? 0.03 : 0.04) : compact ? 0.04 : 0.06}
         >
           {paperSpecks.map(([cx, cy, r]) => (
             <Circle
@@ -126,7 +144,7 @@ export function DreamCardFrame({
 
         {minimal ? null : (
           <>
-            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.1 : 0.16}>
+            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.07 : 0.1}>
               {paperScuffs.map(line => (
                 <Path
                   key={line}
@@ -138,7 +156,7 @@ export function DreamCardFrame({
                 />
               ))}
             </G>
-            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.14 : 0.22}>
+            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.1 : 0.15}>
               {cornerMarks.map(mark => (
                 <Path
                   key={mark}

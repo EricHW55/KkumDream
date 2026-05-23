@@ -13,22 +13,21 @@ import {
 import {
   Clipboard,
   FlatList,
-  Image,
   Modal,
   Pressable,
   Share,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DreamCard } from '../components/DreamCard';
 import { MoonAvatar } from '../components/MoonAvatar';
-import { DreamCardFrame } from '../components/DreamCardFrame';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
-import { TagChip } from '../components/TagChip';
 import {
   getCachedRoomDreams,
   getCachedRooms,
@@ -37,17 +36,11 @@ import {
   loadRooms,
   updateGroupRoom,
 } from '../data/dreamRepository';
-import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
 import { isCurrentUserId } from '../data/currentUser';
 import { getDisplayMember } from '../data/members';
 import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
-import {
-  CARD_COLOR_THEMES,
-  getDreamFontStyle,
-  normalizeDreamDesign,
-} from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
@@ -508,14 +501,10 @@ function DreamMessage({
   onPress: () => void;
 }) {
   const sessionUserId = useSessionStore(state => state.userId);
+  const { width: windowWidth } = useWindowDimensions();
   const sender = getDisplayMember(dream.giverId, sessionUserId);
   const isMine = isCurrentUserId(dream.giverId, sessionUserId);
-  const visibleTags = dream.tags.slice(0, 3);
-  const design = normalizeDreamDesign(dream.design);
-  const designTheme = CARD_COLOR_THEMES[design.cardColor];
-  const frameBorderColor =
-    design.cardColor === 'midnight' ? designTheme.line : '#CBBFAE';
-  const dreamFontStyle = getDreamFontStyle(design.fontStyle);
+  const cardWidth = Math.min(Math.floor(windowWidth * 0.7), 340);
 
   return (
     <View style={[styles.messageRow, isMine && styles.myMessageRow]}>
@@ -524,102 +513,15 @@ function DreamMessage({
         <Text style={[styles.senderName, isMine && styles.mySenderName]}>
           {sender.name}
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.dreamBubble,
-            isMine && styles.myDreamBubble,
-            pressed && interactionStyles.pressedSoft,
-          ]}
-        >
-          <DreamCardFrame
-            compact
-            backgroundColor={designTheme.card}
-            borderColor={frameBorderColor}
-            frame={design.cardFrame}
-            shadowColor={designTheme.shadow}
-            textureColor={designTheme.texture}
-          >
-            <View
-              style={[
-                styles.previewWrap,
-                {
-                  backgroundColor: designTheme.image,
-                  borderColor: frameBorderColor,
-                },
-              ]}
-            >
-              {dream.thumbnailUrl || dream.imageUrl ? (
-                <Image
-                  source={{
-                    uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
-                  }}
-                  style={styles.previewImage}
-                />
-              ) : isImagePending(dream) ? (
-                <DreamGenerationAnimation compact title="이미지 생성 중" />
-              ) : (
-                <View
-                  style={[
-                    styles.previewPlaceholder,
-                    { backgroundColor: designTheme.placeholder },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.previewMood,
-                      dreamFontStyle,
-                      { color: designTheme.accent },
-                    ]}
-                  >
-                    {dream.mainMood}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.bubbleText}>
-              <Text
-                style={[
-                  styles.bubbleMeta,
-                  dreamFontStyle,
-                  { color: designTheme.secondaryText },
-                ]}
-              >
-                {formatSentAt(dream.givenAt ?? dream.createdAt)}
-              </Text>
-              <Text
-                style={[
-                  styles.bubbleTitle,
-                  dreamFontStyle,
-                  { color: designTheme.text },
-                ]}
-              >
-                {dream.title}
-              </Text>
-              <Text
-                style={[
-                  styles.bubbleSummary,
-                  dreamFontStyle,
-                  { color: designTheme.secondaryText },
-                ]}
-                numberOfLines={2}
-              >
-                {dream.summary}
-              </Text>
-              <View style={styles.tags}>
-                {visibleTags.map(tag => (
-                  <TagChip
-                    key={tag}
-                    label={tag}
-                    backgroundColor={designTheme.tagBackground}
-                    textColor={designTheme.tagText}
-                  />
-                ))}
-              </View>
-            </View>
-          </DreamCardFrame>
-        </Pressable>
+        <View style={styles.dreamBubble}>
+          <DreamCard
+            disableFlip
+            dream={dream}
+            onPress={onPress}
+            showImageActions={false}
+            width={cardWidth}
+          />
+        </View>
       </View>
       {isMine ? <Avatar color={sender.avatarColor} /> : null}
     </View>
@@ -640,24 +542,6 @@ function Avatar({ color }: { color: string }) {
       <MoonAvatar size={42} color={color} />
     </View>
   );
-}
-
-function formatSentAt(value: string | null) {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
 }
 
 function buildInviteMessage(roomName: string, inviteCode: string) {

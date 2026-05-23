@@ -17,16 +17,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
-import {
-  CARD_COLOR_THEMES,
-  getDreamFontStyle,
-  normalizeDreamDesign,
-} from '../theme/dreamDesigns';
+import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
-import { DREAM_CARD_ASPECT_RATIO, DreamCardFrame } from './DreamCardFrame';
 
 type LibraryMode = 'archive' | 'calendar';
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -91,7 +86,8 @@ export function DreamLibraryView({
     () => buildCalendarMonths(groupedDreams),
     [groupedDreams],
   );
-  const miniCardWidth = Math.floor((width - 40 - 20) / 3);
+  const archiveColumnGap = 10;
+  const archiveCardWidth = Math.floor((width - 40 - archiveColumnGap * 2) / 3);
   const calendarCellSize = Math.max(
     40,
     Math.min(62, Math.floor((width - 72) / 7)),
@@ -197,7 +193,7 @@ export function DreamLibraryView({
           renderItem={({ item }) => (
             <MiniDreamCard
               dream={item}
-              width={miniCardWidth}
+              width={archiveCardWidth}
               onPress={() => setSelectedDream(item)}
             />
           )}
@@ -488,89 +484,14 @@ function MiniDreamCard({
   width: number;
   onPress: () => void;
 }) {
-  const design = normalizeDreamDesign(dream.design);
-  const designTheme = CARD_COLOR_THEMES[design.cardColor];
-  const frameBorderColor =
-    design.cardColor === 'midnight' ? designTheme.line : '#CBBFAE';
-  const dreamFontStyle = getDreamFontStyle(design.fontStyle);
-  const cardHeight = Math.round(width / DREAM_CARD_ASPECT_RATIO);
-  const imageHeight = Math.round(cardHeight * 0.56);
-
   return (
-    <Pressable
-      accessibilityRole="button"
+    <DreamCard
+      disableFlip
+      dream={dream}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.miniCardButton,
-        { width },
-        pressed && interactionStyles.pressedSoft,
-      ]}
-    >
-      <DreamCardFrame
-        compact
-        backgroundColor={designTheme.card}
-        borderColor={frameBorderColor}
-        frame={design.cardFrame}
-        height={cardHeight}
-        shadowColor={designTheme.shadow}
-        textureColor={designTheme.texture}
-      >
-        <View
-          style={[
-            styles.miniImage,
-            {
-              backgroundColor: designTheme.image,
-              borderColor: frameBorderColor,
-              height: imageHeight,
-            },
-          ]}
-        >
-          {dream.thumbnailUrl || dream.imageUrl ? (
-            <Image
-              source={{
-                uri: dream.thumbnailUrl ?? dream.imageUrl ?? undefined,
-              }}
-              style={styles.miniImageAsset}
-            />
-          ) : (
-            <Text
-              style={[
-                styles.miniMood,
-                dreamFontStyle,
-                { color: designTheme.accent },
-              ]}
-            >
-              {isImagePending(dream) ? '이미지 생성 중' : dream.mainMood}
-            </Text>
-          )}
-        </View>
-        <View style={styles.miniBody}>
-          <Text
-            style={[
-              styles.miniTitle,
-              dreamFontStyle,
-              { color: designTheme.text },
-            ]}
-            numberOfLines={2}
-          >
-            {dream.title}
-          </Text>
-          <Text
-            style={[
-              styles.miniMeta,
-              dreamFontStyle,
-              { color: designTheme.secondaryText },
-            ]}
-            numberOfLines={1}
-          >
-            {dream.tags
-              .slice(0, 2)
-              .map(tag => `#${tag}`)
-              .join(' ')}
-          </Text>
-        </View>
-      </DreamCardFrame>
-    </Pressable>
+      showImageActions={false}
+      width={width}
+    />
   );
 }
 
@@ -729,46 +650,8 @@ const styles = StyleSheet.create({
   },
   gridRow: {
     gap: 10,
-    marginBottom: 10,
-  },
-  miniCardButton: {
-    minHeight: 178,
-  },
-  miniImage: {
-    height: 88,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    borderRadius: 7,
-    borderWidth: 1.2,
-  },
-  miniImageAsset: {
-    width: '100%',
-    height: '100%',
-  },
-  miniMood: {
-    color: colors.primaryDark,
-    fontSize: 19,
-    fontWeight: '700',
-    includeFontPadding: false,
-  },
-  miniBody: {
-    flex: 1,
-    paddingHorizontal: 2,
-    paddingTop: 7,
-    gap: 6,
-  },
-  miniTitle: {
-    color: colors.textPrimary,
-    fontSize: 12.5,
-    fontWeight: '700',
-    lineHeight: 17,
-  },
-  miniMeta: {
-    color: colors.textMuted,
-    fontSize: 10.5,
-    fontWeight: '700',
-    includeFontPadding: false,
+    justifyContent: 'flex-start',
+    marginBottom: 12,
   },
   calendarList: {
     gap: 16,

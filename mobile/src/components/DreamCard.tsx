@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { GestureResponderEvent } from 'react-native';
+import type { GestureResponderEvent, StyleProp, ViewStyle } from 'react-native';
 import {
   Alert,
   Image,
@@ -18,6 +18,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import paperTexture from '../assets/textures/paper_texture.webp';
 import { colors } from '../theme/colors';
 import {
   CARD_COLOR_THEMES,
@@ -36,15 +37,21 @@ import { DreamGenerationAnimation } from './DreamGenerationAnimation';
 type Props = {
   dream: Dream;
   size?: 'feed' | 'full';
+  width?: number;
+  disableFlip?: boolean;
   onPress?: () => void;
   onBackOpen?: () => void;
+  showImageActions?: boolean;
 };
 
 export function DreamCard({
   dream,
   size = 'feed',
+  width,
+  disableFlip = false,
   onPress,
   onBackOpen,
+  showImageActions = true,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const sessionUserId = useSessionStore(state => state.userId);
@@ -54,8 +61,12 @@ export function DreamCard({
   const backTouchMoved = useRef(false);
   const rotation = useSharedValue(0);
   const horizontalMargin = size === 'full' ? 44 : 36;
-  const cardWidth = Math.min(windowWidth - horizontalMargin, 340);
-  const cardHeight = Math.round(cardWidth / DREAM_CARD_ASPECT_RATIO);
+  const requestedCardWidth =
+    width ?? Math.min(windowWidth - horizontalMargin, 340);
+  const layoutCardWidth = requestedCardWidth < 340 ? 340 : requestedCardWidth;
+  const cardScale = requestedCardWidth / layoutCardWidth;
+  const cardHeight = Math.round(layoutCardWidth / DREAM_CARD_ASPECT_RATIO);
+  const sceneHeight = Math.round(cardHeight * cardScale);
   const imageHeight = Math.round(cardHeight * 0.54);
   const rooms = getCachedRooms(sessionUserId);
   const roomMembers = rooms.flatMap(room => room.members ?? []);
@@ -98,6 +109,10 @@ export function DreamCard({
   }));
 
   const flip = () => {
+    if (disableFlip) {
+      return;
+    }
+
     const next = !isBackVisible;
     setIsBackVisible(next);
     if (next) {
@@ -208,179 +223,53 @@ export function DreamCard({
   };
 
   return (
-    <View style={styles.pressable}>
-      <View style={[styles.scene, { width: cardWidth, height: cardHeight }]}>
-        <Animated.View
-          pointerEvents={isBackVisible ? 'none' : 'auto'}
+    <View style={[styles.pressable, { width: requestedCardWidth }]}>
+      <View
+        style={[
+          styles.scene,
+          { width: requestedCardWidth, height: sceneHeight },
+        ]}
+      >
+        <View
           style={[
-            styles.card,
-            styles.face,
-            { width: cardWidth, height: cardHeight },
-            isBackVisible ? styles.faceHidden : styles.faceVisible,
-            frontStyle,
+            styles.scaledScene,
+            {
+              width: layoutCardWidth,
+              height: cardHeight,
+              transform: [{ scale: cardScale }],
+            },
           ]}
         >
-          <DreamCardFrame
-            backgroundColor={designTheme.card}
-            borderColor={frameBorderColor}
-            frame={design.cardFrame}
-            height={cardHeight}
-            shadowColor={designTheme.shadow}
-            textureColor={designTheme.texture}
+          <Animated.View
+            pointerEvents={isBackVisible ? 'none' : 'auto'}
+            style={[
+              styles.card,
+              styles.face,
+              { width: layoutCardWidth, height: cardHeight },
+              isBackVisible ? styles.faceHidden : styles.faceVisible,
+              frontStyle,
+            ]}
           >
-            <Pressable
-              onPress={cardPressHandler}
-              onLongPress={flip}
-              style={({ pressed }) => [
-                styles.facePressable,
-                pressed && interactionStyles.pressedSoft,
-              ]}
+            <DreamCardFrame
+              backgroundColor={designTheme.card}
+              borderColor={frameBorderColor}
+              frame={design.cardFrame}
+              height={cardHeight}
+              shadowColor={designTheme.shadow}
+              textureColor={designTheme.texture}
             >
-              <View style={styles.frontAccentRow}>
-                <Text
-                  style={[
-                    styles.frontAccentStar,
-                    isDarkTheme ? styles.darkStarAccent : styles.warmStarAccent,
-                  ]}
-                >
-                  ✦
-                </Text>
-                <Text
-                  style={[
-                    styles.frontAccentText,
-                    dreamFontStyle,
-                    { color: metaColor },
-                  ]}
-                >
-                  잠에서 건져 올린 작은 꿈
-                </Text>
-                <Text style={[styles.frontAccentStar, { color: metaColor }]}>
-                  ✧
-                </Text>
-              </View>
-              <View style={styles.imageMount}>
-                <View
-                  pointerEvents="none"
-                  style={[styles.paperTape, styles.paperTapeLeft]}
-                />
-                <View
-                  pointerEvents="none"
-                  style={[styles.paperTape, styles.paperTapeRight]}
-                />
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.frontStampMark,
-                    { borderColor: frameBorderColor },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.imageWrap,
-                    {
-                      height: imageHeight,
-                      backgroundColor: designTheme.image,
-                      borderColor: frameBorderColor,
-                    },
-                  ]}
-                >
-                  {hasImage ? (
-                    <>
-                      <Image
-                        source={{
-                          uri:
-                            dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
-                        }}
-                        style={styles.image}
-                      />
-                      <View
-                        pointerEvents="none"
-                        style={styles.imagePaperWash}
-                      />
-                    </>
-                  ) : isImageGenerating ? (
-                    <DreamGenerationAnimation
-                      compact
-                      title="이미지 생성 중"
-                      subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
-                    />
-                  ) : dream.imageStatus === 'failed' ? (
-                    <View
-                      style={[
-                        styles.placeholder,
-                        { backgroundColor: designTheme.placeholder },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.placeholderStamp,
-                          { borderColor: frameBorderColor },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.failureText,
-                          dreamFontStyle,
-                          { color: designTheme.accent },
-                        ]}
-                      >
-                        이미지 준비 실패
-                      </Text>
-                      <Text
-                        style={[
-                          styles.placeholderHint,
-                          { color: designTheme.secondaryText },
-                        ]}
-                      >
-                        다시 보내거나 새 카드로 시도해 주세요.
-                      </Text>
-                    </View>
-                  ) : (
-                    <View
-                      style={[
-                        styles.placeholder,
-                        { backgroundColor: designTheme.placeholder },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.placeholderStamp,
-                          { borderColor: frameBorderColor },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.placeholderText,
-                          dreamFontStyle,
-                          { color: designTheme.accent },
-                        ]}
-                      >
-                        {dream.mainMood}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-              <View style={styles.content}>
-                <View style={styles.titleRow}>
-                  <Text style={[styles.titleDoodle, { color: metaColor }]}>
-                    ✧
-                  </Text>
-                  {dream.titleVisible ? (
-                    <Text
-                      style={[
-                        styles.title,
-                        dreamFontStyle,
-                        { color: titleColor },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {dream.title}
-                    </Text>
-                  ) : null}
+              <Pressable
+                onPress={cardPressHandler}
+                onLongPress={disableFlip ? undefined : flip}
+                style={({ pressed }) => [
+                  styles.facePressable,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <View style={styles.frontAccentRow}>
                   <Text
                     style={[
-                      styles.titleDoodle,
+                      styles.frontAccentStar,
                       isDarkTheme
                         ? styles.darkStarAccent
                         : styles.warmStarAccent,
@@ -388,228 +277,403 @@ export function DreamCard({
                   >
                     ✦
                   </Text>
+                  <Text
+                    style={[
+                      styles.frontAccentText,
+                      dreamFontStyle,
+                      { color: metaColor },
+                    ]}
+                  >
+                    잠에서 건져 올린 작은 꿈
+                  </Text>
+                  <Text style={[styles.frontAccentStar, { color: metaColor }]}>
+                    ✧
+                  </Text>
                 </View>
-                <Text
-                  style={[
-                    styles.message,
-                    dreamFontStyle,
-                    { color: letterColor },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {dream.shortMessage}
-                </Text>
-                <View style={styles.fromToRow}>
+                <View style={styles.imageMount}>
+                  <PaperTape
+                    crease="left"
+                    style={[styles.paperTape, styles.paperTapeLeft]}
+                  />
+                  <PaperTape
+                    crease="right"
+                    style={[styles.paperTape, styles.paperTapeRight]}
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.frontStampMark,
+                      { borderColor: frameBorderColor },
+                    ]}
+                  />
                   <View
                     style={[
-                      styles.fromToPaper,
-                      isDarkTheme
-                        ? styles.darkNotePaper
-                        : styles.lightNotePaper,
+                      styles.imageWrap,
                       {
+                        height: imageHeight,
+                        backgroundColor: designTheme.image,
                         borderColor: frameBorderColor,
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.fromToLabel,
-                        {
-                          color: titleColor,
-                          fontFamily: serifTitleFamily,
-                        },
-                      ]}
-                    >
-                      FROM
-                    </Text>
-                    <Text
-                      style={[
-                        styles.fromToValue,
-                        dreamFontStyle,
-                        { color: metaColor },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {giverName}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.fromToArrow,
-                      { color: metaColor, fontFamily: serifTitleFamily },
-                    ]}
-                  >
-                    →
-                  </Text>
-                  <View
-                    style={[
-                      styles.fromToPaper,
-                      isDarkTheme
-                        ? styles.darkNotePaper
-                        : styles.lightNotePaper,
-                      {
-                        borderColor: frameBorderColor,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.fromToLabel,
-                        {
-                          color: titleColor,
-                          fontFamily: serifTitleFamily,
-                        },
-                      ]}
-                    >
-                      TO
-                    </Text>
-                    <Text
-                      style={[
-                        styles.fromToValue,
-                        dreamFontStyle,
-                        { color: metaColor },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {receiverName}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.metaFooter}>
-                  <Text
-                    style={[
-                      styles.frontDate,
-                      { color: metaColor, fontFamily: serifTitleFamily },
-                    ]}
-                  >
-                    {frontDate}
-                  </Text>
-                  <View style={styles.tags}>
-                    {visibleTags.map(tag => (
+                    {hasImage ? (
+                      <>
+                        <Image
+                          source={{
+                            uri:
+                              dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
+                          }}
+                          style={styles.image}
+                        />
+                        <View
+                          pointerEvents="none"
+                          style={styles.imagePaperWash}
+                        />
+                      </>
+                    ) : isImageGenerating ? (
+                      <DreamGenerationAnimation
+                        compact
+                        title="이미지 생성 중"
+                        subtitle="달빛과 구름을 모아 카드 그림을 만들고 있어요."
+                      />
+                    ) : dream.imageStatus === 'failed' ? (
                       <View
-                        key={tag}
                         style={[
-                          styles.frontTagChip,
-                          isDarkTheme
-                            ? styles.darkNotePaper
-                            : styles.tagChipPaper,
+                          styles.placeholder,
+                          { backgroundColor: designTheme.placeholder },
                         ]}
                       >
+                        <View
+                          style={[
+                            styles.placeholderStamp,
+                            { borderColor: frameBorderColor },
+                          ]}
+                        />
                         <Text
                           style={[
-                            styles.frontTagText,
+                            styles.failureText,
                             dreamFontStyle,
-                            { color: metaColor },
+                            { color: designTheme.accent },
                           ]}
                         >
-                          #{tag}
+                          이미지 준비 실패
+                        </Text>
+                        <Text
+                          style={[
+                            styles.placeholderHint,
+                            { color: designTheme.secondaryText },
+                          ]}
+                        >
+                          다시 보내거나 새 카드로 시도해 주세요.
                         </Text>
                       </View>
-                    ))}
+                    ) : (
+                      <View
+                        style={[
+                          styles.placeholder,
+                          { backgroundColor: designTheme.placeholder },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.placeholderStamp,
+                            { borderColor: frameBorderColor },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.placeholderText,
+                            dreamFontStyle,
+                            { color: designTheme.accent },
+                          ]}
+                        >
+                          {dream.mainMood}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.content}>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.titleDoodle, { color: metaColor }]}>
+                      ✧
+                    </Text>
+                    {dream.titleVisible ? (
+                      <Text
+                        style={[
+                          styles.title,
+                          dreamFontStyle,
+                          { color: titleColor },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {dream.title}
+                      </Text>
+                    ) : null}
+                    <Text
+                      style={[
+                        styles.titleDoodle,
+                        isDarkTheme
+                          ? styles.darkStarAccent
+                          : styles.warmStarAccent,
+                      ]}
+                    >
+                      ✦
+                    </Text>
                   </View>
                   <Text
                     style={[
-                      styles.frontWordmark,
-                      { color: metaColor, fontFamily: serifTitleFamily },
+                      styles.message,
+                      dreamFontStyle,
+                      { color: letterColor },
                     ]}
+                    numberOfLines={2}
                   >
-                    ✦ 꿈드림 ✦
+                    {dream.shortMessage}
                   </Text>
+                  <View style={styles.fromToRow}>
+                    <View
+                      style={[
+                        styles.fromToPaper,
+                        isDarkTheme
+                          ? styles.darkNotePaper
+                          : styles.lightNotePaper,
+                        {
+                          borderColor: frameBorderColor,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.fromToLabel,
+                          {
+                            color: titleColor,
+                            fontFamily: serifTitleFamily,
+                          },
+                        ]}
+                      >
+                        FROM
+                      </Text>
+                      <Text
+                        style={[
+                          styles.fromToValue,
+                          dreamFontStyle,
+                          { color: metaColor },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {giverName}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.fromToArrow,
+                        { color: metaColor, fontFamily: serifTitleFamily },
+                      ]}
+                    >
+                      →
+                    </Text>
+                    <View
+                      style={[
+                        styles.fromToPaper,
+                        isDarkTheme
+                          ? styles.darkNotePaper
+                          : styles.lightNotePaper,
+                        {
+                          borderColor: frameBorderColor,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.fromToLabel,
+                          {
+                            color: titleColor,
+                            fontFamily: serifTitleFamily,
+                          },
+                        ]}
+                      >
+                        TO
+                      </Text>
+                      <Text
+                        style={[
+                          styles.fromToValue,
+                          dreamFontStyle,
+                          { color: metaColor },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {receiverName}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.metaFooter}>
+                    <Text
+                      style={[
+                        styles.frontDate,
+                        { color: metaColor, fontFamily: serifTitleFamily },
+                      ]}
+                    >
+                      {frontDate}
+                    </Text>
+                    <View style={styles.tags}>
+                      {visibleTags.map(tag => (
+                        <View
+                          key={tag}
+                          style={[
+                            styles.frontTagChip,
+                            isDarkTheme
+                              ? styles.darkNotePaper
+                              : styles.tagChipPaper,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.frontTagText,
+                              dreamFontStyle,
+                              { color: metaColor },
+                            ]}
+                          >
+                            #{tag}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                    <Text
+                      style={[
+                        styles.frontWordmark,
+                        { color: metaColor, fontFamily: serifTitleFamily },
+                      ]}
+                    >
+                      ✦ 꿈드림 ✦
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </Pressable>
-          </DreamCardFrame>
-        </Animated.View>
+              </Pressable>
+            </DreamCardFrame>
+          </Animated.View>
 
-        <Animated.View
-          pointerEvents={isBackVisible ? 'auto' : 'none'}
-          style={[
-            styles.card,
-            styles.face,
-            styles.backFace,
-            { width: cardWidth, height: cardHeight },
-            isBackVisible ? styles.faceVisible : styles.faceHidden,
-            backStyle,
-          ]}
-        >
-          <DreamCardFrame
-            backgroundColor={designTheme.back}
-            borderColor={frameBorderColor}
-            frame={design.cardFrame}
-            height={cardHeight}
-            minimal
-            shadowColor={designTheme.shadow}
-            textureColor={designTheme.texture}
+          <Animated.View
+            pointerEvents={isBackVisible ? 'auto' : 'none'}
+            style={[
+              styles.card,
+              styles.face,
+              styles.backFace,
+              { width: layoutCardWidth, height: cardHeight },
+              isBackVisible ? styles.faceVisible : styles.faceHidden,
+              backStyle,
+            ]}
           >
-            <View style={styles.backLayout}>
-              <View
-                style={[
-                  styles.letterPaper,
-                  isDarkTheme
-                    ? styles.darkLetterPaper
-                    : styles.lightLetterPaper,
-                  { borderColor: frameBorderColor },
-                ]}
-              >
-                <View pointerEvents="none" style={styles.letterTape} />
+            <DreamCardFrame
+              backgroundColor={designTheme.back}
+              borderColor={frameBorderColor}
+              frame={design.cardFrame}
+              height={cardHeight}
+              minimal
+              shadowColor={designTheme.shadow}
+              textureColor={designTheme.texture}
+            >
+              <View style={styles.backLayout}>
                 <View
-                  pointerEvents="none"
                   style={[
-                    styles.letterStampMark,
+                    styles.letterPaper,
+                    isDarkTheme
+                      ? styles.darkLetterPaper
+                      : styles.lightLetterPaper,
                     { borderColor: frameBorderColor },
                   ]}
-                />
-                <Text
-                  pointerEvents="none"
-                  style={[
-                    styles.letterDoodle,
-                    styles.letterDoodleTop,
-                    isDarkTheme ? styles.darkStarAccent : styles.warmStarAccent,
-                  ]}
                 >
-                  ✦
-                </Text>
-                <Text
-                  pointerEvents="none"
-                  style={[
-                    styles.letterDoodle,
-                    styles.letterDoodleBottom,
-                    { color: metaColor },
-                  ]}
-                >
-                  ✧
-                </Text>
-                <ScrollView
-                  bounces={false}
-                  nestedScrollEnabled
-                  onScrollBeginDrag={() => {
-                    backTouchMoved.current = true;
-                  }}
-                  onTouchCancel={resetBackTouch}
-                  onTouchEnd={handleBackTouchEnd}
-                  onTouchMove={handleBackTouchMove}
-                  onTouchStart={handleBackTouchStart}
-                  persistentScrollbar={false}
-                  showsVerticalScrollIndicator={false}
-                  style={styles.backScroll}
-                  contentContainerStyle={styles.letterContent}
-                >
-                  <Text
+                  <PaperTape style={styles.letterTape} />
+                  <View
+                    pointerEvents="none"
                     style={[
-                      styles.letterStory,
-                      dreamFontStyle,
-                      { color: designTheme.secondaryText },
+                      styles.letterStampMark,
+                      { borderColor: frameBorderColor },
+                    ]}
+                  />
+                  <Text
+                    pointerEvents="none"
+                    style={[
+                      styles.letterDoodle,
+                      styles.letterDoodleTop,
+                      isDarkTheme
+                        ? styles.darkStarAccent
+                        : styles.warmStarAccent,
                     ]}
                   >
-                    {dream.story}
+                    ✦
                   </Text>
-                </ScrollView>
+                  <Text
+                    pointerEvents="none"
+                    style={[
+                      styles.letterDoodle,
+                      styles.letterDoodleBottom,
+                      { color: metaColor },
+                    ]}
+                  >
+                    ✧
+                  </Text>
+                  <ScrollView
+                    bounces={false}
+                    nestedScrollEnabled
+                    onScrollBeginDrag={() => {
+                      backTouchMoved.current = true;
+                    }}
+                    onTouchCancel={resetBackTouch}
+                    onTouchEnd={handleBackTouchEnd}
+                    onTouchMove={handleBackTouchMove}
+                    onTouchStart={handleBackTouchStart}
+                    persistentScrollbar={false}
+                    showsVerticalScrollIndicator={false}
+                    style={styles.backScroll}
+                    contentContainerStyle={styles.letterContent}
+                  >
+                    <Text
+                      style={[
+                        styles.letterStory,
+                        dreamFontStyle,
+                        { color: designTheme.secondaryText },
+                      ]}
+                    >
+                      {dream.story}
+                    </Text>
+                  </ScrollView>
+                </View>
               </View>
-            </View>
-          </DreamCardFrame>
-        </Animated.View>
-        {!isBackVisible ? renderImageActions() : null}
+            </DreamCardFrame>
+          </Animated.View>
+          {showImageActions && !isBackVisible ? renderImageActions() : null}
+        </View>
       </View>
+    </View>
+  );
+}
+
+type PaperTapeProps = {
+  crease?: 'center' | 'left' | 'right';
+  style?: StyleProp<ViewStyle>;
+};
+
+function PaperTape({ crease = 'center', style }: PaperTapeProps) {
+  return (
+    <View pointerEvents="none" style={[styles.tapeBase, style]}>
+      <Image
+        resizeMode="cover"
+        source={paperTexture}
+        style={styles.tapeTexture}
+      />
+      <View pointerEvents="none" style={styles.tapeWarmth} />
+      <View pointerEvents="none" style={styles.tapeLeftEdge} />
+      <View pointerEvents="none" style={styles.tapeRightEdge} />
+      <View
+        pointerEvents="none"
+        style={[
+          styles.tapeCrease,
+          crease === 'left' && styles.tapeCreaseLeft,
+          crease === 'right' && styles.tapeCreaseRight,
+          crease === 'center' && styles.tapeCreaseCenter,
+        ]}
+      />
     </View>
   );
 }
@@ -630,10 +694,15 @@ function formatShortDate(value: string | null | undefined): string {
 
 const styles = StyleSheet.create({
   pressable: {
-    width: '100%',
+    alignSelf: 'center',
     alignItems: 'center',
   },
   scene: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scaledScene: {
     position: 'relative',
   },
   facePressable: {
@@ -688,31 +757,87 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginHorizontal: 2,
     marginBottom: 13,
-    padding: 4,
-    backgroundColor: 'rgba(255,253,247,0.42)',
-    shadowColor: '#42321E',
-    shadowOpacity: 0.08,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+  },
+  tapeBase: {
+    overflow: 'hidden',
+    borderRadius: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(164, 132, 92, 0.18)',
+    backgroundColor: '#E8D4B3',
+  },
+  tapeTexture: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    opacity: 0.34,
+  },
+  tapeWarmth: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(232, 200, 153, 0.22)',
+  },
+  tapeLeftEdge: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 5,
+    backgroundColor: 'rgba(255, 248, 231, 0.25)',
+  },
+  tapeRightEdge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 5,
+    backgroundColor: 'rgba(128, 92, 52, 0.08)',
+  },
+  tapeCrease: {
+    position: 'absolute',
+    top: -4,
+    bottom: -4,
+    width: 1.4,
+    borderRadius: 1,
+    backgroundColor: 'rgba(111, 86, 54, 0.22)',
+  },
+  tapeCreaseLeft: {
+    left: 22,
+    transform: [{ rotate: '-13deg' }],
+  },
+  tapeCreaseRight: {
+    right: 20,
+    transform: [{ rotate: '12deg' }],
+  },
+  tapeCreaseCenter: {
+    left: '50%',
+    marginLeft: -0.7,
+    transform: [{ rotate: '-7deg' }],
   },
   paperTape: {
     position: 'absolute',
-    top: -7,
+    top: -8,
     zIndex: 4,
-    width: 54,
-    height: 18,
-    borderRadius: 3,
-    backgroundColor: '#F3DFC2',
-    opacity: 0.66,
+    width: 62,
+    height: 20,
+    opacity: 0.78,
+    shadowColor: '#5A4329',
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   paperTapeLeft: {
-    left: 20,
-    transform: [{ rotate: '-4deg' }],
+    left: 17,
+    transform: [{ rotate: '-3deg' }],
   },
   paperTapeRight: {
-    right: 22,
-    transform: [{ rotate: '5deg' }],
+    right: 18,
+    transform: [{ rotate: '4deg' }],
   },
   frontStampMark: {
     position: 'absolute',
@@ -729,7 +854,6 @@ const styles = StyleSheet.create({
   imageWrap: {
     backgroundColor: colors.lavenderTint,
     borderRadius: 11,
-    borderWidth: 0.55,
     overflow: 'hidden',
   },
   image: {
@@ -919,7 +1043,7 @@ const styles = StyleSheet.create({
   letterPaper: {
     flex: 1,
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'visible',
     borderRadius: 18,
     borderWidth: 0.5,
     paddingHorizontal: 20,
@@ -932,21 +1056,20 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   lightLetterPaper: {
-    backgroundColor: 'rgba(255,249,238,0.58)',
+    backgroundColor: '#FFF8EA',
   },
   darkLetterPaper: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#2C2739',
   },
   letterTape: {
     position: 'absolute',
-    top: 14,
+    top: -10,
     left: '50%',
-    marginLeft: -39,
-    width: 78,
-    height: 18,
-    borderRadius: 3,
-    backgroundColor: '#F3DFC2',
-    opacity: 0.45,
+    zIndex: 2,
+    marginLeft: -42,
+    width: 84,
+    height: 20,
+    opacity: 0.52,
     transform: [{ rotate: '-2deg' }],
   },
   letterStampMark: {

@@ -20,7 +20,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
-DEFAULT_DREAM_DESIGN = {"card_color": "ivory", "font_style": "rounded"}
+DEFAULT_DREAM_DESIGN = {
+    "card_color": "beige",
+    "card_frame": "classic",
+    "font_style": "rounded",
+}
 
 
 class Dream(Base):
@@ -68,7 +72,7 @@ class Dream(Base):
         nullable=False,
         default=lambda: DEFAULT_DREAM_DESIGN.copy(),
         server_default=text(
-            """'{"card_color": "ivory", "font_style": "rounded"}'::jsonb"""
+            """'{"card_color": "beige", "card_frame": "classic", "font_style": "rounded"}'::jsonb"""
         ),
     )
 
