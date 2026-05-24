@@ -814,7 +814,7 @@ export function DreamCard({
                       style={[
                         styles.letterStory,
                         dreamFontStyle,
-                        { color: designTheme.secondaryText },
+                        { color: designTheme.text },
                       ]}
                     >
                       {dream.story}

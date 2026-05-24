@@ -202,6 +202,48 @@ const FONT_STYLE_FAMILIES: Record<DreamFontStyle, string> = {
   serif: nanumHandwritingFonts.yedang,
   clean: nanumHandwritingFonts.miraenamu,
 };
+const FONT_STYLE_BACK_TEXT: Record<DreamFontStyle, TextStyle> = {
+  dahaeng: {
+    fontSize: 14.8,
+    fontWeight: '700',
+    lineHeight: 27,
+  },
+  daegwangyuri: {
+    fontSize: 15.2,
+    fontWeight: '700',
+    lineHeight: 28,
+  },
+  miraenamu: {
+    fontSize: 14.8,
+    fontWeight: '700',
+    lineHeight: 27,
+  },
+  agisarang: {
+    fontSize: 15.2,
+    fontWeight: '700',
+    lineHeight: 28,
+  },
+  yedang: {
+    fontSize: 14.9,
+    fontWeight: '700',
+    lineHeight: 27,
+  },
+  rounded: {
+    fontSize: 14.8,
+    fontWeight: '700',
+    lineHeight: 27,
+  },
+  serif: {
+    fontSize: 14.9,
+    fontWeight: '700',
+    lineHeight: 27,
+  },
+  clean: {
+    fontSize: 14.8,
+    fontWeight: '700',
+    lineHeight: 27,
+  },
+};
 
 export function normalizeDreamDesign(
   design?: Partial<DreamDesign> | null,
@@ -229,6 +271,6 @@ export function getDreamFontStyle(fontStyle: DreamFontStyle): TextStyle {
   return {
     fontFamily:
       FONT_STYLE_FAMILIES[fontStyle] ?? nanumHandwritingFonts.dahaeng,
-    fontWeight: '500',
+    ...(FONT_STYLE_BACK_TEXT[fontStyle] ?? FONT_STYLE_BACK_TEXT.dahaeng),
   };
 }

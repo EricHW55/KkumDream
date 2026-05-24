@@ -98,6 +98,45 @@ export function DreamCardFrame({
   const innerPath = getInnerFramePath(frame);
   const accentPath = getAccentFramePath(frame);
   const clipId = `dream-card-frame-${frame}`;
+  const textureOpacity = minimal
+    ? compact
+      ? 0.08
+      : 0.1
+    : compact
+      ? 0.09
+      : 0.13;
+  const speckOpacity = minimal
+    ? compact
+      ? 0.045
+      : 0.06
+    : compact
+      ? 0.05
+      : 0.075;
+  const paperScuffOpacity = compact ? 0.09 : 0.13;
+  const agedMarkOpacity = minimal
+    ? compact
+      ? 0.13
+      : 0.18
+    : compact
+      ? 0.13
+      : 0.2;
+  const cornerMarkOpacity = compact ? 0.12 : 0.18;
+  const innerStrokeOpacity = minimal
+    ? compact
+      ? 0.28
+      : 0.4
+    : compact
+      ? 0.24
+      : 0.38;
+  const innerStrokeWidth =
+    frame === 'classic' ? (compact ? 0.62 : 0.9) : compact ? 0.55 : 0.78;
+  const accentStrokeOpacity = minimal
+    ? compact
+      ? 0.1
+      : 0.16
+    : compact
+      ? 0.08
+      : 0.13;
 
   return (
     <View
@@ -128,17 +167,14 @@ export function DreamCardFrame({
           clipPath={`url(#${clipId})`}
           height={FRAME_HEIGHT}
           href={paperTexture}
-          opacity={minimal ? (compact ? 0.06 : 0.08) : compact ? 0.08 : 0.12}
+          opacity={textureOpacity}
           preserveAspectRatio="xMidYMid slice"
           width={FRAME_WIDTH}
           x={0}
           y={0}
         />
 
-        <G
-          clipPath={`url(#${clipId})`}
-          opacity={minimal ? (compact ? 0.03 : 0.04) : compact ? 0.04 : 0.06}
-        >
+        <G clipPath={`url(#${clipId})`} opacity={speckOpacity}>
           {paperSpecks.map(([cx, cy, r]) => (
             <Circle
               key={`${cx}-${cy}`}
@@ -151,9 +187,24 @@ export function DreamCardFrame({
           ))}
         </G>
 
-        {minimal ? null : (
+        {minimal ? (
+          frame === 'ticket' ? (
+            <G clipPath={`url(#${clipId})`} opacity={agedMarkOpacity}>
+              {agedLetterMarks.map(line => (
+                <Path
+                  key={line}
+                  d={line}
+                  fill="none"
+                  stroke={textureColor}
+                  strokeLinecap="round"
+                  strokeWidth={compact ? 0.55 : 0.75}
+                />
+              ))}
+            </G>
+          ) : null
+        ) : (
           <>
-            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.07 : 0.1}>
+            <G clipPath={`url(#${clipId})`} opacity={paperScuffOpacity}>
               {paperScuffs.map(line => (
                 <Path
                   key={line}
@@ -166,7 +217,7 @@ export function DreamCardFrame({
               ))}
             </G>
             {frame === 'ticket' ? (
-              <G clipPath={`url(#${clipId})`} opacity={compact ? 0.1 : 0.16}>
+              <G clipPath={`url(#${clipId})`} opacity={agedMarkOpacity}>
                 {agedLetterMarks.map(line => (
                   <Path
                     key={line}
@@ -181,19 +232,19 @@ export function DreamCardFrame({
                   cx={52}
                   cy={84}
                   fill={textureColor}
-                  opacity={0.14}
+                  opacity={0.18}
                   r={compact ? 5 : 8}
                 />
                 <Circle
                   cx={286}
                   cy={420}
                   fill={textureColor}
-                  opacity={0.12}
+                  opacity={0.16}
                   r={compact ? 8 : 13}
                 />
               </G>
             ) : null}
-            <G clipPath={`url(#${clipId})`} opacity={compact ? 0.1 : 0.15}>
+            <G clipPath={`url(#${clipId})`} opacity={cornerMarkOpacity}>
               {cornerMarks.map(mark => (
                 <Path
                   key={mark}
@@ -220,21 +271,21 @@ export function DreamCardFrame({
         <Path
           d={innerPath}
           fill="none"
-          opacity={compact ? 0.2 : 0.3}
+          opacity={innerStrokeOpacity}
           stroke={borderColor}
           strokeDasharray={frame === 'classic' ? '3 7' : undefined}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth={compact ? 0.5 : 0.7}
+          strokeWidth={innerStrokeWidth}
         />
         <Path
           d={accentPath}
           fill="none"
-          opacity={compact ? 0.07 : 0.11}
+          opacity={accentStrokeOpacity}
           stroke={borderColor}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeWidth={0.45}
+          strokeWidth={compact ? 0.45 : 0.55}
         />
 
         <Path
