@@ -8,6 +8,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Home, Inbox, Send, UserRound } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ClaimDreamScreen } from '../screens/ClaimDreamScreen';
@@ -29,6 +30,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const TAB_BAR_BASE_HEIGHT = 64;
 const TAB_BAR_TOP_RADIUS = 30;
 const TAB_BAR_BASE_PADDING_BOTTOM = 8;
+const TAB_BAR_SEPARATOR_HEIGHT = 18;
 
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['kkumdream://', 'https://kkumdream.app'],
@@ -68,14 +70,40 @@ function ProfileTabIcon({ color, size }: TabIconProps) {
   return <UserRound color={color} size={size} />;
 }
 
+function TabBarSeparatorGradient() {
+  return (
+    <Svg
+      pointerEvents="none"
+      preserveAspectRatio="none"
+      style={styles.tabBarSeparatorGradient}
+      width="100%"
+      height={TAB_BAR_SEPARATOR_HEIGHT}
+    >
+      <Defs>
+        <LinearGradient id="tabBarSeparator" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={colors.primary} stopOpacity={0.22} />
+          <Stop offset="0.48" stopColor={colors.primary} stopOpacity={0.08} />
+          <Stop offset="1" stopColor={colors.primary} stopOpacity={0} />
+        </LinearGradient>
+      </Defs>
+      <Rect
+        x="0"
+        y="0"
+        width="100%"
+        height={TAB_BAR_SEPARATOR_HEIGHT}
+        fill="url(#tabBarSeparator)"
+      />
+    </Svg>
+  );
+}
+
 function TabBarPaperBackground() {
   return (
     <View pointerEvents="none" style={styles.tabBarBackground}>
-      <View style={styles.tabBarFadeWide} />
-      <View style={styles.tabBarFadeMid} />
-      <View style={styles.tabBarFadeNear} />
+      <View style={styles.tabBarBaseFill} />
       <View style={styles.tabBarSurface}>
         <PaperTextureOverlay subtle />
+        <TabBarSeparatorGradient />
       </View>
     </View>
   );
@@ -106,9 +134,12 @@ function MainTabs() {
           borderTopWidth: 0,
           borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
           borderTopRightRadius: TAB_BAR_TOP_RADIUS,
-          elevation: 0,
+          elevation: 8,
           overflow: 'visible',
-          shadowOpacity: 0,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
         },
         tabBarLabelStyle: {
           fontFamily: fontFamily.handwritten,
@@ -223,38 +254,13 @@ const styles = StyleSheet.create({
     left: 0,
     overflow: 'visible',
   },
-  tabBarFadeWide: {
+  tabBarBaseFill: {
     position: 'absolute',
-    top: -18,
-    right: 18,
-    left: 18,
-    height: 18,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: colors.cardBase,
-    opacity: 0.08,
-  },
-  tabBarFadeMid: {
-    position: 'absolute',
-    top: -11,
-    right: 10,
-    left: 10,
-    height: 16,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: colors.cardBase,
-    opacity: 0.18,
-  },
-  tabBarFadeNear: {
-    position: 'absolute',
-    top: -5,
-    right: 4,
-    left: 4,
-    height: 14,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: colors.cardBase,
-    opacity: 0.34,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.background,
   },
   tabBarSurface: {
     position: 'absolute',
@@ -266,7 +272,17 @@ const styles = StyleSheet.create({
     borderTopRightRadius: TAB_BAR_TOP_RADIUS,
     overflow: 'hidden',
     backgroundColor: colors.cardBase,
-    borderTopWidth: 0.6,
-    borderTopColor: 'rgba(216, 205, 187, 0.58)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  tabBarSeparatorGradient: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    height: TAB_BAR_SEPARATOR_HEIGHT,
   },
 });

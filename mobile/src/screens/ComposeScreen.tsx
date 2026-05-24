@@ -274,9 +274,11 @@ export function ComposeScreen({ navigation }: Props) {
     setActionError(null);
     setIsGenerating(true);
     let nextDraft: Dream;
+    const requestDesign = normalizeDreamDesign(selectedDesign);
+    setSelectedDesign(requestDesign);
     try {
       nextDraft = await createDreamDraft(
-        { rawInput: input, mood, tone, storyLength, design: selectedDesign },
+        { rawInput: input, mood, tone, storyLength, design: requestDesign },
         token,
       );
     } catch (error) {
@@ -288,14 +290,14 @@ export function ComposeScreen({ navigation }: Props) {
         );
         return;
       }
-      nextDraft = buildMockDraft(input, mood, selectedDesign, storyLength);
+      nextDraft = buildMockDraft(input, mood, requestDesign, storyLength);
     } finally {
       setIsGenerating(false);
     }
 
     const normalizedDraft = {
       ...nextDraft,
-      design: normalizeDreamDesign(nextDraft.design ?? selectedDesign),
+      design: normalizeDreamDesign(nextDraft.design ?? requestDesign),
     };
     setSelectedDesign(normalizedDraft.design);
     setDraft(normalizedDraft);
@@ -324,12 +326,14 @@ export function ComposeScreen({ navigation }: Props) {
     const title = editTitle.trim() || draft.title;
     const story = editStory.trim() || draft.story;
     const summary = story.slice(0, 48) || draft.summary;
+    const requestDesign = normalizeDreamDesign(selectedDesign);
+    setSelectedDesign(requestDesign);
     const nextDraft = {
       ...draft,
       title,
       story,
       summary,
-      design: selectedDesign,
+      design: requestDesign,
     };
 
     if (!token) {
@@ -343,7 +347,7 @@ export function ComposeScreen({ navigation }: Props) {
     try {
       const updatedDream = await updateDream(
         draft.id,
-        { title, story, summary, design: selectedDesign },
+        { title, story, summary, design: requestDesign },
         token,
       );
       setDraft(updatedDream);
@@ -395,10 +399,12 @@ export function ComposeScreen({ navigation }: Props) {
 
     setActionError(null);
     setIsGiving(true);
+    const requestDesign = normalizeDreamDesign(selectedDesign);
+    setSelectedDesign(requestDesign);
     try {
       const dreamToGive = await updateDream(
         draft.id,
-        { design: selectedDesign },
+        { design: requestDesign },
         token,
       );
       setDraft(dreamToGive);
