@@ -444,8 +444,8 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 24,
     fontWeight: '700',
+    fontSize: 24,
     marginBottom: 18,
   },
   panel: {
@@ -460,15 +460,15 @@ const styles = StyleSheet.create({
   sectionHeading: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
     includeFontPadding: false,
   },
   sectionDescription: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '600',
+    fontSize: 13,
     lineHeight: 19,
   },
   profileHeader: {
@@ -492,8 +492,8 @@ const styles = StyleSheet.create({
   name: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 18,
     fontWeight: '700',
+    fontSize: 18,
   },
   meta: {
     marginTop: 6,
@@ -515,8 +515,8 @@ const styles = StyleSheet.create({
   editProfileButtonText: {
     color: colors.primaryDark,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '800',
+    fontSize: 13,
     includeFontPadding: false,
   },
   profileEditorShell: {
@@ -528,8 +528,8 @@ const styles = StyleSheet.create({
   inputLabel: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '700',
+    fontSize: 14,
     includeFontPadding: false,
   },
   input: {
@@ -541,8 +541,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
     paddingHorizontal: 14,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
   },
   avatarOptions: {
     flexDirection: 'row',
@@ -578,8 +578,8 @@ const styles = StyleSheet.create({
   avatarOptionLabel: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 10,
     fontWeight: '700',
+    fontSize: 10,
     includeFontPadding: false,
   },
   avatarOptionLabelActive: {
@@ -588,8 +588,8 @@ const styles = StyleSheet.create({
   statusText: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '700',
+    fontSize: 13,
     lineHeight: 19,
   },
   saveButton: {
@@ -605,8 +605,8 @@ const styles = StyleSheet.create({
   saveText: {
     color: '#FFFFFF',
     fontFamily: fontFamily.handwritten,
-    fontSize: 15,
     fontWeight: '700',
+    fontSize: 15,
     includeFontPadding: false,
   },
   logoutButton: {
@@ -620,8 +620,8 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#FFFFFF',
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
     includeFontPadding: false,
   },
 });

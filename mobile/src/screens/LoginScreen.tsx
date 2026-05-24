@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 42,
     fontWeight: '700',
+    fontSize: 42,
     includeFontPadding: false,
   },
   subtitle: {
@@ -153,16 +153,16 @@ const styles = StyleSheet.create({
   panelTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 24,
     fontWeight: '700',
+    fontSize: 24,
     includeFontPadding: false,
   },
   panelText: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
     fontSize: 14,
-    lineHeight: 21,
     fontWeight: '600',
+    lineHeight: 21,
   },
   googleButton: {
     minHeight: 56,
@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
   googleButtonText: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
     includeFontPadding: false,
   },
   setupText: {
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontFamily: fontFamily.handwritten,
     fontSize: 13,
-    lineHeight: 19,
     fontWeight: '700',
+    lineHeight: 19,
   },
 });

@@ -509,8 +509,8 @@ const styles = StyleSheet.create({
   reactionLabel: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '700',
+    fontSize: 13,
     includeFontPadding: false,
   },
   reactionLabelActive: {
@@ -519,8 +519,8 @@ const styles = StyleSheet.create({
   reactionCount: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '700',
+    fontSize: 13,
     includeFontPadding: false,
   },
   reactionCountActive: {
@@ -553,8 +553,8 @@ const styles = StyleSheet.create({
   commentTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 17,
     fontWeight: '700',
+    fontSize: 17,
   },
   commentItem: {
     borderRadius: 16,
@@ -574,8 +574,8 @@ const styles = StyleSheet.create({
   commentAuthor: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '700',
+    fontSize: 14,
   },
   ownerBadge: {
     borderRadius: 999,
@@ -584,8 +584,8 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     backgroundColor: colors.cardBase,
     fontFamily: fontFamily.handwritten,
-    fontSize: 11,
     fontWeight: '700',
+    fontSize: 11,
     includeFontPadding: false,
   },
   commentText: {
@@ -629,8 +629,8 @@ const styles = StyleSheet.create({
   commentSubmitText: {
     color: '#FFFFFF',
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '700',
+    fontSize: 14,
     includeFontPadding: false,
   },
   commentNotice: {
@@ -641,8 +641,8 @@ const styles = StyleSheet.create({
   commentNoticeText: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '700',
+    fontSize: 14,
     lineHeight: 20,
   },
   errorText: {

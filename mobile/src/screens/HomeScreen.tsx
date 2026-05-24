@@ -589,8 +589,8 @@ const styles = StyleSheet.create({
   wordmark: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 34,
     fontWeight: '700',
+    fontSize: 34,
     includeFontPadding: false,
   },
   subtitle: {
@@ -640,8 +640,8 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 20,
     fontWeight: '700',
+    fontSize: 20,
     includeFontPadding: false,
   },
   emptyText: {
@@ -676,16 +676,16 @@ const styles = StyleSheet.create({
   addRoomTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 17,
     fontWeight: '700',
+    fontSize: 17,
     includeFontPadding: false,
   },
   addRoomSubtitle: {
     marginTop: 5,
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '600',
+    fontSize: 13,
     lineHeight: 18,
   },
   roomItem: {
@@ -706,8 +706,8 @@ const styles = StyleSheet.create({
   roomName: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 24,
     fontWeight: '700',
+    fontSize: 24,
     includeFontPadding: false,
   },
   roomMeta: {

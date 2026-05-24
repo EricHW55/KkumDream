@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ChevronDown,
   ChevronLeft,
+  ChevronUp,
   Copy,
   Settings,
   Share2,
@@ -13,6 +15,7 @@ import {
 import {
   Clipboard,
   FlatList,
+  InteractionManager,
   Modal,
   Pressable,
   Share,
@@ -25,7 +28,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DreamCard } from '../components/DreamCard';
-import { MoonAvatar } from '../components/MoonAvatar';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import {
@@ -44,6 +46,7 @@ import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
+import type { GroupMember } from '../types/group';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupRoom'>;
 
@@ -54,6 +57,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const sessionUserId = useSessionStore(state => state.userId);
   const dreamListRef = useRef<FlatList<Dream>>(null);
   const shouldScrollToLatestRef = useRef(false);
+  const scrollRetryTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const [roomOverride, setRoomOverride] = useState<
     ReturnType<typeof getCachedRooms>[number] | null
   >(null);
@@ -62,6 +66,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [roomNameDraft, setRoomNameDraft] = useState('');
   const [roomError, setRoomError] = useState<string | null>(null);
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
+  const [isInviteCollapsed, setIsInviteCollapsed] = useState(false);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
@@ -98,24 +103,45 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       : (room?.memberIds ?? []).map(memberId =>
           getDisplayMember(memberId, sessionUserId),
         );
+
+  const clearScrollRetryTimers = useCallback(() => {
+    scrollRetryTimersRef.current.forEach(timer => {
+      clearTimeout(timer);
+    });
+    scrollRetryTimersRef.current = [];
+  }, []);
+
   const scrollToLatestDream = useCallback(() => {
     if (dreams.length === 0) {
+      clearScrollRetryTimers();
       return;
     }
 
-    requestAnimationFrame(() => {
+    clearScrollRetryTimers();
+
+    const scrollToEnd = () => {
+      if (!shouldScrollToLatestRef.current) {
+        return;
+      }
       dreamListRef.current?.scrollToEnd({ animated: false });
+    };
+
+    requestAnimationFrame(scrollToEnd);
+    [80, 220, 500, 900, 1400, 2200].forEach(delay => {
+      const timer = setTimeout(scrollToEnd, delay);
+      scrollRetryTimersRef.current.push(timer);
     });
-    setTimeout(() => {
-      dreamListRef.current?.scrollToEnd({ animated: false });
-    }, 80);
-    setTimeout(() => {
-      dreamListRef.current?.scrollToEnd({ animated: false });
-    }, 220);
-    setTimeout(() => {
-      dreamListRef.current?.scrollToEnd({ animated: false });
-    }, 500);
-  }, [dreams.length]);
+    InteractionManager.runAfterInteractions(() => {
+      if (!shouldScrollToLatestRef.current) {
+        return;
+      }
+      scrollToEnd();
+      const timer = setTimeout(scrollToEnd, 80);
+      scrollRetryTimersRef.current.push(timer);
+    });
+  }, [clearScrollRetryTimers, dreams.length]);
+
+  useEffect(() => clearScrollRetryTimers, [clearScrollRetryTimers]);
 
   useEffect(() => {
     shouldScrollToLatestRef.current = dreams.length > 0;
@@ -129,7 +155,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       refetchRooms().catch(() => undefined);
       refetchDreams()
         .then(() => {
-          shouldScrollToLatestRef.current = dreams.length > 0;
+          shouldScrollToLatestRef.current = true;
           scrollToLatestDream();
         })
         .catch(() => undefined);
@@ -139,6 +165,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const openSettings = () => {
     setRoomNameDraft(title);
     setRoomError(null);
+    setInviteStatus(null);
     setIsSettingsVisible(true);
   };
 
@@ -283,42 +310,6 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      <View style={styles.roomInfo}>
-        <View style={styles.inviteTextWrap}>
-          <Text style={styles.infoLabel}>초대 코드</Text>
-          <Text selectable style={styles.inviteCode}>
-            {room?.inviteCode ?? '초대 코드 없음'}
-          </Text>
-        </View>
-        <View style={styles.inviteActions}>
-          <Pressable
-            accessibilityLabel="초대 코드 복사"
-            accessibilityRole="button"
-            onPress={copyInviteCode}
-            style={({ pressed }) => [
-              styles.inviteActionButton,
-              pressed && interactionStyles.pressed,
-            ]}
-          >
-            <Copy color={colors.primary} size={19} />
-          </Pressable>
-          <Pressable
-            accessibilityLabel="초대 코드 공유"
-            accessibilityRole="button"
-            onPress={shareInviteCode}
-            style={({ pressed }) => [
-              styles.inviteActionButton,
-              pressed && interactionStyles.pressed,
-            ]}
-          >
-            <Share2 color={colors.primary} size={19} />
-          </Pressable>
-        </View>
-      </View>
-      {inviteStatus ? (
-        <Text style={styles.inviteStatus}>{inviteStatus}</Text>
-      ) : null}
-
       <FlatList
         ref={dreamListRef}
         data={dreams}
@@ -329,16 +320,18 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             return;
           }
           scrollToLatestDream();
-          shouldScrollToLatestRef.current = false;
         }}
         onLayout={() => {
           if (shouldScrollToLatestRef.current) {
             scrollToLatestDream();
           }
         }}
+        onScrollBeginDrag={() => {
+          shouldScrollToLatestRef.current = false;
+          clearScrollRetryTimers();
+        }}
         contentContainerStyle={[
           styles.messages,
-          { paddingBottom: Math.max(insets.bottom + 24, 56) },
           dreams.length === 0 && styles.emptyMessages,
         ]}
         ListEmptyComponent={
@@ -354,13 +347,57 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             <Text style={styles.dateDivider}>오늘</Text>
           ) : null
         }
+        ListFooterComponent={
+          dreams.length > 0 ? (
+            <View style={{ height: insets.bottom + 22 }} />
+          ) : null
+        }
         renderItem={({ item }) => (
           <DreamMessage
             dream={item}
+            members={members}
             onPress={() => navigation.navigate('DreamDetail', { dream: item })}
           />
         )}
       />
+
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.inviteOverlay,
+          { top: Math.max(insets.top + 12, 42) + 74 },
+        ]}
+      >
+        {isInviteCollapsed ? (
+          <View style={styles.collapsedInviteWrap}>
+            <Pressable
+              accessibilityLabel="초대 코드 펼치기"
+              accessibilityRole="button"
+              onPress={() => setIsInviteCollapsed(false)}
+              style={({ pressed }) => [
+                styles.collapsedInviteButton,
+                pressed && interactionStyles.pressed,
+              ]}
+            >
+              <ChevronDown
+                color={colors.primary}
+                size={20}
+                strokeWidth={2.5}
+              />
+            </Pressable>
+          </View>
+        ) : (
+          <InviteCodeCard
+            inviteCode={room?.inviteCode}
+            onCollapse={() => setIsInviteCollapsed(true)}
+            onCopy={copyInviteCode}
+            onShare={shareInviteCode}
+          />
+        )}
+        {inviteStatus && !isInviteCollapsed ? (
+          <Text style={styles.inviteStatus}>{inviteStatus}</Text>
+        ) : null}
+      </View>
 
       <Modal
         animationType="fade"
@@ -390,6 +427,15 @@ export function GroupRoomScreen({ navigation, route }: Props) {
                 <X color={colors.textSecondary} size={20} />
               </Pressable>
             </View>
+            <InviteCodeCard
+              inSheet
+              inviteCode={room?.inviteCode}
+              onCopy={copyInviteCode}
+              onShare={shareInviteCode}
+            />
+            {inviteStatus ? (
+              <Text style={styles.sheetInviteStatus}>{inviteStatus}</Text>
+            ) : null}
             <Text style={styles.inputLabel}>꿈방 이름</Text>
             <TextInput
               autoCorrect={false}
@@ -495,23 +541,28 @@ export function GroupRoomScreen({ navigation, route }: Props) {
 
 function DreamMessage({
   dream,
+  members,
   onPress,
 }: {
   dream: Dream;
+  members: GroupMember[];
   onPress: () => void;
 }) {
   const sessionUserId = useSessionStore(state => state.userId);
   const { width: windowWidth } = useWindowDimensions();
-  const sender = getDisplayMember(dream.giverId, sessionUserId);
+  const sender =
+    members.find(member => member.id === dream.giverId) ??
+    getDisplayMember(dream.giverId, sessionUserId);
   const isMine = isCurrentUserId(dream.giverId, sessionUserId);
+  const senderName = isMine ? '나' : sender.name;
   const cardWidth = Math.min(Math.floor(windowWidth * 0.7), 340);
 
   return (
     <View style={[styles.messageRow, isMine && styles.myMessageRow]}>
-      {!isMine ? <Avatar color={sender.avatarColor} /> : null}
+      {!isMine ? <Avatar member={sender} /> : null}
       <View style={[styles.messageBody, isMine && styles.myMessageBody]}>
         <Text style={[styles.senderName, isMine && styles.mySenderName]}>
-          {sender.name}
+          {senderName}
         </Text>
         <View style={styles.dreamBubble}>
           <DreamCard
@@ -523,7 +574,69 @@ function DreamMessage({
           />
         </View>
       </View>
-      {isMine ? <Avatar color={sender.avatarColor} /> : null}
+    </View>
+  );
+}
+
+function InviteCodeCard({
+  inSheet = false,
+  inviteCode,
+  onCollapse,
+  onCopy,
+  onShare,
+}: {
+  inSheet?: boolean;
+  inviteCode?: string | null;
+  onCollapse?: () => void;
+  onCopy: () => void;
+  onShare: () => void;
+}) {
+  return (
+    <View style={[styles.roomInfo, inSheet && styles.sheetInviteCard]}>
+      <View style={styles.inviteTextWrap}>
+        <Text style={styles.infoLabel}>초대 코드</Text>
+        <Text selectable style={styles.inviteCode}>
+          {inviteCode ?? '초대 코드 없음'}
+        </Text>
+      </View>
+      <View style={styles.inviteActions}>
+        <Pressable
+          accessibilityLabel="초대 코드 복사"
+          accessibilityRole="button"
+          onPress={onCopy}
+          style={({ pressed }) => [
+            styles.inviteActionButton,
+            pressed && interactionStyles.pressed,
+          ]}
+        >
+          <Copy color={colors.primary} size={19} />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="초대 코드 공유"
+          accessibilityRole="button"
+          onPress={onShare}
+          style={({ pressed }) => [
+            styles.inviteActionButton,
+            pressed && interactionStyles.pressed,
+          ]}
+        >
+          <Share2 color={colors.primary} size={19} />
+        </Pressable>
+        {onCollapse ? (
+          <Pressable
+            accessibilityLabel="초대 코드 접기"
+            accessibilityRole="button"
+            onPress={onCollapse}
+            style={({ pressed }) => [
+              styles.inviteActionButton,
+              styles.inviteCollapseButton,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            <ChevronUp color={colors.textMuted} size={18} strokeWidth={2.5} />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -536,10 +649,19 @@ function isImagePending(dream: Dream) {
   return dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
 }
 
-function Avatar({ color }: { color: string }) {
+function Avatar({
+  member,
+}: {
+  member: Pick<GroupMember, 'avatarColor' | 'name' | 'profileImageUrl'>;
+}) {
   return (
     <View style={styles.avatar}>
-      <MoonAvatar size={42} color={color} />
+      <ProfileAvatar
+        fallbackColor={member.avatarColor}
+        name={member.name}
+        size={42}
+        value={member.profileImageUrl}
+      />
     </View>
   );
 }
@@ -578,8 +700,8 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 22,
     fontWeight: '700',
+    fontSize: 22,
     includeFontPadding: false,
   },
   subtitle: {
@@ -617,6 +739,36 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: colors.lavenderMist,
   },
+  sheetInviteCard: {
+    marginHorizontal: 0,
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  inviteOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    elevation: 12,
+  },
+  collapsedInviteWrap: {
+    minHeight: 44,
+    marginHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 2,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  collapsedInviteButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: 'rgba(110, 91, 198, 0.16)',
+  },
   inviteTextWrap: {
     flex: 1,
     paddingRight: 12,
@@ -633,6 +785,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.cardBase,
   },
+  inviteCollapseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 253, 247, 0.72)',
+  },
   inviteStatus: {
     marginHorizontal: 24,
     marginTop: 8,
@@ -642,11 +800,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     includeFontPadding: false,
   },
+  sheetInviteStatus: {
+    marginTop: -4,
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 12,
+    includeFontPadding: false,
+  },
   infoLabel: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 12,
     fontWeight: '700',
+    fontSize: 12,
     includeFontPadding: false,
   },
   inviteCode: {
@@ -671,8 +836,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
     includeFontPadding: false,
     marginBottom: 2,
   },
@@ -704,8 +869,8 @@ const styles = StyleSheet.create({
     marginLeft: 2,
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '700',
+    fontSize: 13,
     includeFontPadding: false,
   },
   mySenderName: {
@@ -778,8 +943,8 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 20,
     fontWeight: '700',
+    fontSize: 20,
     includeFontPadding: false,
   },
   emptyText: {
@@ -810,16 +975,16 @@ const styles = StyleSheet.create({
   sheetTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 22,
     fontWeight: '700',
+    fontSize: 22,
     includeFontPadding: false,
   },
   sheetSubtitle: {
     marginTop: 5,
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '600',
+    fontSize: 13,
     includeFontPadding: false,
   },
   closeButton: {
@@ -833,8 +998,8 @@ const styles = StyleSheet.create({
   inputLabel: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '700',
+    fontSize: 14,
     includeFontPadding: false,
   },
   sheetInput: {
@@ -846,8 +1011,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
     paddingHorizontal: 16,
-    fontSize: 17,
     fontWeight: '700',
+    fontSize: 17,
   },
   primaryAction: {
     minHeight: 54,
@@ -862,8 +1027,8 @@ const styles = StyleSheet.create({
   primaryActionText: {
     color: '#FFFFFF',
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
     includeFontPadding: false,
   },
   dangerAction: {
@@ -878,8 +1043,8 @@ const styles = StyleSheet.create({
   dangerActionText: {
     color: '#B84A68',
     fontFamily: fontFamily.handwritten,
-    fontSize: 15,
     fontWeight: '700',
+    fontSize: 15,
     includeFontPadding: false,
   },
   errorText: {
@@ -907,8 +1072,8 @@ const styles = StyleSheet.create({
   memberName: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
     includeFontPadding: false,
   },
   memberRole: {

@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   label: {
     color: colors.primary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
   },
 });

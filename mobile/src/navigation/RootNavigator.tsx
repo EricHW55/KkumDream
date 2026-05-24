@@ -143,8 +143,8 @@ function MainTabs() {
         },
         tabBarLabelStyle: {
           fontFamily: fontFamily.handwritten,
-          fontSize: 12,
           fontWeight: '600',
+          fontSize: 12,
         },
         tabBarBackground: TabBarPaperBackground,
         headerShown: false,

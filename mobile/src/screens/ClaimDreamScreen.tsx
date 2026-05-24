@@ -213,16 +213,16 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 26,
     fontWeight: '700',
+    fontSize: 26,
     includeFontPadding: false,
   },
   description: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
     fontSize: 15,
-    lineHeight: 22,
     fontWeight: '600',
+    lineHeight: 22,
     textAlign: 'center',
   },
   statusRow: {
@@ -235,8 +235,8 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontFamily: fontFamily.handwritten,
     fontSize: 13,
-    lineHeight: 19,
     fontWeight: '700',
+    lineHeight: 19,
     textAlign: 'center',
   },
   primaryButton: {
@@ -250,8 +250,8 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#FFFFFF',
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
     includeFontPadding: false,
   },
   secondaryButton: {
@@ -265,8 +265,8 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: colors.primary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '700',
+    fontSize: 14,
     includeFontPadding: false,
   },
   disabledButton: {

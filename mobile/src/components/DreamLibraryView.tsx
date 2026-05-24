@@ -588,16 +588,16 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 28,
     fontWeight: '700',
+    fontSize: 28,
     includeFontPadding: false,
   },
   description: {
     marginTop: 8,
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '600',
+    fontSize: 14,
     lineHeight: 20,
   },
   segmented: {
@@ -622,8 +622,8 @@ const styles = StyleSheet.create({
   segmentLabel: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '700',
+    fontSize: 14,
     includeFontPadding: false,
   },
   segmentLabelActive: {
@@ -644,8 +644,8 @@ const styles = StyleSheet.create({
   emptyDreamText: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '700',
+    fontSize: 14,
     lineHeight: 20,
   },
   gridRow: {
