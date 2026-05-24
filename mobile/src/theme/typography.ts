@@ -8,13 +8,11 @@
 
 import { Platform, type TextStyle } from 'react-native';
 
+import { nanumHandwritingFonts } from './fonts';
+
 export const fontFamily = {
-  /** Korean UI — soft handwritten fallback. */
-  korean: Platform.select<string | undefined>({
-    ios: 'Marker Felt',
-    android: 'casual',
-    default: undefined,
-  }),
+  /** Korean UI — bundled handwritten font. */
+  korean: nanumHandwritingFonts.dahaeng,
   /** English metadata — monospaced ticket print. */
   mono: Platform.select<string | undefined>({
     ios: 'Menlo',
@@ -27,12 +25,8 @@ export const fontFamily = {
     android: 'serif',
     default: 'serif',
   }),
-  /** Hand-written feel for the wordmark fallback. */
-  handwritten: Platform.select<string | undefined>({
-    ios: 'Marker Felt',
-    android: 'casual',
-    default: undefined,
-  }),
+  /** Hand-written feel for app UI. */
+  handwritten: nanumHandwritingFonts.dahaeng,
 } as const;
 
 type TypoStyle = Pick<
@@ -62,20 +56,20 @@ export const textStyle = {
   },
   subtitle: {
     fontFamily: fontFamily.korean,
-    fontSize: 16,
     fontWeight: '700',
+    fontSize: 16,
     lineHeight: 22,
   },
   body: {
     fontFamily: fontFamily.korean,
-    fontSize: 14,
     fontWeight: '500',
+    fontSize: 14,
     lineHeight: 21,
   },
   caption: {
     fontFamily: fontFamily.korean,
-    fontSize: 12,
     fontWeight: '600',
+    fontSize: 12,
     lineHeight: 17,
   },
   metaLabel: {

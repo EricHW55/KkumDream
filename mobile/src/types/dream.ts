@@ -21,7 +21,15 @@ export type DreamCardColor =
   | 'mint'
   | 'midnight';
 export type DreamCardFrame = 'ticket' | 'beveled' | 'tag' | 'classic';
-export type DreamFontStyle = 'rounded' | 'serif' | 'clean';
+export type DreamFontStyle =
+  | 'dahaeng'
+  | 'daegwangyuri'
+  | 'miraenamu'
+  | 'agisarang'
+  | 'yedang'
+  | 'rounded'
+  | 'serif'
+  | 'clean';
 export type DreamStoryLength = 'short' | 'standard' | 'long';
 
 export interface DreamDesign {

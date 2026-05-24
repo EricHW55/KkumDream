@@ -516,15 +516,29 @@ export function ComposeScreen({ navigation }: Props) {
             style={styles.horizontalPicker}
             contentContainerStyle={styles.moodScroller}
           >
-            {moods.map(item => (
-              <Text
-                key={item}
-                onPress={() => setMood(item)}
-                style={[styles.mood, item === mood && styles.moodActive]}
-              >
-                {item}
-              </Text>
-            ))}
+            {moods.map(item => {
+              const isSelected = item === mood;
+              return (
+                <Pressable
+                  key={item}
+                  onPress={() => setMood(item)}
+                  style={({ pressed }) => [
+                    styles.moodButton,
+                    isSelected && styles.moodButtonActive,
+                    pressed && interactionStyles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.moodLabel,
+                      isSelected && styles.moodLabelActive,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </ScrollView>
 
           <Text style={styles.label}>어체</Text>
@@ -705,7 +719,7 @@ export function ComposeScreen({ navigation }: Props) {
                 })}
               </ScrollView>
 
-              <Text style={styles.designLabel}>글씨체</Text>
+              <Text style={styles.designLabel}>뒷면 글씨체</Text>
               <View style={styles.fontGrid}>
                 {FONT_STYLE_OPTIONS.map(option => {
                   const isSelected = option.value === selectedDesign.fontStyle;
@@ -919,7 +933,7 @@ export function ComposeScreen({ navigation }: Props) {
               })}
             </ScrollView>
 
-            <Text style={styles.designLabel}>글씨체</Text>
+            <Text style={styles.designLabel}>뒷면 글씨체</Text>
             <View style={styles.fontGrid}>
               {FONT_STYLE_OPTIONS.map(option => {
                 const isSelected = option.value === selectedDesign.fontStyle;
@@ -1307,8 +1321,8 @@ const styles = StyleSheet.create({
   label: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 15,
     fontWeight: '700',
+    fontSize: 15,
     includeFontPadding: false,
   },
   input: {
@@ -1331,22 +1345,31 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingRight: 6,
   },
-  mood: {
-    minWidth: 72,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+  moodButton: {
+    minHeight: 42,
+    paddingHorizontal: 18,
     borderRadius: 999,
-    color: colors.textSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
     backgroundColor: colors.cardBase,
     borderWidth: 1,
     borderColor: colors.divider,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
   },
-  moodActive: {
-    color: '#FFFFFF',
+  moodButtonActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+  },
+  moodLabel: {
+    color: colors.textSecondary,
+    fontWeight: '700',
+    fontFamily: fontFamily.handwritten,
+    fontSize: 14,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+  moodLabelActive: {
+    color: '#FFFFFF',
   },
   toneGrid: {
     flexDirection: 'row',
@@ -1370,8 +1393,8 @@ const styles = StyleSheet.create({
   toneLabel: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 14,
     fontWeight: '800',
+    fontSize: 14,
     includeFontPadding: false,
   },
   toneLabelActive: {
@@ -1381,8 +1404,8 @@ const styles = StyleSheet.create({
     marginTop: 7,
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 12,
     fontWeight: '600',
+    fontSize: 12,
     lineHeight: 17,
   },
   toneHint: {
@@ -1414,8 +1437,8 @@ const styles = StyleSheet.create({
   lengthLabel: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '800',
+    fontSize: 13,
     includeFontPadding: false,
   },
   lengthLabelActive: {
@@ -1437,23 +1460,23 @@ const styles = StyleSheet.create({
   designTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 16,
     fontWeight: '800',
+    fontSize: 16,
     includeFontPadding: false,
   },
   designSummary: {
     marginTop: 4,
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 12,
     fontWeight: '700',
+    fontSize: 12,
     includeFontPadding: false,
   },
   designLabel: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '800',
+    fontSize: 13,
     includeFontPadding: false,
   },
   frameGrid: {
@@ -1500,8 +1523,8 @@ const styles = StyleSheet.create({
   frameOptionText: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '800',
+    fontSize: 13,
     includeFontPadding: false,
   },
   frameOptionTextActive: {
@@ -1510,8 +1533,8 @@ const styles = StyleSheet.create({
   frameOptionDescription: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
-    fontSize: 10.5,
     fontWeight: '600',
+    fontSize: 10.5,
     lineHeight: 14,
   },
   colorScroller: {
@@ -1551,8 +1574,8 @@ const styles = StyleSheet.create({
   colorOptionText: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '800',
+    fontSize: 13,
     includeFontPadding: false,
   },
   colorOptionTextActive: {
@@ -1587,8 +1610,8 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 12,
     fontWeight: '600',
+    fontSize: 12,
     lineHeight: 17,
   },
   preview: {
@@ -1604,16 +1627,16 @@ const styles = StyleSheet.create({
   previewTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 18,
     fontWeight: '700',
+    fontSize: 18,
     includeFontPadding: false,
   },
   previewMeta: {
     marginTop: 5,
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
-    fontSize: 13,
     fontWeight: '600',
+    fontSize: 13,
     lineHeight: 18,
   },
   editButton: {

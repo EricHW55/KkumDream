@@ -1,4 +1,4 @@
-import { Platform, type TextStyle } from 'react-native';
+import type { TextStyle } from 'react-native';
 
 import type {
   DreamCardColor,
@@ -6,11 +6,12 @@ import type {
   DreamDesign,
   DreamFontStyle,
 } from '../types/dream';
+import { nanumHandwritingFonts } from './fonts';
 
 export const DEFAULT_DREAM_DESIGN: DreamDesign = {
   cardColor: 'beige',
   cardFrame: 'classic',
-  fontStyle: 'rounded',
+  fontStyle: 'dahaeng',
 };
 
 export const CARD_COLOR_OPTIONS: {
@@ -32,19 +33,29 @@ export const FONT_STYLE_OPTIONS: {
   description: string;
 }[] = [
   {
-    value: 'rounded',
-    label: '손편지체',
-    description: '조금 느슨하고 직접 쓴 듯한 느낌',
+    value: 'dahaeng',
+    label: '다행체',
+    description: '앱 기본 글씨체로 부드럽고 또렷해요.',
   },
   {
-    value: 'serif',
-    label: '엽서 명조',
-    description: '오래된 카드처럼 차분한 느낌',
+    value: 'daegwangyuri',
+    label: '대광유리체',
+    description: '반듯하고 밝은 손글씨 느낌이에요.',
   },
   {
-    value: 'clean',
-    label: '정리된 펜글씨',
-    description: '읽기 쉬운 얇은 펜 느낌',
+    value: 'miraenamu',
+    label: '미래나무체',
+    description: '동글고 편안한 편지 느낌이에요.',
+  },
+  {
+    value: 'agisarang',
+    label: '아기사랑체',
+    description: '작고 귀여운 손글씨 느낌이에요.',
+  },
+  {
+    value: 'yedang',
+    label: '예당체',
+    description: '차분하고 고전적인 손글씨 느낌이에요.',
   },
 ];
 
@@ -181,6 +192,16 @@ export const CARD_COLOR_THEMES: Record<
 const CARD_COLOR_VALUES = CARD_COLOR_OPTIONS.map(option => option.value);
 const CARD_FRAME_VALUES = CARD_FRAME_OPTIONS.map(option => option.value);
 const FONT_STYLE_VALUES = FONT_STYLE_OPTIONS.map(option => option.value);
+const FONT_STYLE_FAMILIES: Record<DreamFontStyle, string> = {
+  dahaeng: nanumHandwritingFonts.dahaeng,
+  daegwangyuri: nanumHandwritingFonts.daegwangyuri,
+  miraenamu: nanumHandwritingFonts.miraenamu,
+  agisarang: nanumHandwritingFonts.agisarang,
+  yedang: nanumHandwritingFonts.yedang,
+  rounded: nanumHandwritingFonts.dahaeng,
+  serif: nanumHandwritingFonts.yedang,
+  clean: nanumHandwritingFonts.miraenamu,
+};
 
 export function normalizeDreamDesign(
   design?: Partial<DreamDesign> | null,
@@ -205,34 +226,9 @@ export function normalizeDreamDesign(
 }
 
 export function getDreamFontStyle(fontStyle: DreamFontStyle): TextStyle {
-  if (fontStyle === 'serif') {
-    return {
-      fontFamily: Platform.select({
-        ios: 'Georgia',
-        android: 'serif',
-        default: undefined,
-      }),
-      fontWeight: '500',
-    };
-  }
-
-  if (fontStyle === 'clean') {
-    return {
-      fontFamily: Platform.select({
-        ios: 'Avenir Next',
-        android: 'sans-serif-light',
-        default: undefined,
-      }),
-      fontWeight: '400',
-    };
-  }
-
   return {
-    fontFamily: Platform.select({
-      ios: 'Marker Felt',
-      android: 'casual',
-      default: undefined,
-    }),
+    fontFamily:
+      FONT_STYLE_FAMILIES[fontStyle] ?? nanumHandwritingFonts.dahaeng,
     fontWeight: '500',
   };
 }

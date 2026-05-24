@@ -37,6 +37,14 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>NanumAGiSaRangCe.ttf</string>
+		<string>NanumDaeGwangYuRi.ttf</string>
+		<string>NanumDaHaengCe.ttf</string>
+		<string>NanumMiRaeNaMu.ttf</string>
+		<string>NanumYeDangCe.ttf</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->

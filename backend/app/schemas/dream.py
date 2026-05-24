@@ -10,14 +10,23 @@ ReactionType = Literal["heart", "sparkle", "moon", "cloud"]
 REACTION_TYPES: tuple[ReactionType, ...] = ("heart", "sparkle", "moon", "cloud")
 CardColor = Literal["beige", "ivory", "lilac", "peach", "mint", "midnight"]
 CardFrame = Literal["ticket", "beveled", "tag", "classic"]
-FontStyle = Literal["rounded", "serif", "clean"]
+FontStyle = Literal[
+    "dahaeng",
+    "daegwangyuri",
+    "miraenamu",
+    "agisarang",
+    "yedang",
+    "rounded",
+    "serif",
+    "clean",
+]
 StoryLength = Literal["short", "standard", "long"]
 
 
 class DreamDesign(ApiModel):
     card_color: CardColor = "beige"
     card_frame: CardFrame = "classic"
-    font_style: FontStyle = "rounded"
+    font_style: FontStyle = "dahaeng"
 
 
 class DreamDraftCreate(ApiModel):
