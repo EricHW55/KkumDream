@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -11,7 +11,13 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { CalendarDays, Grid2X2, X } from 'lucide-react-native';
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Grid2X2,
+  X,
+} from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -45,6 +51,8 @@ type CalendarCell = {
   day: number;
 } | null;
 
+const monthNumbers = Array.from({ length: 12 }, (_, index) => index + 1);
+
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 
 export function DreamLibraryView({
@@ -59,6 +67,13 @@ export function DreamLibraryView({
   const [mode, setMode] = useState<LibraryMode>('archive');
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null);
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([]);
+  const [selectedCalendarMonthKey, setSelectedCalendarMonthKey] = useState<
+    string | null
+  >(null);
+  const [isMonthPickerVisible, setIsMonthPickerVisible] = useState(false);
+  const [monthPickerYear, setMonthPickerYear] = useState(() =>
+    Number(getCurrentMonthKey().slice(0, 4)),
+  );
   const [multiDreamDateGroup, setMultiDreamDateGroup] =
     useState<DateGroup | null>(null);
   const previewPanResponder = useMemo(
@@ -82,10 +97,22 @@ export function DreamLibraryView({
     () => new Map(groupedDreams.map(group => [group.dateKey, group])),
     [groupedDreams],
   );
-  const calendarMonths = useMemo(
-    () => buildCalendarMonths(groupedDreams),
+  const availableMonthKeys = useMemo(
+    () => getCalendarMonthKeys(groupedDreams),
     [groupedDreams],
   );
+  const availableMonthKeySet = useMemo(
+    () => new Set(availableMonthKeys),
+    [availableMonthKeys],
+  );
+  const visibleCalendarMonthKey =
+    selectedCalendarMonthKey ?? availableMonthKeys[0] ?? getCurrentMonthKey();
+  const visibleCalendarMonth = useMemo(
+    () => buildCalendarMonth(visibleCalendarMonthKey),
+    [visibleCalendarMonthKey],
+  );
+  const calendarMonths = [visibleCalendarMonth];
+  const selectedMonthNumber = Number(visibleCalendarMonthKey.slice(5, 7));
   const archiveColumnGap = 10;
   const archiveCardWidth = Math.floor((width - 40 - archiveColumnGap * 2) / 3);
   const calendarCellSize = Math.max(
@@ -98,6 +125,25 @@ export function DreamLibraryView({
     setSelectedDream(null);
     navigation.navigate('DreamDetail', { dream });
   };
+
+  const openMonthPicker = () => {
+    setMonthPickerYear(Number(visibleCalendarMonthKey.slice(0, 4)));
+    setIsMonthPickerVisible(true);
+  };
+
+  const selectCalendarMonth = (month: number) => {
+    setSelectedCalendarMonthKey(
+      `${monthPickerYear}-${String(month).padStart(2, '0')}`,
+    );
+    setSelectedDateKeys([]);
+    setIsMonthPickerVisible(false);
+  };
+
+  useEffect(() => {
+    setSelectedDateKeys(currentKeys =>
+      currentKeys.filter(key => key.startsWith(`${visibleCalendarMonthKey}-`)),
+    );
+  }, [visibleCalendarMonthKey]);
 
   const onPressCalendarDate = (dateKey: string) => {
     const group = groupedDreamMap.get(dateKey);
@@ -205,7 +251,18 @@ export function DreamLibraryView({
         >
           {calendarMonths.map(month => (
             <View key={month.monthKey} style={styles.calendarMonth}>
-              <Text style={styles.monthTitle}>{month.label}</Text>
+              <Pressable
+                accessibilityLabel="달력 월 선택"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={openMonthPicker}
+                style={({ pressed }) => [
+                  styles.monthTitleButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <Text style={styles.monthTitle}>{month.label}</Text>
+              </Pressable>
               <View style={styles.weekdayRow}>
                 {weekdays.map(day => (
                   <Text key={day} style={styles.weekdayText}>
@@ -320,13 +377,106 @@ export function DreamLibraryView({
             </View>
           ))}
 
-          {calendarMonths.length === 0 ? (
+          {dreams.length === 0 ? (
             <View style={styles.calendarHintBox}>
               <Text style={styles.calendarHintText}>{emptyMessage}</Text>
             </View>
           ) : null}
         </ScrollView>
       )}
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isMonthPickerVisible}
+        onRequestClose={() => setIsMonthPickerVisible(false)}
+      >
+        <Pressable
+          style={styles.pickerBackdrop}
+          onPress={() => setIsMonthPickerVisible(false)}
+        >
+          <Pressable
+            style={styles.monthPickerSheet}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>달력 날짜 선택</Text>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                onPress={() => setIsMonthPickerVisible(false)}
+                style={({ pressed }) => [
+                  styles.pickerClose,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <X color={colors.textSecondary} size={18} />
+              </Pressable>
+            </View>
+            <View style={styles.monthPickerYearRow}>
+              <Pressable
+                accessibilityLabel="이전 연도"
+                accessibilityRole="button"
+                onPress={() => setMonthPickerYear(year => year - 1)}
+                style={({ pressed }) => [
+                  styles.monthPickerYearButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <ChevronLeft color={colors.textPrimary} size={18} />
+              </Pressable>
+              <Text style={styles.monthPickerYearText}>{monthPickerYear}년</Text>
+              <Pressable
+                accessibilityLabel="다음 연도"
+                accessibilityRole="button"
+                onPress={() => setMonthPickerYear(year => year + 1)}
+                style={({ pressed }) => [
+                  styles.monthPickerYearButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <ChevronRight color={colors.textPrimary} size={18} />
+              </Pressable>
+            </View>
+            <View style={styles.monthPickerGrid}>
+              {monthNumbers.map(month => {
+                const monthKey = `${monthPickerYear}-${String(month).padStart(
+                  2,
+                  '0',
+                )}`;
+                const isSelected =
+                  monthPickerYear ===
+                    Number(visibleCalendarMonthKey.slice(0, 4)) &&
+                  month === selectedMonthNumber;
+                const hasDreams = availableMonthKeySet.has(monthKey);
+                return (
+                  <Pressable
+                    key={month}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    onPress={() => selectCalendarMonth(month)}
+                    style={({ pressed }) => [
+                      styles.monthPickerOption,
+                      isSelected && styles.monthPickerOptionSelected,
+                      pressed && interactionStyles.pressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.monthPickerOptionText,
+                        isSelected && styles.monthPickerOptionTextSelected,
+                      ]}
+                    >
+                      {month}월
+                    </Text>
+                    {hasDreams ? <View style={styles.monthPickerDot} /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal
         animationType="fade"
@@ -548,6 +698,37 @@ function buildCalendarMonths(groups: DateGroup[]) {
   });
 }
 
+function getCalendarMonthKeys(groups: DateGroup[]) {
+  return buildCalendarMonths(groups).map(month => month.monthKey);
+}
+
+function buildCalendarMonth(monthKey: string) {
+  const [yearText, monthText] = monthKey.split('-');
+  const year = Number(yearText);
+  const monthIndex = Number(monthText) - 1;
+  const month = buildCalendarMonths([
+    {
+      dateKey: `${monthKey}-01`,
+      label: '',
+      items: [],
+    },
+  ])[0];
+
+  return {
+    monthKey,
+    label: `${year}년 ${monthIndex + 1}월`,
+    cells: month?.cells ?? [],
+  };
+}
+
+function getCurrentMonthKey() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    '0',
+  )}`;
+}
+
 function toDateKey(value: string | null) {
   if (!value) {
     return 'unknown';
@@ -669,6 +850,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     includeFontPadding: false,
+  },
+  monthTitleButton: {
+    alignSelf: 'flex-start',
     marginBottom: 14,
   },
   weekdayRow: {
@@ -761,17 +945,15 @@ const styles = StyleSheet.create({
   dayPreviewCount: {
     position: 'absolute',
     right: 5,
-    bottom: 4,
-    minWidth: 14,
-    height: 14,
-    borderRadius: 7,
+    bottom: 3,
     textAlign: 'center',
-    color: colors.primaryDark,
-    backgroundColor: colors.cardBase,
-    fontSize: 8,
-    fontWeight: '800',
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: '900',
     includeFontPadding: false,
-    overflow: 'hidden',
+    textShadowColor: colors.cardBase,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2,
   },
   calendarHintBox: {
     borderRadius: 20,
@@ -818,6 +1000,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardBase,
+  },
+  monthPickerSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 18,
+    gap: 18,
+    backgroundColor: colors.background,
+  },
+  monthPickerYearRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  monthPickerYearButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
+  },
+  monthPickerYearText: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  monthPickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  monthPickerOption: {
+    width: '30.8%',
+    minHeight: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.cardBase,
+  },
+  monthPickerOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.lavenderMist,
+  },
+  monthPickerOptionText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  monthPickerOptionTextSelected: {
+    color: colors.textPrimary,
+  },
+  monthPickerDot: {
+    position: 'absolute',
+    right: 10,
+    bottom: 8,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.primary,
   },
   pickerGrid: {
     flexDirection: 'row',
