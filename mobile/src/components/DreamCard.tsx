@@ -86,6 +86,7 @@ export function DreamCard({
     dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
   const design = normalizeDreamDesign(dream.design);
   const designTheme = CARD_COLOR_THEMES[design.cardColor];
+  const isClassicFrame = design.cardFrame === 'classic';
   const isMovieTicketFrame = design.cardFrame === 'beveled';
   const isDarkTheme = design.cardColor === 'midnight';
   const frameBorderColor = isDarkTheme ? designTheme.line : '#CBBFAE';
@@ -609,6 +610,7 @@ export function DreamCard({
                         <View
                           style={[
                             styles.fromToPaper,
+                            isClassicFrame && styles.classicFromToPaper,
                             isDarkTheme
                               ? styles.darkNotePaper
                               : styles.lightNotePaper,
@@ -620,6 +622,7 @@ export function DreamCard({
                           <Text
                             style={[
                               styles.fromToLabel,
+                              isClassicFrame && styles.classicFromToLabel,
                               {
                                 color: titleColor,
                                 fontFamily: serifTitleFamily,
@@ -652,6 +655,7 @@ export function DreamCard({
                         <View
                           style={[
                             styles.fromToPaper,
+                            isClassicFrame && styles.classicFromToPaper,
                             isDarkTheme
                               ? styles.darkNotePaper
                               : styles.lightNotePaper,
@@ -663,6 +667,7 @@ export function DreamCard({
                           <Text
                             style={[
                               styles.fromToLabel,
+                              isClassicFrame && styles.classicFromToLabel,
                               {
                                 color: titleColor,
                                 fontFamily: serifTitleFamily,
@@ -1214,6 +1219,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  classicFromToPaper: {
+    justifyContent: 'center',
+  },
   lightNotePaper: {
     backgroundColor: 'rgba(255,249,238,0.68)',
   },
@@ -1235,6 +1243,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     includeFontPadding: false,
     opacity: 0.72,
+  },
+  classicFromToLabel: {
+    fontSize: 9,
+    fontWeight: '800',
   },
   fromToValue: {
     flexShrink: 1,

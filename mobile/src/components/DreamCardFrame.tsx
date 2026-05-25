@@ -9,6 +9,7 @@ import Svg, {
   Path,
 } from 'react-native-svg';
 
+import agedLetterPaperTexture from '../assets/textures/aged_letter_paper.webp';
 import paperTexture from '../assets/textures/paper_texture.webp';
 import type { DreamCardFrame as DreamCardFrameType } from '../types/dream';
 
@@ -137,6 +138,17 @@ export function DreamCardFrame({
     : compact
       ? 0.08
       : 0.13;
+  const frameTexture = frame === 'ticket' ? agedLetterPaperTexture : paperTexture;
+  const frameTextureOpacity =
+    frame === 'ticket'
+      ? minimal
+        ? compact
+          ? 0.3
+          : 0.36
+        : compact
+          ? 0.34
+          : 0.44
+      : textureOpacity;
 
   return (
     <View
@@ -166,8 +178,8 @@ export function DreamCardFrame({
         <SvgImage
           clipPath={`url(#${clipId})`}
           height={FRAME_HEIGHT}
-          href={paperTexture}
-          opacity={textureOpacity}
+          href={frameTexture}
+          opacity={frameTextureOpacity}
           preserveAspectRatio="xMidYMid slice"
           width={FRAME_WIDTH}
           x={0}

@@ -17,6 +17,18 @@ const MOON_LIGHT = '#FFE08A';
 const MOON_SHADOW = '#E8B85A';
 const STAR_FILL = '#FFD66B';
 const CLOUD_FILL = '#FFFCF3';
+const CLOUD_SHADE = '#DCEAFF';
+const CLOUD_SHADE_DEEP = '#BFD1FF';
+const CLOUD_DETAIL = '#8DA0C9';
+const CLOUD_OUTLINE_PATH = `M 11 37
+   C 7 37 5 33 8 30
+   C 4 27 7 21 12 22
+   C 11 14 21 13 23 18
+   C 22 10 33 8 37 14
+   C 39 8 49 10 49 17
+   C 56 16 60 22 56 27
+   C 60 30 58 36 53 36
+   L 11 37 Z`;
 
 function CrescentMoonIcon({ size }: { size: number }) {
   return (
@@ -67,16 +79,45 @@ function CloudIcon({ size }: { size: number }) {
       viewBox="0 0 64 44"
     >
       <Path
-        d="M 11 37
-           C 7 37 5 33 8 30
-           C 4 27 7 21 12 22
-           C 11 14 21 13 23 18
-           C 22 10 33 8 37 14
-           C 39 8 49 10 49 17
-           C 56 16 60 22 56 27
-           C 60 30 58 36 53 36
-           L 11 37 Z"
+        d={CLOUD_OUTLINE_PATH}
         fill={CLOUD_FILL}
+      />
+      <Path
+        d="M 10 31
+           C 14 27 20 29 23 25
+           C 28 18 36 19 40 25
+           C 43 22 50 23 53 29
+           C 48 34 35 35 25 34
+           C 18 34 13 35 10 31 Z"
+        fill={CLOUD_SHADE}
+        opacity={0.42}
+      />
+      <Path
+        d="M 21 35
+           C 25 30 31 31 35 35
+           C 40 31 48 31 52 35
+           C 44 38 30 38 21 35 Z"
+        fill={CLOUD_SHADE_DEEP}
+        opacity={0.28}
+      />
+      <Path
+        d="M 13 28
+           C 16 25 20 26 22 29
+           M 24 22
+           C 27 17 34 17 37 22
+           M 40 22
+           C 44 19 50 21 52 26
+           M 16 34
+           C 26 36 40 35 51 33"
+        fill="none"
+        opacity={0.45}
+        stroke={CLOUD_DETAIL}
+        strokeWidth={0.85}
+        strokeLinecap="round"
+      />
+      <Path
+        d={CLOUD_OUTLINE_PATH}
+        fill="none"
         stroke={INK}
         strokeWidth={1.4}
         strokeLinejoin="round"

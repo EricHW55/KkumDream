@@ -30,6 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DreamCard } from '../components/DreamCard';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
+import { readCache, writeCache } from '../data/cache';
 import {
   getCachedRoomDreams,
   getCachedRooms,
@@ -49,6 +50,7 @@ import type { Dream } from '../types/dream';
 import type { GroupMember } from '../types/group';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupRoom'>;
+const INVITE_COLLAPSED_CACHE_PREFIX = 'ui:group-room:invite-collapsed';
 
 export function GroupRoomScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
@@ -66,7 +68,9 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [roomNameDraft, setRoomNameDraft] = useState('');
   const [roomError, setRoomError] = useState<string | null>(null);
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
-  const [isInviteCollapsed, setIsInviteCollapsed] = useState(false);
+  const [isInviteCollapsed, setIsInviteCollapsed] = useState(() =>
+    readInviteCollapsedState(route.params.groupId, sessionUserId),
+  );
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
@@ -142,6 +146,12 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   }, [clearScrollRetryTimers, dreams.length]);
 
   useEffect(() => clearScrollRetryTimers, [clearScrollRetryTimers]);
+
+  useEffect(() => {
+    setIsInviteCollapsed(
+      readInviteCollapsedState(route.params.groupId, sessionUserId),
+    );
+  }, [route.params.groupId, sessionUserId]);
 
   useEffect(() => {
     shouldScrollToLatestRef.current = dreams.length > 0;
@@ -261,6 +271,15 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     }
   };
 
+  const updateInviteCollapsed = (nextValue: boolean) => {
+    setIsInviteCollapsed(nextValue);
+    writeInviteCollapsedState(
+      route.params.groupId,
+      sessionUserId,
+      nextValue,
+    );
+  };
+
   return (
     <View style={[styles.root, { paddingTop: Math.max(insets.top + 12, 42) }]}>
       <PaperTextureOverlay />
@@ -373,7 +392,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             <Pressable
               accessibilityLabel="초대 코드 펼치기"
               accessibilityRole="button"
-              onPress={() => setIsInviteCollapsed(false)}
+              onPress={() => updateInviteCollapsed(false)}
               style={({ pressed }) => [
                 styles.collapsedInviteButton,
                 pressed && interactionStyles.pressed,
@@ -389,7 +408,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         ) : (
           <InviteCodeCard
             inviteCode={room?.inviteCode}
-            onCollapse={() => setIsInviteCollapsed(true)}
+            onCollapse={() => updateInviteCollapsed(true)}
             onCopy={copyInviteCode}
             onShare={shareInviteCode}
           />
@@ -670,6 +689,22 @@ function buildInviteMessage(roomName: string, inviteCode: string) {
   return `꿈드림 꿈방 "${roomName}"에 초대합니다.\n초대 코드: ${inviteCode}\n\n꿈드림 앱에서 초대코드로 참가해 주세요.`;
 }
 
+function inviteCollapsedCacheKey(roomId: string, userId?: string | null) {
+  return `${INVITE_COLLAPSED_CACHE_PREFIX}:${userId ?? 'local'}:${roomId}`;
+}
+
+function readInviteCollapsedState(roomId: string, userId?: string | null) {
+  return readCache<boolean>(inviteCollapsedCacheKey(roomId, userId)) ?? false;
+}
+
+function writeInviteCollapsedState(
+  roomId: string,
+  userId: string | null | undefined,
+  value: boolean,
+) {
+  writeCache(inviteCollapsedCacheKey(roomId, userId), value);
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -823,9 +858,9 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   messages: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 18,
+    paddingBottom: 0,
     gap: 22,
   },
   emptyMessages: {
@@ -844,7 +879,7 @@ const styles = StyleSheet.create({
   messageRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 12,
+    gap: 8,
   },
   myMessageRow: {
     justifyContent: 'flex-end',
