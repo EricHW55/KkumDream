@@ -683,9 +683,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardBase,

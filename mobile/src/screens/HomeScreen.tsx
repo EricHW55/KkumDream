@@ -16,7 +16,6 @@ import {
   PenLine,
   Plus,
   Share2,
-  Sparkles,
   UsersRound,
   X,
 } from 'lucide-react-native';
@@ -26,6 +25,7 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { SleepingMoonAvatar } from '../components/MoonAvatar';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
 import {
@@ -531,7 +531,7 @@ function GroupRoomItem({
           </View>
         ) : (
           <View style={styles.emptyDreamBadge}>
-            <Sparkles color={colors.primaryDark} size={22} strokeWidth={2.4} />
+            <SleepingMoonAvatar size={36} />
           </View>
         )}
       </View>
@@ -767,7 +767,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cardBase,
+    backgroundColor: 'transparent',
   },
   sheetBackdrop: {
     flex: 1,
