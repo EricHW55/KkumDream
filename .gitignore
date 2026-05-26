@@ -42,3 +42,6 @@ mobile/ios/*.xcworkspace/
 .idea/
 .vscode/
 
+# Claude local settings
+.claude/settings.local.json
+
