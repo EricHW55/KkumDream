@@ -19,7 +19,7 @@ export const palette = {
   inkDivider: '#D8CDBB',
 
   // Brand
-  lavenderPrimary: '#6E5BC6',
+  lavenderPrimary: '#8B7BC8',
   lavenderSoft: '#E9E4FB',
 
   // Accents

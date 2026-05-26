@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GestureResponderEvent, StyleProp, ViewStyle } from 'react-native';
 import {
   Alert,
@@ -42,6 +42,7 @@ type Props = {
   disableFlip?: boolean;
   onPress?: () => void;
   onBackOpen?: () => void;
+  preferThumbnail?: boolean;
   showImageActions?: boolean;
 };
 
@@ -52,6 +53,7 @@ export function DreamCard({
   disableFlip = false,
   onPress,
   onBackOpen,
+  preferThumbnail = false,
   showImageActions = true,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
@@ -70,7 +72,7 @@ export function DreamCard({
   const cardHeight = Math.round(layoutCardWidth / DREAM_CARD_ASPECT_RATIO);
   const sceneHeight = Math.round(cardHeight * cardScale);
   const imageHeight = Math.round(cardHeight * 0.54);
-  const rooms = getCachedRooms(sessionUserId);
+  const rooms = useMemo(() => getCachedRooms(sessionUserId), [sessionUserId]);
   const roomMembers = rooms.flatMap(room => room.members ?? []);
   const giverName =
     roomMembers.find(member => member.id === dream.giverId)?.name ??
@@ -81,7 +83,14 @@ export function DreamCard({
     : dream.receiverLabel ?? '받는 사람 미정';
 
   const imageUrl = dream.imageUrl ?? dream.thumbnailUrl;
-  const hasImage = Boolean(dream.thumbnailUrl || dream.imageUrl);
+  const displayImageUrl = preferThumbnail
+    ? dream.thumbnailUrl ?? dream.imageUrl
+    : dream.imageUrl ?? dream.thumbnailUrl;
+  const [isRemoteImageLoading, setIsRemoteImageLoading] = useState(
+    Boolean(displayImageUrl),
+  );
+  const [didRemoteImageFail, setDidRemoteImageFail] = useState(false);
+  const hasImage = Boolean(displayImageUrl) && !didRemoteImageFail;
   const isImageGenerating =
     dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
   const design = normalizeDreamDesign(dream.design);
@@ -124,6 +133,11 @@ export function DreamCard({
       { rotateY: `${rotation.value + 180}deg` },
     ],
   }));
+
+  useEffect(() => {
+    setDidRemoteImageFail(false);
+    setIsRemoteImageLoading(Boolean(displayImageUrl));
+  }, [displayImageUrl]);
 
   const flip = () => {
     if (disableFlip) {
@@ -259,13 +273,50 @@ export function DreamCard({
       {hasImage ? (
         <>
           <Image
+            onError={() => {
+              setDidRemoteImageFail(true);
+              setIsRemoteImageLoading(false);
+            }}
+            onLoadEnd={() => setIsRemoteImageLoading(false)}
+            onLoadStart={() => setIsRemoteImageLoading(true)}
             source={{
-              uri: dream.imageUrl ?? dream.thumbnailUrl ?? undefined,
+              uri: displayImageUrl ?? undefined,
             }}
             style={styles.image}
           />
           <View pointerEvents="none" style={styles.imagePaperWash} />
+          {isRemoteImageLoading ? (
+            <View pointerEvents="none" style={styles.imageLoadingOverlay}>
+              <Text
+                style={[
+                  styles.imageLoadingText,
+                  { color: designTheme.secondaryText },
+                ]}
+              >
+                꿈카드 이미지를 불러오는 중
+              </Text>
+            </View>
+          ) : null}
         </>
+      ) : displayImageUrl && didRemoteImageFail ? (
+        <View
+          style={[
+            styles.placeholder,
+            { backgroundColor: designTheme.placeholder },
+          ]}
+        >
+          <View
+            style={[styles.placeholderStamp, { borderColor: frameBorderColor }]}
+          />
+          <Text
+            style={[
+              styles.failureText,
+              { color: designTheme.accent, fontFamily: frontTitleFamily },
+            ]}
+          >
+            이미지를 불러오지 못했어요
+          </Text>
+        </View>
       ) : isImageGenerating ? (
         <DreamGenerationAnimation
           compact
@@ -1064,6 +1115,23 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: 'rgba(255, 247, 230, 0.22)',
     borderWidth: 0,
+  },
+  imageLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 252, 245, 0.74)',
+  },
+  imageLoadingText: {
+    paddingHorizontal: 10,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
   },
   placeholder: {
     flex: 1,

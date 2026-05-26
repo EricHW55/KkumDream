@@ -661,6 +661,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lavenderTint,
     borderWidth: 1,
     borderColor: colors.primaryLight,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 9,
+    elevation: 3,
   },
   addRoomIcon: {
     width: 46,
@@ -698,6 +703,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.divider,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.085,
+    shadowRadius: 10,
+    elevation: 3,
   },
   roomText: {
     flex: 1,

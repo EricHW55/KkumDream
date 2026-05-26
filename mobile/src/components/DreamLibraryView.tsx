@@ -28,6 +28,7 @@ import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
+import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
 
 type LibraryMode = 'archive' | 'calendar';
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -38,6 +39,8 @@ type Props = {
   calendarLabel: string;
   emptyMessage: string;
   dreams: Dream[];
+  isLoading?: boolean;
+  isRefreshing?: boolean;
 };
 
 type DateGroup = {
@@ -54,6 +57,10 @@ type CalendarCell = {
 const monthNumbers = Array.from({ length: 12 }, (_, index) => index + 1);
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+const EMPTY_DREAMS: Dream[] = [];
+const INITIAL_ARCHIVE_RENDER_COUNT = 6;
+const ARCHIVE_RENDER_BATCH_SIZE = 6;
+const ARCHIVE_RENDER_BATCH_DELAY_MS = 90;
 
 export function DreamLibraryView({
   title,
@@ -61,6 +68,8 @@ export function DreamLibraryView({
   calendarLabel,
   emptyMessage,
   dreams,
+  isLoading = false,
+  isRefreshing = false,
 }: Props) {
   const navigation = useNavigation<Navigation>();
   const { width } = useWindowDimensions();
@@ -76,6 +85,9 @@ export function DreamLibraryView({
   );
   const [multiDreamDateGroup, setMultiDreamDateGroup] =
     useState<DateGroup | null>(null);
+  const [visibleArchiveCount, setVisibleArchiveCount] = useState(
+    INITIAL_ARCHIVE_RENDER_COUNT,
+  );
   const previewPanResponder = useMemo(
     () =>
       PanResponder.create({
@@ -89,9 +101,14 @@ export function DreamLibraryView({
       }),
     [],
   );
+  const calendarDreams = mode === 'calendar' ? dreams : EMPTY_DREAMS;
+  const archiveDreams = useMemo(
+    () => dreams.slice(0, Math.min(visibleArchiveCount, dreams.length)),
+    [dreams, visibleArchiveCount],
+  );
   const groupedDreams = useMemo(
-    () => groupDreamsByDate(dreams, calendarLabel),
-    [calendarLabel, dreams],
+    () => groupDreamsByDate(calendarDreams, calendarLabel),
+    [calendarDreams, calendarLabel],
   );
   const groupedDreamMap = useMemo(
     () => new Map(groupedDreams.map(group => [group.dateKey, group])),
@@ -115,6 +132,10 @@ export function DreamLibraryView({
   const selectedMonthNumber = Number(visibleCalendarMonthKey.slice(5, 7));
   const archiveColumnGap = 10;
   const archiveCardWidth = Math.floor((width - 40 - archiveColumnGap * 2) / 3);
+  const archiveCardHeight = Math.round(
+    archiveCardWidth / DREAM_CARD_ASPECT_RATIO,
+  );
+  const archiveRowHeight = archiveCardHeight + 12;
   const calendarCellSize = Math.max(
     40,
     Math.min(62, Math.floor((width - 72) / 7)),
@@ -144,6 +165,46 @@ export function DreamLibraryView({
       currentKeys.filter(key => key.startsWith(`${visibleCalendarMonthKey}-`)),
     );
   }, [visibleCalendarMonthKey]);
+
+  useEffect(() => {
+    if (dreams.length <= INITIAL_ARCHIVE_RENDER_COUNT) {
+      setVisibleArchiveCount(INITIAL_ARCHIVE_RENDER_COUNT);
+      return undefined;
+    }
+
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let isCancelled = false;
+    setVisibleArchiveCount(INITIAL_ARCHIVE_RENDER_COUNT);
+
+    const revealNextBatch = () => {
+      if (isCancelled) {
+        return;
+      }
+
+      setVisibleArchiveCount(currentCount => {
+        const nextCount = Math.min(
+          currentCount + ARCHIVE_RENDER_BATCH_SIZE,
+          dreams.length,
+        );
+        if (nextCount < dreams.length) {
+          timeout = setTimeout(
+            revealNextBatch,
+            ARCHIVE_RENDER_BATCH_DELAY_MS,
+          );
+        }
+        return nextCount;
+      });
+    };
+
+    timeout = setTimeout(revealNextBatch, ARCHIVE_RENDER_BATCH_DELAY_MS);
+
+    return () => {
+      isCancelled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
+  }, [dreams]);
 
   const onPressCalendarDate = (dateKey: string) => {
     const group = groupedDreamMap.get(dateKey);
@@ -224,18 +285,38 @@ export function DreamLibraryView({
         </Pressable>
       </View>
 
-      {mode === 'archive' ? (
+      {mode === 'archive' && isLoading ? (
+        <DreamLibraryLoadingState cardWidth={archiveCardWidth} />
+      ) : mode === 'archive' ? (
         <FlatList
-          data={dreams}
+          data={archiveDreams}
+          getItemLayout={(_, index) => ({
+            length: archiveRowHeight,
+            offset: archiveRowHeight * Math.floor(index / 3),
+            index,
+          })}
+          initialNumToRender={6}
           keyExtractor={item => item.id}
+          maxToRenderPerBatch={6}
           numColumns={3}
+          refreshing={isRefreshing && dreams.length === 0}
+          removeClippedSubviews
           showsVerticalScrollIndicator={false}
+          updateCellsBatchingPeriod={60}
+          windowSize={5}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={[
             styles.archiveGrid,
             dreams.length === 0 && styles.emptyArchiveGrid,
           ]}
           ListEmptyComponent={<EmptyDreamState message={emptyMessage} />}
+          ListFooterComponent={
+            dreams.length > archiveDreams.length ? (
+              <Text style={styles.archiveLoadingMoreText}>
+                꿈카드를 더 불러오는 중이에요.
+              </Text>
+            ) : null
+          }
           renderItem={({ item }) => (
             <MiniDreamCard
               dream={item}
@@ -625,6 +706,36 @@ function EmptyDreamState({ message }: { message: string }) {
   );
 }
 
+function DreamLibraryLoadingState({ cardWidth }: { cardWidth: number }) {
+  return (
+    <View style={styles.loadingState}>
+      <Text style={styles.loadingText}>꿈카드 정보를 받아오고 있어요.</Text>
+      <View style={styles.loadingGrid}>
+        {Array.from({ length: 6 }, (_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.loadingCard,
+              {
+                width: cardWidth,
+                height: Math.round(cardWidth / DREAM_CARD_ASPECT_RATIO),
+              },
+            ]}
+          >
+            <View style={styles.loadingImageBlock} />
+            <View style={styles.loadingLineStrong} />
+            <View style={styles.loadingLine} />
+            <View style={styles.loadingPillRow}>
+              <View style={styles.loadingPill} />
+              <View style={styles.loadingPill} />
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function MiniDreamCard({
   dream,
   width,
@@ -639,6 +750,7 @@ function MiniDreamCard({
       disableFlip
       dream={dream}
       onPress={onPress}
+      preferThumbnail
       showImageActions={false}
       width={width}
     />
@@ -817,6 +929,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
+  archiveLoadingMoreText: {
+    marginTop: 4,
+    marginBottom: 16,
+    textAlign: 'center',
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 13,
+    includeFontPadding: false,
+  },
   emptyDreamBox: {
     borderRadius: 20,
     padding: 18,
@@ -828,6 +950,60 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
     lineHeight: 20,
+  },
+  loadingState: {
+    flex: 1,
+    paddingBottom: 120,
+  },
+  loadingText: {
+    marginBottom: 14,
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 14,
+    includeFontPadding: false,
+  },
+  loadingGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  loadingCard: {
+    borderRadius: 8,
+    padding: 7,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: 'rgba(216, 205, 187, 0.7)',
+  },
+  loadingImageBlock: {
+    height: '52%',
+    borderRadius: 7,
+    backgroundColor: colors.lavenderMist,
+  },
+  loadingLineStrong: {
+    width: '76%',
+    height: 7,
+    borderRadius: 999,
+    marginTop: 9,
+    backgroundColor: '#E5DCCF',
+  },
+  loadingLine: {
+    width: '58%',
+    height: 5,
+    borderRadius: 999,
+    marginTop: 7,
+    backgroundColor: '#EEE6DA',
+  },
+  loadingPillRow: {
+    flexDirection: 'row',
+    gap: 5,
+    marginTop: 8,
+  },
+  loadingPill: {
+    width: 24,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: '#F0E7D9',
   },
   gridRow: {
     gap: 10,

@@ -4,6 +4,9 @@ import Svg, {
   Circle,
   ClipPath,
   Defs,
+  FeGaussianBlur,
+  FeOffset,
+  Filter,
   G,
   Image as SvgImage,
   Path,
@@ -31,6 +34,7 @@ export const DREAM_CARD_ASPECT_RATIO = 0.61;
 
 const FRAME_WIDTH = 340;
 const FRAME_HEIGHT = 510;
+const SHADOW_SPREAD = 34;
 const DARK_TEXTURE_LUMINANCE_THRESHOLD = 0.35;
 const paperSpecks = [
   [44, 48, 1.1],
@@ -100,6 +104,8 @@ export function DreamCardFrame({
   const innerPath = getInnerFramePath(frame);
   const accentPath = getAccentFramePath(frame);
   const clipId = `dream-card-frame-${frame}`;
+  const contactShadowId = `${clipId}-contact-shadow`;
+  const softShadowId = `${clipId}-soft-shadow`;
   const textureOpacity = minimal
     ? compact
       ? 0.08
@@ -139,6 +145,16 @@ export function DreamCardFrame({
     : compact
       ? 0.08
       : 0.13;
+  const outerStrokeOpacity = minimal
+    ? compact
+      ? 0.36
+      : 0.48
+    : compact
+      ? 0.32
+      : 0.46;
+  const outerStrokeWidth = compact ? 0.5 : 0.68;
+  const contactShadowOpacity = compact ? 0.08 : 0.1;
+  const softShadowOpacity = compact ? 0.07 : 0.09;
   const isAgedLetterFrame = frame === 'ticket';
   const isDarkTextureBase = isDarkColor(backgroundColor);
   const frameTexture = frame === 'ticket' ? agedLetterPaperTexture : paperTexture;
@@ -168,11 +184,65 @@ export function DreamCardFrame({
       style={[
         styles.root,
         height !== undefined && { height },
-        shadowColor && styles.shadow,
-        shadowColor && { shadowColor },
         style,
       ]}
     >
+      {shadowColor ? (
+        <Svg
+          height="100%"
+          pointerEvents="none"
+          preserveAspectRatio="none"
+          style={styles.shadowSvg}
+          viewBox={`${-SHADOW_SPREAD} ${-SHADOW_SPREAD} ${
+            FRAME_WIDTH + SHADOW_SPREAD * 2
+          } ${FRAME_HEIGHT + SHADOW_SPREAD * 2}`}
+          width="100%"
+        >
+          <Defs>
+            <Filter
+              id={contactShadowId}
+              filterUnits="userSpaceOnUse"
+              height={FRAME_HEIGHT + SHADOW_SPREAD * 2}
+              width={FRAME_WIDTH + SHADOW_SPREAD * 2}
+              x={-SHADOW_SPREAD}
+              y={-SHADOW_SPREAD}
+            >
+              <FeOffset dx={0} dy={compact ? 2 : 3} result="contactOffset" />
+              <FeGaussianBlur
+                in="contactOffset"
+                stdDeviation={compact ? 2.4 : 3.2}
+              />
+            </Filter>
+            <Filter
+              id={softShadowId}
+              filterUnits="userSpaceOnUse"
+              height={FRAME_HEIGHT + SHADOW_SPREAD * 2}
+              width={FRAME_WIDTH + SHADOW_SPREAD * 2}
+              x={-SHADOW_SPREAD}
+              y={-SHADOW_SPREAD}
+            >
+              <FeOffset dx={0} dy={compact ? 7 : 10} result="softOffset" />
+              <FeGaussianBlur
+                in="softOffset"
+                stdDeviation={compact ? 6 : 8.5}
+              />
+            </Filter>
+          </Defs>
+          <Path
+            d={shapePath}
+            filter={`url(#${softShadowId})`}
+            fill={shadowColor}
+            opacity={softShadowOpacity}
+          />
+          <Path
+            d={shapePath}
+            filter={`url(#${contactShadowId})`}
+            fill={shadowColor}
+            opacity={contactShadowOpacity}
+          />
+        </Svg>
+      ) : null}
+
       <Svg
         height="100%"
         pointerEvents="none"
@@ -326,9 +396,10 @@ export function DreamCardFrame({
           fill="none"
           clipRule="evenodd"
           fillRule="evenodd"
+          opacity={outerStrokeOpacity}
           stroke={borderColor}
           strokeLinejoin="round"
-          strokeWidth={compact ? 0.7 : 0.95}
+          strokeWidth={outerStrokeWidth}
         />
         <Path
           d={shapePath}
@@ -638,12 +709,14 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     aspectRatio: DREAM_CARD_ASPECT_RATIO,
+    overflow: 'visible',
   },
-  shadow: {
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+  shadowSvg: {
+    position: 'absolute',
+    top: -SHADOW_SPREAD,
+    right: -SHADOW_SPREAD,
+    bottom: -SHADOW_SPREAD,
+    left: -SHADOW_SPREAD,
   },
   svg: {
     position: 'absolute',

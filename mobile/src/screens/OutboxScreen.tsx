@@ -1,33 +1,85 @@
-import { useQuery } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
+import { InteractionManager } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { DreamLibraryView } from '../components/DreamLibraryView';
 import { Screen } from '../components/Screen';
-import { getCachedOutbox, loadOutbox } from '../data/dreamRepository';
+import {
+  getCachedOutbox,
+  getOutboxCacheUpdatedAt,
+  hasCachedOutbox,
+  loadOutbox,
+} from '../data/dreamRepository';
 import { useSessionStore } from '../store/sessionStore';
 import type { Dream } from '../types/dream';
+
+const DREAM_LIBRARY_STALE_MS = 60 * 1000;
 
 export function OutboxScreen() {
   const token = useSessionStore(state => state.token);
   const userId = useSessionStore(state => state.userId);
+  const queryClient = useQueryClient();
+  const [isLibraryHydrated, setIsLibraryHydrated] = useState(false);
+  const [hasLoadedCache, setHasLoadedCache] = useState(false);
+  const queryKey = useMemo(
+    () => ['dreams', 'outbox', userId, token] as const,
+    [token, userId],
+  );
   const {
-    data: outbox = getCachedOutbox(userId),
+    data: outbox = [],
+    dataUpdatedAt,
+    isFetching,
     refetch: refetchOutbox,
   } = useQuery({
-    queryKey: ['dreams', 'outbox', userId, token],
+    queryKey,
     queryFn: () => loadOutbox(token, userId),
-    initialData: () => getCachedOutbox(userId),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    enabled: isLibraryHydrated,
+    staleTime: DREAM_LIBRARY_STALE_MS,
+    refetchOnMount: false,
     refetchInterval: query =>
       hasPendingImage(query.state.data) ? 5000 : false,
   });
+  const displayedOutbox = isLibraryHydrated ? outbox : [];
 
   useFocusEffect(
     useCallback(() => {
-      refetchOutbox().catch(() => undefined);
-    }, [refetchOutbox]),
+      let isCancelled = false;
+      let animationFrame: number | null = null;
+      setIsLibraryHydrated(false);
+      setHasLoadedCache(false);
+
+      const task = InteractionManager.runAfterInteractions(() => {
+        animationFrame = requestAnimationFrame(() => {
+          if (isCancelled) {
+            return;
+          }
+
+          const cachedAt = getOutboxCacheUpdatedAt(userId);
+          const cachedDreams = getCachedOutbox(userId);
+          const hasCache = hasCachedOutbox(userId);
+          queryClient.setQueryData(queryKey, cachedDreams, {
+            updatedAt: cachedAt || Date.now(),
+          });
+          setHasLoadedCache(hasCache);
+          setIsLibraryHydrated(true);
+
+          if (!hasCache || Date.now() - cachedAt > DREAM_LIBRARY_STALE_MS) {
+            refetchOutbox().catch(() => undefined);
+          }
+        });
+      });
+
+      return () => {
+        isCancelled = true;
+        task.cancel();
+        if (animationFrame !== null) {
+          cancelAnimationFrame(animationFrame);
+        }
+        setIsLibraryHydrated(false);
+        setHasLoadedCache(false);
+      };
+    }, [queryClient, queryKey, refetchOutbox, userId]),
   );
 
   return (
@@ -37,7 +89,12 @@ export function OutboxScreen() {
         description="내가 건넨 꿈카드를 보관함이나 날짜별 캘린더에서 다시 열어볼 수 있어요."
         calendarLabel="보낸 꿈카드"
         emptyMessage="보낸 꿈 카드가 없습니다."
-        dreams={outbox}
+        dreams={displayedOutbox}
+        isLoading={
+          !isLibraryHydrated ||
+          (!hasLoadedCache && displayedOutbox.length === 0 && dataUpdatedAt === 0)
+        }
+        isRefreshing={isFetching}
       />
     </Screen>
   );

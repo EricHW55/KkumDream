@@ -13,7 +13,10 @@ import { mockGroupMessages, mockGroupRooms } from '../mocks/groups';
 import type { Dream } from '../types/dream';
 import type { GroupRoom } from '../types/group';
 import { LOCAL_MOCK_USER_ID } from './currentUser';
-import { readCache, writeCache } from './cache';
+import { getCacheUpdatedAt, hasCache, readCache, writeCache } from './cache';
+
+const DREAM_LIST_CACHE_LIMIT = 60;
+const ALL_DREAM_CACHE_LIMIT = 120;
 
 const CACHE_KEYS = {
   rooms: (userId?: string | null) => scopedKey(userId, 'rooms'),
@@ -88,10 +91,22 @@ export function getCachedInbox(userId?: string | null) {
   return readCache<Dream[]>(CACHE_KEYS.inbox(userId)) ?? getMockInbox(userId);
 }
 
+export function hasCachedInbox(userId?: string | null) {
+  return hasCache(CACHE_KEYS.inbox(userId));
+}
+
+export function getInboxCacheUpdatedAt(userId?: string | null) {
+  return getCacheUpdatedAt(CACHE_KEYS.inbox(userId));
+}
+
 export async function loadInbox(token?: string | null, userId?: string | null) {
   try {
     const dreams = await fetchInbox(token);
-    writeDreamCaches(CACHE_KEYS.inbox(userId), dreams, userId);
+    writeDreamCaches(
+      CACHE_KEYS.inbox(userId),
+      limitDreamCache(dreams, DREAM_LIST_CACHE_LIMIT),
+      userId,
+    );
     return dreams;
   } catch {
     return getCachedInbox(userId);
@@ -102,10 +117,22 @@ export function getCachedOutbox(userId?: string | null) {
   return readCache<Dream[]>(CACHE_KEYS.outbox(userId)) ?? getMockOutbox(userId);
 }
 
+export function hasCachedOutbox(userId?: string | null) {
+  return hasCache(CACHE_KEYS.outbox(userId));
+}
+
+export function getOutboxCacheUpdatedAt(userId?: string | null) {
+  return getCacheUpdatedAt(CACHE_KEYS.outbox(userId));
+}
+
 export async function loadOutbox(token?: string | null, userId?: string | null) {
   try {
     const dreams = await fetchOutbox(token);
-    writeDreamCaches(CACHE_KEYS.outbox(userId), dreams, userId);
+    writeDreamCaches(
+      CACHE_KEYS.outbox(userId),
+      limitDreamCache(dreams, DREAM_LIST_CACHE_LIMIT),
+      userId,
+    );
     return dreams;
   } catch {
     return getCachedOutbox(userId);
@@ -146,7 +173,10 @@ function writeDreamCaches(key: string, dreams: Dream[], userId?: string | null) 
   const cachedDreams = readCache<Dream[]>(CACHE_KEYS.allDreams(userId)) ?? [];
   const merged = new Map(cachedDreams.map(dream => [dream.id, dream]));
   dreams.forEach(dream => merged.set(dream.id, dream));
-  writeCache(CACHE_KEYS.allDreams(userId), Array.from(merged.values()));
+  writeCache(
+    CACHE_KEYS.allDreams(userId),
+    limitDreamCache(Array.from(merged.values()), ALL_DREAM_CACHE_LIMIT),
+  );
 }
 
 function sortDreamsOldestFirst(dreams: Dream[]) {
@@ -155,6 +185,16 @@ function sortDreamsOldestFirst(dreams: Dream[]) {
     const rightTime = new Date(right.givenAt ?? right.createdAt).getTime();
     return leftTime - rightTime;
   });
+}
+
+function limitDreamCache(dreams: Dream[], limit: number) {
+  return [...dreams]
+    .sort((left, right) => {
+      const leftTime = new Date(left.givenAt ?? left.createdAt).getTime();
+      const rightTime = new Date(right.givenAt ?? right.createdAt).getTime();
+      return rightTime - leftTime;
+    })
+    .slice(0, limit);
 }
 
 function toGroupRoom(room: ApiDreamRoom): GroupRoom {

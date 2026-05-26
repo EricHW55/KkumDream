@@ -31,6 +31,9 @@ const TAB_BAR_BASE_HEIGHT = 64;
 const TAB_BAR_TOP_RADIUS = 30;
 const TAB_BAR_BASE_PADDING_BOTTOM = 8;
 const TAB_BAR_SEPARATOR_HEIGHT = 18;
+const TAB_BAR_OUTER_GLOW_HEIGHT = 34;
+const TAB_BAR_OUTER_GLOW_SURFACE_HEIGHT =
+  TAB_BAR_OUTER_GLOW_HEIGHT + TAB_BAR_TOP_RADIUS;
 
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['kkumdream://', 'https://kkumdream.app'],
@@ -97,10 +100,40 @@ function TabBarSeparatorGradient() {
   );
 }
 
+function TabBarOuterGlow() {
+  return (
+    <View pointerEvents="none" style={styles.tabBarOuterGlow}>
+      <Svg
+        pointerEvents="none"
+        preserveAspectRatio="none"
+        width="100%"
+        height={TAB_BAR_OUTER_GLOW_SURFACE_HEIGHT}
+      >
+        <Defs>
+          <LinearGradient id="tabBarOuterGlow" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={colors.primary} stopOpacity={0} />
+            <Stop offset="0.5" stopColor={colors.primary} stopOpacity={0.07} />
+            <Stop offset="1" stopColor={colors.primary} stopOpacity={0.18} />
+          </LinearGradient>
+        </Defs>
+        <Rect
+          x="0"
+          y="0"
+          width="100%"
+          height={TAB_BAR_OUTER_GLOW_SURFACE_HEIGHT}
+          fill="url(#tabBarOuterGlow)"
+        />
+      </Svg>
+    </View>
+  );
+}
+
 function TabBarPaperBackground() {
   return (
     <View pointerEvents="none" style={styles.tabBarBackground}>
       <View style={styles.tabBarBaseFill} />
+      <TabBarOuterGlow />
+      <View style={styles.tabBarShadowShape} />
       <View style={styles.tabBarSurface}>
         <PaperTextureOverlay subtle />
         <TabBarSeparatorGradient />
@@ -134,12 +167,12 @@ function MainTabs() {
           borderTopWidth: 0,
           borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
           borderTopRightRadius: TAB_BAR_TOP_RADIUS,
-          elevation: 8,
+          elevation: 12,
           overflow: 'visible',
           shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 10,
+          shadowOffset: { width: 0, height: -8 },
+          shadowOpacity: 0.16,
+          shadowRadius: 18,
         },
         tabBarLabelStyle: {
           fontFamily: fontFamily.handwritten,
@@ -272,11 +305,31 @@ const styles = StyleSheet.create({
     borderTopRightRadius: TAB_BAR_TOP_RADIUS,
     overflow: 'hidden',
     backgroundColor: colors.cardBase,
+  },
+  tabBarShadowShape: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
+    borderTopRightRadius: TAB_BAR_TOP_RADIUS,
+    backgroundColor: colors.cardBase,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  tabBarOuterGlow: {
+    position: 'absolute',
+    top: -TAB_BAR_OUTER_GLOW_HEIGHT + 4,
+    right: 0,
+    left: 0,
+    height: TAB_BAR_OUTER_GLOW_SURFACE_HEIGHT,
+    borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
+    borderTopRightRadius: TAB_BAR_TOP_RADIUS,
+    overflow: 'hidden',
   },
   tabBarSeparatorGradient: {
     position: 'absolute',
