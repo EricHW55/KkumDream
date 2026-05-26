@@ -539,7 +539,7 @@ function GroupRoomItem({
                         index > 0 && styles.stackedMemberDot,
                       ]}
                     >
-                      <RoomMemberAvatar member={member} size={24} />
+                      <RoomMemberAvatar member={member} size={28} />
                     </View>
                   ))}
                 </View>
@@ -553,7 +553,7 @@ function GroupRoomItem({
                           index > 0 && styles.stackedMemberDot,
                         ]}
                       >
-                        <RoomMemberAvatar member={member} size={24} />
+                        <RoomMemberAvatar member={member} size={28} />
                       </View>
                     ))}
                   </View>
@@ -797,9 +797,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   memberDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardBase,
@@ -808,7 +808,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   stackedMemberDot: {
-    marginLeft: -8,
+    marginLeft: -10,
   },
   roomDivider: {
     width: 1,
