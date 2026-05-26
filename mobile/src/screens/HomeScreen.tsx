@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
   },
   addRoomShell: {
     borderRadius: 24,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.lavenderTint,
     shadowColor: colors.primaryDark,
     shadowOffset: { width: 4, height: 14 },
     shadowOpacity: 0.14,
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   },
   roomItemShell: {
     borderRadius: 28,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.lavenderMist,
     shadowColor: colors.primaryDark,
     shadowOffset: { width: 4, height: 12 },
     shadowOpacity: 0.13,
