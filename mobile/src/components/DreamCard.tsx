@@ -3,6 +3,7 @@ import type { GestureResponderEvent, StyleProp, ViewStyle } from 'react-native';
 import {
   Alert,
   Image,
+  InteractionManager,
   Platform,
   Pressable,
   ScrollView,
@@ -102,6 +103,7 @@ export function DreamCard({
     ? dream.imageUrl
     : null;
   const [didRemoteImageFail, setDidRemoteImageFail] = useState(false);
+  const [canStartFullImageLoad, setCanStartFullImageLoad] = useState(false);
   const [isFullImageReady, setIsFullImageReady] = useState(false);
   const [didFullImageFail, setDidFullImageFail] = useState(false);
   const hasImage = Boolean(displayImageUrl) && !didRemoteImageFail;
@@ -150,8 +152,31 @@ export function DreamCard({
 
   useEffect(() => {
     setDidRemoteImageFail(false);
+    setCanStartFullImageLoad(false);
     setIsFullImageReady(false);
     setDidFullImageFail(false);
+
+    if (!fullImageUrl) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+    let frameId: number | null = null;
+    const task = InteractionManager.runAfterInteractions(() => {
+      frameId = requestAnimationFrame(() => {
+        if (!isCancelled) {
+          setCanStartFullImageLoad(true);
+        }
+      });
+    });
+
+    return () => {
+      isCancelled = true;
+      task.cancel?.();
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+    };
   }, [displayImageUrl, fullImageUrl]);
 
   const flip = () => {
@@ -296,8 +321,9 @@ export function DreamCard({
             }}
             style={styles.image}
           />
-          {fullImageUrl && !didFullImageFail ? (
+          {fullImageUrl && canStartFullImageLoad && !didFullImageFail ? (
             <Image
+              fadeDuration={160}
               onError={() => setDidFullImageFail(true)}
               onLoadEnd={() => setIsFullImageReady(true)}
               source={{ uri: fullImageUrl }}

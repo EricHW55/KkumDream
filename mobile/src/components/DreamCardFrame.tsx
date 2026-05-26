@@ -34,7 +34,7 @@ export const DREAM_CARD_ASPECT_RATIO = 0.61;
 
 const FRAME_WIDTH = 340;
 const FRAME_HEIGHT = 510;
-const SHADOW_SPREAD = 34;
+const SHADOW_SPREAD = 48;
 const PAPER_SHADOW_COLOR = '#3F3124';
 const DARK_TEXTURE_LUMINANCE_THRESHOLD = 0.35;
 const paperSpecks = [
@@ -154,18 +154,18 @@ export function DreamCardFrame({
       ? 0.32
       : 0.46;
   const outerStrokeWidth = compact ? 0.5 : 0.68;
-  const contactShadowOpacity = compact ? 0.09 : 0.12;
-  const softShadowOpacity = compact ? 0.045 : 0.06;
-  const edgeShadowOpacity = compact ? 0.09 : 0.11;
-  const bedShadowOpacity = compact ? 0.045 : 0.055;
-  const contactShadowOffsetX = compact ? 2.5 : 4;
-  const contactShadowOffsetY = compact ? 3 : 5;
-  const softShadowOffsetX = compact ? 7 : 11;
-  const softShadowOffsetY = compact ? 8 : 13;
-  const edgeShadowOffsetX = compact ? 3 : 5;
-  const edgeShadowOffsetY = compact ? 3 : 5;
-  const bedShadowOffsetX = compact ? 6 : 9;
-  const bedShadowOffsetY = compact ? 7 : 11;
+  const contactShadowOpacity = compact ? 0.11 : 0.15;
+  const softShadowOpacity = compact ? 0.055 : 0.075;
+  const edgeShadowOpacity = compact ? 0.1 : 0.13;
+  const bedShadowOpacity = compact ? 0.05 : 0.065;
+  const contactShadowOffsetX = compact ? 5 : 8;
+  const contactShadowOffsetY = compact ? 6 : 10;
+  const softShadowOffsetX = compact ? 12 : 18;
+  const softShadowOffsetY = compact ? 14 : 22;
+  const edgeShadowOffsetX = compact ? 6 : 9;
+  const edgeShadowOffsetY = compact ? 7 : 11;
+  const bedShadowOffsetX = compact ? 10 : 15;
+  const bedShadowOffsetY = compact ? 12 : 18;
   const isAgedLetterFrame = frame === 'ticket';
   const isDarkTextureBase = isDarkColor(backgroundColor);
   const frameTexture = frame === 'ticket' ? agedLetterPaperTexture : paperTexture;
@@ -226,7 +226,7 @@ export function DreamCardFrame({
               />
               <FeGaussianBlur
                 in="contactOffset"
-                stdDeviation={compact ? 2.4 : 3.2}
+                stdDeviation={compact ? 2.2 : 3}
               />
             </Filter>
             <Filter
@@ -244,7 +244,7 @@ export function DreamCardFrame({
               />
               <FeGaussianBlur
                 in="softOffset"
-                stdDeviation={compact ? 6 : 8.5}
+                stdDeviation={compact ? 5 : 7}
               />
             </Filter>
           </Defs>

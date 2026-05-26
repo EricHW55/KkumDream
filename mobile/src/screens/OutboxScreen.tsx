@@ -27,6 +27,7 @@ export function OutboxScreen() {
     () => ['dreams', 'outbox', userId, token] as const,
     [token, userId],
   );
+  const initialCachedAt = getOutboxCacheUpdatedAt(userId);
   const {
     data: outbox = [],
     dataUpdatedAt,
@@ -40,8 +41,11 @@ export function OutboxScreen() {
     refetchOnMount: false,
     refetchInterval: query =>
       hasPendingImage(query.state.data) ? 5000 : false,
+    initialData: () =>
+      hasCachedOutbox(userId) ? getCachedOutbox(userId) : undefined,
+    initialDataUpdatedAt: () => initialCachedAt || undefined,
   });
-  const displayedOutbox = isLibraryHydrated ? outbox : [];
+  const displayedOutbox = outbox;
   const viewModeCacheKey = `${OUTBOX_VIEW_MODE_CACHE_PREFIX}:${
     userId ?? 'local'
   }`;
@@ -50,8 +54,17 @@ export function OutboxScreen() {
     useCallback(() => {
       let isCancelled = false;
       let animationFrame: number | null = null;
-      setIsLibraryHydrated(false);
-      setHasLoadedCache(false);
+
+      const cachedAt = getOutboxCacheUpdatedAt(userId);
+      const cachedDreams = getCachedOutbox(userId);
+      const hasCache = hasCachedOutbox(userId);
+      if (hasCache) {
+        queryClient.setQueryData(queryKey, cachedDreams, {
+          updatedAt: cachedAt || Date.now(),
+        });
+        setHasLoadedCache(true);
+        setIsLibraryHydrated(true);
+      }
 
       const task = InteractionManager.runAfterInteractions(() => {
         animationFrame = requestAnimationFrame(() => {
@@ -59,9 +72,6 @@ export function OutboxScreen() {
             return;
           }
 
-          const cachedAt = getOutboxCacheUpdatedAt(userId);
-          const cachedDreams = getCachedOutbox(userId);
-          const hasCache = hasCachedOutbox(userId);
           queryClient.setQueryData(queryKey, cachedDreams, {
             updatedAt: cachedAt || Date.now(),
           });
@@ -80,8 +90,6 @@ export function OutboxScreen() {
         if (animationFrame !== null) {
           cancelAnimationFrame(animationFrame);
         }
-        setIsLibraryHydrated(false);
-        setHasLoadedCache(false);
       };
     }, [queryClient, queryKey, refetchOutbox, userId]),
   );
@@ -96,8 +104,10 @@ export function OutboxScreen() {
         dreams={displayedOutbox}
         viewModeCacheKey={viewModeCacheKey}
         isLoading={
-          !isLibraryHydrated ||
-          (!hasLoadedCache && displayedOutbox.length === 0 && dataUpdatedAt === 0)
+          !isLibraryHydrated &&
+          !hasLoadedCache &&
+          displayedOutbox.length === 0 &&
+          dataUpdatedAt === 0
         }
         isRefreshing={isFetching}
       />

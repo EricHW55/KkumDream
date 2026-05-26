@@ -26,6 +26,7 @@ export function InboxScreen() {
     () => ['dreams', 'inbox', userId, token] as const,
     [token, userId],
   );
+  const initialCachedAt = getInboxCacheUpdatedAt(userId);
   const {
     data: inbox = [],
     dataUpdatedAt,
@@ -37,8 +38,11 @@ export function InboxScreen() {
     enabled: isLibraryHydrated,
     staleTime: DREAM_LIBRARY_STALE_MS,
     refetchOnMount: false,
+    initialData: () =>
+      hasCachedInbox(userId) ? getCachedInbox(userId) : undefined,
+    initialDataUpdatedAt: () => initialCachedAt || undefined,
   });
-  const displayedInbox = isLibraryHydrated ? inbox : [];
+  const displayedInbox = inbox;
   const viewModeCacheKey = `${INBOX_VIEW_MODE_CACHE_PREFIX}:${
     userId ?? 'local'
   }`;
@@ -47,8 +51,17 @@ export function InboxScreen() {
     useCallback(() => {
       let isCancelled = false;
       let animationFrame: number | null = null;
-      setIsLibraryHydrated(false);
-      setHasLoadedCache(false);
+
+      const cachedAt = getInboxCacheUpdatedAt(userId);
+      const cachedDreams = getCachedInbox(userId);
+      const hasCache = hasCachedInbox(userId);
+      if (hasCache) {
+        queryClient.setQueryData(queryKey, cachedDreams, {
+          updatedAt: cachedAt || Date.now(),
+        });
+        setHasLoadedCache(true);
+        setIsLibraryHydrated(true);
+      }
 
       const task = InteractionManager.runAfterInteractions(() => {
         animationFrame = requestAnimationFrame(() => {
@@ -56,9 +69,6 @@ export function InboxScreen() {
             return;
           }
 
-          const cachedAt = getInboxCacheUpdatedAt(userId);
-          const cachedDreams = getCachedInbox(userId);
-          const hasCache = hasCachedInbox(userId);
           queryClient.setQueryData(queryKey, cachedDreams, {
             updatedAt: cachedAt || Date.now(),
           });
@@ -77,8 +87,6 @@ export function InboxScreen() {
         if (animationFrame !== null) {
           cancelAnimationFrame(animationFrame);
         }
-        setIsLibraryHydrated(false);
-        setHasLoadedCache(false);
       };
     }, [queryClient, queryKey, refetchInbox, userId]),
   );
@@ -93,8 +101,10 @@ export function InboxScreen() {
         dreams={displayedInbox}
         viewModeCacheKey={viewModeCacheKey}
         isLoading={
-          !isLibraryHydrated ||
-          (!hasLoadedCache && displayedInbox.length === 0 && dataUpdatedAt === 0)
+          !isLibraryHydrated &&
+          !hasLoadedCache &&
+          displayedInbox.length === 0 &&
+          dataUpdatedAt === 0
         }
         isRefreshing={isFetching}
       />

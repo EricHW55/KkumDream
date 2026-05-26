@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
+  InteractionManager,
   Modal,
   PanResponder,
   Pressable,
@@ -63,6 +64,7 @@ const EMPTY_DREAMS: Dream[] = [];
 const INITIAL_ARCHIVE_RENDER_COUNT = 6;
 const ARCHIVE_RENDER_BATCH_SIZE = 6;
 const ARCHIVE_RENDER_BATCH_DELAY_MS = 90;
+const THUMBNAIL_PREFETCH_LIMIT = 30;
 const DEFAULT_LIBRARY_MODE: LibraryMode = 'archive';
 
 export function DreamLibraryView({
@@ -165,6 +167,7 @@ export function DreamLibraryView({
     setSelectedDateKeys([]);
     setIsMonthPickerVisible(false);
   };
+
   const updateMode = (nextMode: LibraryMode) => {
     setMode(nextMode);
     if (viewModeCacheKey) {
@@ -175,7 +178,6 @@ export function DreamLibraryView({
   useEffect(() => {
     setMode(readLibraryMode(viewModeCacheKey));
   }, [viewModeCacheKey]);
-
 
   useEffect(() => {
     if (mode !== 'calendar') {
@@ -227,6 +229,43 @@ export function DreamLibraryView({
       if (timeout) {
         clearTimeout(timeout);
       }
+    };
+  }, [dreams]);
+
+  useEffect(() => {
+    const thumbnailUrls = Array.from(
+      new Set(
+        dreams
+          .map(dream => dream.thumbnailUrl)
+          .filter((url): url is string => Boolean(url)),
+      ),
+    ).slice(0, THUMBNAIL_PREFETCH_LIMIT);
+
+    if (thumbnailUrls.length === 0) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+    const task = InteractionManager.runAfterInteractions(() => {
+      thumbnailUrls.reduce<Promise<void>>(
+        (chain, url) =>
+          chain.then(async () => {
+            if (isCancelled) {
+              return;
+            }
+            try {
+              await Image.prefetch(url);
+            } catch {
+              // Prefetch is only an optimization; normal image rendering can retry.
+            }
+          }),
+        Promise.resolve(),
+      );
+    });
+
+    return () => {
+      isCancelled = true;
+      task.cancel?.();
     };
   }, [dreams]);
 
@@ -897,6 +936,7 @@ function formatCalendarLabel(
 function isImagePending(dream: Dream) {
   return dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
 }
+
 function readLibraryMode(cacheKey?: string): LibraryMode {
   if (!cacheKey) {
     return DEFAULT_LIBRARY_MODE;
@@ -907,7 +947,6 @@ function readLibraryMode(cacheKey?: string): LibraryMode {
     ? cachedMode
     : DEFAULT_LIBRARY_MODE;
 }
-
 
 const styles = StyleSheet.create({
   root: {

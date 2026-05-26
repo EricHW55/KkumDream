@@ -31,7 +31,7 @@ const TAB_BAR_BASE_HEIGHT = 64;
 const TAB_BAR_TOP_RADIUS = 30;
 const TAB_BAR_BASE_PADDING_BOTTOM = 8;
 const TAB_BAR_SEPARATOR_HEIGHT = 18;
-const TAB_BAR_OUTER_GLOW_HEIGHT = 34;
+const TAB_BAR_OUTER_GLOW_HEIGHT = 46;
 const TAB_BAR_OUTER_GLOW_SURFACE_HEIGHT =
   TAB_BAR_OUTER_GLOW_HEIGHT + TAB_BAR_TOP_RADIUS;
 
@@ -112,8 +112,9 @@ function TabBarOuterGlow() {
         <Defs>
           <LinearGradient id="tabBarOuterGlow" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={colors.primary} stopOpacity={0} />
-            <Stop offset="0.5" stopColor={colors.primary} stopOpacity={0.07} />
-            <Stop offset="1" stopColor={colors.primary} stopOpacity={0.18} />
+            <Stop offset="0.35" stopColor={colors.primary} stopOpacity={0.08} />
+            <Stop offset="0.72" stopColor={colors.primary} stopOpacity={0.2} />
+            <Stop offset="1" stopColor={colors.primary} stopOpacity={0.28} />
           </LinearGradient>
         </Defs>
         <Rect
@@ -170,9 +171,9 @@ function MainTabs() {
           elevation: 12,
           overflow: 'visible',
           shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: -8 },
-          shadowOpacity: 0.16,
-          shadowRadius: 18,
+          shadowOffset: { width: 0, height: -10 },
+          shadowOpacity: 0.22,
+          shadowRadius: 24,
         },
         tabBarLabelStyle: {
           fontFamily: fontFamily.handwritten,
@@ -321,16 +322,16 @@ const styles = StyleSheet.create({
     borderTopRightRadius: TAB_BAR_TOP_RADIUS,
     backgroundColor: colors.cardBase,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.24,
+    shadowRadius: 26,
+    elevation: 14,
   },
   tabBarOuterGlow: {
     position: 'absolute',
-    top: -TAB_BAR_OUTER_GLOW_HEIGHT + 4,
-    right: 0,
-    left: 0,
+    top: -TAB_BAR_OUTER_GLOW_HEIGHT + 6,
+    right: -22,
+    left: -22,
     height: TAB_BAR_OUTER_GLOW_SURFACE_HEIGHT,
     borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
     borderTopRightRadius: TAB_BAR_TOP_RADIUS,
