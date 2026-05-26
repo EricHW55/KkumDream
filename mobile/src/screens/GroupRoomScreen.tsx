@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -68,39 +68,52 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [roomNameDraft, setRoomNameDraft] = useState('');
   const [roomError, setRoomError] = useState<string | null>(null);
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
-  const [isInviteCollapsed, setIsInviteCollapsed] = useState(() =>
-    readInviteCollapsedState(route.params.groupId, sessionUserId),
-  );
+  const [isInviteCollapsed, setIsInviteCollapsed] = useState(true);
+  const [isRoomContentHydrated, setIsRoomContentHydrated] = useState(false);
+  const [isRoomTimelineReady, setIsRoomTimelineReady] = useState(false);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
-  const roomsQueryKey = ['rooms', sessionUserId, token] as const;
-  const { data: rooms = getCachedRooms(sessionUserId), refetch: refetchRooms } =
-    useQuery({
-      queryKey: roomsQueryKey,
-      queryFn: () => loadRooms(token, sessionUserId),
-      initialData: () => getCachedRooms(sessionUserId),
-      staleTime: 0,
-      refetchOnMount: 'always',
-    });
+  const roomsQueryKey = useMemo(
+    () => ['rooms', sessionUserId, token] as const,
+    [sessionUserId, token],
+  );
+  const dreamsQueryKey = useMemo(
+    () =>
+      ['rooms', route.params.groupId, 'dreams', sessionUserId, token] as const,
+    [route.params.groupId, sessionUserId, token],
+  );
+  const { data: rooms = [], refetch: refetchRooms } = useQuery({
+    queryKey: roomsQueryKey,
+    queryFn: () => loadRooms(token, sessionUserId),
+    enabled: isRoomContentHydrated,
+    staleTime: 0,
+    refetchOnMount: false,
+  });
   const cachedRoom = rooms.find(item => item.id === route.params.groupId);
   const room = roomOverride ?? cachedRoom;
   const title = room?.name ?? route.params.groupName ?? '꿈방';
   const description =
     room?.description ??
     route.params.description ??
-    '아직 주고받은 꿈카드가 없습니다';
+    '오늘 꿈카드 0개';
   const {
-    data: dreams = getCachedRoomDreams(route.params.groupId, sessionUserId),
+    data: dreams = [],
     refetch: refetchDreams,
   } = useQuery({
-    queryKey: ['rooms', route.params.groupId, 'dreams', sessionUserId, token],
+    queryKey: dreamsQueryKey,
     queryFn: () => loadRoomDreams(route.params.groupId, token, sessionUserId),
-    initialData: () => getCachedRoomDreams(route.params.groupId, sessionUserId),
+    enabled: isRoomContentHydrated,
     staleTime: 0,
-    refetchOnMount: 'always',
+    refetchOnMount: false,
     refetchInterval: query =>
       hasPendingImage(query.state.data) ? 5000 : false,
   });
+  const visibleDreams = isRoomContentHydrated ? dreams : [];
+  const shouldHideTimeline = visibleDreams.length > 0 && !isRoomTimelineReady;
+  const shouldShowTimelineLoading =
+    !isRoomContentHydrated ||
+    shouldHideTimeline ||
+    (visibleDreams.length === 0 && !isRoomTimelineReady);
   const members =
     (room?.members ?? []).length > 0
       ? room?.members ?? []
@@ -116,7 +129,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   }, []);
 
   const scrollToLatestDream = useCallback(() => {
-    if (dreams.length === 0) {
+    if (visibleDreams.length === 0) {
       clearScrollRetryTimers();
       return;
     }
@@ -143,33 +156,107 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       const timer = setTimeout(scrollToEnd, 80);
       scrollRetryTimersRef.current.push(timer);
     });
-  }, [clearScrollRetryTimers, dreams.length]);
+  }, [clearScrollRetryTimers, visibleDreams.length]);
+
+  const revealTimelineAtBottom = useCallback(() => {
+    if (visibleDreams.length === 0 || isRoomTimelineReady) {
+      return;
+    }
+
+    const scrollToEnd = () => {
+      dreamListRef.current?.scrollToEnd({ animated: false });
+    };
+
+    scrollToEnd();
+    requestAnimationFrame(() => {
+      scrollToEnd();
+      requestAnimationFrame(() => {
+        scrollToEnd();
+        setIsRoomTimelineReady(true);
+        shouldScrollToLatestRef.current = true;
+      });
+    });
+  }, [isRoomTimelineReady, visibleDreams.length]);
 
   useEffect(() => clearScrollRetryTimers, [clearScrollRetryTimers]);
 
   useEffect(() => {
-    setIsInviteCollapsed(
-      readInviteCollapsedState(route.params.groupId, sessionUserId),
-    );
-  }, [route.params.groupId, sessionUserId]);
-
-  useEffect(() => {
-    shouldScrollToLatestRef.current = dreams.length > 0;
+    shouldScrollToLatestRef.current = visibleDreams.length > 0;
     scrollToLatestDream();
-  }, [dreams.length, route.params.groupId, scrollToLatestDream]);
+  }, [route.params.groupId, scrollToLatestDream, visibleDreams.length]);
 
   useFocusEffect(
     useCallback(() => {
-      shouldScrollToLatestRef.current = dreams.length > 0;
-      scrollToLatestDream();
-      refetchRooms().catch(() => undefined);
-      refetchDreams()
-        .then(() => {
-          shouldScrollToLatestRef.current = true;
-          scrollToLatestDream();
-        })
-        .catch(() => undefined);
-    }, [dreams.length, refetchDreams, refetchRooms, scrollToLatestDream]),
+      let isCancelled = false;
+      let animationFrame: number | null = null;
+      setIsRoomContentHydrated(false);
+      setIsRoomTimelineReady(false);
+      setIsInviteCollapsed(true);
+      shouldScrollToLatestRef.current = false;
+      clearScrollRetryTimers();
+
+      const task = InteractionManager.runAfterInteractions(() => {
+        animationFrame = requestAnimationFrame(() => {
+          if (isCancelled) {
+            return;
+          }
+
+          const cachedRooms = getCachedRooms(sessionUserId);
+          const cachedDreams = getCachedRoomDreams(
+            route.params.groupId,
+            sessionUserId,
+          );
+          queryClient.setQueryData(roomsQueryKey, cachedRooms);
+          queryClient.setQueryData(dreamsQueryKey, cachedDreams);
+          setIsInviteCollapsed(
+            readInviteCollapsedState(route.params.groupId, sessionUserId),
+          );
+          setIsRoomContentHydrated(true);
+          shouldScrollToLatestRef.current = cachedDreams.length > 0;
+
+          refetchRooms().catch(() => undefined);
+          refetchDreams()
+            .then(result => {
+              if (isCancelled) {
+                return;
+              }
+
+              const nextDreams = result.data ?? [];
+              shouldScrollToLatestRef.current = nextDreams.length > 0;
+              if (nextDreams.length === 0) {
+                setIsRoomTimelineReady(true);
+              }
+            })
+            .catch(() => {
+              if (!isCancelled && cachedDreams.length === 0) {
+                setIsRoomTimelineReady(true);
+              }
+            });
+        });
+      });
+
+      return () => {
+        isCancelled = true;
+        task.cancel();
+        if (animationFrame !== null) {
+          cancelAnimationFrame(animationFrame);
+        }
+        setIsRoomContentHydrated(false);
+        setIsRoomTimelineReady(false);
+        setIsInviteCollapsed(true);
+        shouldScrollToLatestRef.current = false;
+        clearScrollRetryTimers();
+      };
+    }, [
+      clearScrollRetryTimers,
+      dreamsQueryKey,
+      queryClient,
+      refetchDreams,
+      refetchRooms,
+      route.params.groupId,
+      roomsQueryKey,
+      sessionUserId,
+    ]),
   );
 
   const openSettings = () => {
@@ -329,56 +416,82 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      <FlatList
-        ref={dreamListRef}
-        data={dreams}
-        keyExtractor={item => item.id}
-        showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => {
-          if (!shouldScrollToLatestRef.current) {
-            return;
-          }
-          scrollToLatestDream();
-        }}
-        onLayout={() => {
-          if (shouldScrollToLatestRef.current) {
+      <View style={styles.timelineContainer}>
+        <FlatList
+          ref={dreamListRef}
+          data={visibleDreams}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          style={[
+            styles.timelineList,
+            shouldHideTimeline && styles.timelineHidden,
+          ]}
+          onContentSizeChange={() => {
+            if (shouldHideTimeline) {
+              revealTimelineAtBottom();
+              return;
+            }
+            if (!shouldScrollToLatestRef.current) {
+              return;
+            }
             scrollToLatestDream();
+          }}
+          onLayout={() => {
+            if (shouldHideTimeline) {
+              revealTimelineAtBottom();
+              return;
+            }
+            if (shouldScrollToLatestRef.current) {
+              scrollToLatestDream();
+            }
+          }}
+          onScrollBeginDrag={() => {
+            shouldScrollToLatestRef.current = false;
+            clearScrollRetryTimers();
+          }}
+          contentContainerStyle={[
+            styles.messages,
+            visibleDreams.length === 0 && styles.emptyMessages,
+          ]}
+          ListEmptyComponent={
+            shouldShowTimelineLoading ? (
+              <DreamRoomLoadingState />
+            ) : (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyTitle}>첫 꿈카드를 기다리는 중</Text>
+                <Text style={styles.emptyText}>
+                  아래 메시지 창에서 짧은 인사를 함께 남길 수 있어요.
+                </Text>
+              </View>
+            )
           }
-        }}
-        onScrollBeginDrag={() => {
-          shouldScrollToLatestRef.current = false;
-          clearScrollRetryTimers();
-        }}
-        contentContainerStyle={[
-          styles.messages,
-          dreams.length === 0 && styles.emptyMessages,
-        ]}
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>첫 꿈카드를 기다리는 중</Text>
-            <Text style={styles.emptyText}>
-              아래 메시지 창에서 짧은 인사를 함께 남길 수 있어요.
-            </Text>
+          ListHeaderComponent={
+            visibleDreams.length > 0 ? (
+              <Text style={styles.dateDivider}>오늘</Text>
+            ) : null
+          }
+          ListFooterComponent={
+            visibleDreams.length > 0 ? (
+              <View style={{ height: insets.bottom + 22 }} />
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <DreamMessage
+              dream={item}
+              isRoomTimelineReady={isRoomTimelineReady}
+              members={members}
+              onPress={() =>
+                navigation.navigate('DreamDetail', { dream: item })
+              }
+            />
+          )}
+        />
+        {shouldHideTimeline ? (
+          <View pointerEvents="none" style={styles.timelineLoadingOverlay}>
+            <DreamRoomLoadingState />
           </View>
-        }
-        ListHeaderComponent={
-          dreams.length > 0 ? (
-            <Text style={styles.dateDivider}>오늘</Text>
-          ) : null
-        }
-        ListFooterComponent={
-          dreams.length > 0 ? (
-            <View style={{ height: insets.bottom + 22 }} />
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <DreamMessage
-            dream={item}
-            members={members}
-            onPress={() => navigation.navigate('DreamDetail', { dream: item })}
-          />
-        )}
-      />
+        ) : null}
+      </View>
 
       <View
         pointerEvents="box-none"
@@ -558,12 +671,24 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   );
 }
 
+function DreamRoomLoadingState() {
+  return (
+    <View style={styles.loadingConversation}>
+      <Text style={styles.loadingConversationText}>
+        꿈방 대화를 불러오고 있어요.
+      </Text>
+    </View>
+  );
+}
+
 function DreamMessage({
   dream,
+  isRoomTimelineReady,
   members,
   onPress,
 }: {
   dream: Dream;
+  isRoomTimelineReady: boolean;
   members: GroupMember[];
   onPress: () => void;
 }) {
@@ -587,7 +712,9 @@ function DreamMessage({
           <DreamCard
             disableFlip
             dream={dream}
+            loadFullImageProgressively={isRoomTimelineReady}
             onPress={onPress}
+            preferThumbnail={!isRoomTimelineReady}
             showImageActions={false}
             width={cardWidth}
           />
@@ -842,6 +969,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     includeFontPadding: false,
   },
+  timelineContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  timelineList: {
+    flex: 1,
+  },
+  timelineHidden: {
+    opacity: 0,
+  },
+  timelineLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   infoLabel: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
@@ -988,6 +1134,19 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontSize: 14,
     lineHeight: 21,
+  },
+  loadingConversation: {
+    flex: 1,
+    minHeight: 280,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingConversationText: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 14,
+    includeFontPadding: false,
   },
   modalBackdrop: {
     flex: 1,

@@ -43,6 +43,7 @@ type Props = {
   onPress?: () => void;
   onBackOpen?: () => void;
   preferThumbnail?: boolean;
+  loadFullImageProgressively?: boolean;
   showImageActions?: boolean;
 };
 
@@ -54,6 +55,7 @@ export function DreamCard({
   onPress,
   onBackOpen,
   preferThumbnail = false,
+  loadFullImageProgressively = false,
   showImageActions = true,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
@@ -83,13 +85,24 @@ export function DreamCard({
     : dream.receiverLabel ?? '받는 사람 미정';
 
   const imageUrl = dream.imageUrl ?? dream.thumbnailUrl;
+  const shouldLoadFullImageProgressively = Boolean(
+    loadFullImageProgressively &&
+      !preferThumbnail &&
+      dream.thumbnailUrl &&
+      dream.imageUrl &&
+      dream.thumbnailUrl !== dream.imageUrl,
+  );
   const displayImageUrl = preferThumbnail
     ? dream.thumbnailUrl ?? dream.imageUrl
-    : dream.imageUrl ?? dream.thumbnailUrl;
-  const [isRemoteImageLoading, setIsRemoteImageLoading] = useState(
-    Boolean(displayImageUrl),
-  );
+    : shouldLoadFullImageProgressively
+      ? dream.thumbnailUrl
+      : dream.imageUrl ?? dream.thumbnailUrl;
+  const fullImageUrl = shouldLoadFullImageProgressively
+    ? dream.imageUrl
+    : null;
   const [didRemoteImageFail, setDidRemoteImageFail] = useState(false);
+  const [isFullImageReady, setIsFullImageReady] = useState(false);
+  const [didFullImageFail, setDidFullImageFail] = useState(false);
   const hasImage = Boolean(displayImageUrl) && !didRemoteImageFail;
   const isImageGenerating =
     dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
@@ -136,8 +149,9 @@ export function DreamCard({
 
   useEffect(() => {
     setDidRemoteImageFail(false);
-    setIsRemoteImageLoading(Boolean(displayImageUrl));
-  }, [displayImageUrl]);
+    setIsFullImageReady(false);
+    setDidFullImageFail(false);
+  }, [displayImageUrl, fullImageUrl]);
 
   const flip = () => {
     if (disableFlip) {
@@ -275,27 +289,27 @@ export function DreamCard({
           <Image
             onError={() => {
               setDidRemoteImageFail(true);
-              setIsRemoteImageLoading(false);
             }}
-            onLoadEnd={() => setIsRemoteImageLoading(false)}
-            onLoadStart={() => setIsRemoteImageLoading(true)}
             source={{
               uri: displayImageUrl ?? undefined,
             }}
             style={styles.image}
           />
-          <View pointerEvents="none" style={styles.imagePaperWash} />
-          {isRemoteImageLoading ? (
-            <View pointerEvents="none" style={styles.imageLoadingOverlay}>
-              <Text
-                style={[
-                  styles.imageLoadingText,
-                  { color: designTheme.secondaryText },
-                ]}
-              >
-                꿈카드 이미지를 불러오는 중
-              </Text>
-            </View>
+          {fullImageUrl && !didFullImageFail ? (
+            <Image
+              onError={() => setDidFullImageFail(true)}
+              onLoadEnd={() => setIsFullImageReady(true)}
+              source={{ uri: fullImageUrl }}
+              style={[
+                styles.image,
+                styles.fullImageLayer,
+                !isFullImageReady && styles.fullImageLayerHidden,
+              ]}
+            />
+          ) : null}
+          {!preferThumbnail &&
+          (!shouldLoadFullImageProgressively || isFullImageReady) ? (
+            <View pointerEvents="none" style={styles.imagePaperWash} />
           ) : null}
         </>
       ) : displayImageUrl && didRemoteImageFail ? (
@@ -1107,6 +1121,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  fullImageLayer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  fullImageLayerHidden: {
+    opacity: 0,
+  },
   imagePaperWash: {
     position: 'absolute',
     top: 0,
@@ -1115,23 +1139,6 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: 'rgba(255, 247, 230, 0.22)',
     borderWidth: 0,
-  },
-  imageLoadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 252, 245, 0.74)',
-  },
-  imageLoadingText: {
-    paddingHorizontal: 10,
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '700',
-    includeFontPadding: false,
   },
   placeholder: {
     flex: 1,
