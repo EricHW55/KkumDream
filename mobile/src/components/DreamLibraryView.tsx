@@ -73,7 +73,7 @@ export function DreamLibraryView({
 }: Props) {
   const navigation = useNavigation<Navigation>();
   const { width } = useWindowDimensions();
-  const [mode, setMode] = useState<LibraryMode>('archive');
+  const [mode, setMode] = useState<LibraryMode>('calendar');
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null);
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([]);
   const [selectedCalendarMonthKey, setSelectedCalendarMonthKey] = useState<
@@ -161,10 +161,17 @@ export function DreamLibraryView({
   };
 
   useEffect(() => {
-    setSelectedDateKeys(currentKeys =>
-      currentKeys.filter(key => key.startsWith(`${visibleCalendarMonthKey}-`)),
+    if (mode !== 'calendar') {
+      setSelectedDateKeys([]);
+      return;
+    }
+
+    setSelectedDateKeys(
+      groupedDreams
+        .filter(group => group.dateKey.startsWith(`${visibleCalendarMonthKey}-`))
+        .map(group => group.dateKey),
     );
-  }, [visibleCalendarMonthKey]);
+  }, [groupedDreams, mode, visibleCalendarMonthKey]);
 
   useEffect(() => {
     if (dreams.length <= INITIAL_ARCHIVE_RENDER_COUNT) {

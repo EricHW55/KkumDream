@@ -59,6 +59,8 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const sessionUserId = useSessionStore(state => state.userId);
   const dreamListRef = useRef<FlatList<Dream>>(null);
   const shouldScrollToLatestRef = useRef(false);
+  const savedScrollOffsetRef = useRef(0);
+  const pendingScrollRestoreOffsetRef = useRef<number | null>(null);
   const scrollRetryTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const [roomOverride, setRoomOverride] = useState<
     ReturnType<typeof getCachedRooms>[number] | null
@@ -71,6 +73,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [isInviteCollapsed, setIsInviteCollapsed] = useState(true);
   const [isRoomContentHydrated, setIsRoomContentHydrated] = useState(false);
   const [isRoomTimelineReady, setIsRoomTimelineReady] = useState(false);
+  const [isRestoringRoomScroll, setIsRestoringRoomScroll] = useState(false);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const roomsQueryKey = useMemo(
@@ -109,7 +112,10 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       hasPendingImage(query.state.data) ? 5000 : false,
   });
   const visibleDreams = isRoomContentHydrated ? dreams : [];
-  const shouldHideTimeline = visibleDreams.length > 0 && !isRoomTimelineReady;
+  const shouldHideTimeline =
+    visibleDreams.length > 0 &&
+    !isRoomTimelineReady &&
+    !isRestoringRoomScroll;
   const shouldShowTimelineLoading =
     !isRoomContentHydrated ||
     shouldHideTimeline ||
@@ -158,6 +164,41 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     });
   }, [clearScrollRetryTimers, visibleDreams.length]);
 
+  const restoreSavedScrollPosition = useCallback(() => {
+    const offset = pendingScrollRestoreOffsetRef.current;
+    if (offset === null || visibleDreams.length === 0) {
+      return;
+    }
+
+    shouldScrollToLatestRef.current = false;
+    clearScrollRetryTimers();
+
+    const scrollToOffset = () => {
+      dreamListRef.current?.scrollToOffset({
+        animated: false,
+        offset: Math.max(0, offset),
+      });
+    };
+
+    requestAnimationFrame(scrollToOffset);
+    [80, 220, 500, 900].forEach(delay => {
+      const timer = setTimeout(scrollToOffset, delay);
+      scrollRetryTimersRef.current.push(timer);
+    });
+    InteractionManager.runAfterInteractions(() => {
+      scrollToOffset();
+      const timer = setTimeout(scrollToOffset, 80);
+      scrollRetryTimersRef.current.push(timer);
+    });
+    const finishTimer = setTimeout(() => {
+      if (pendingScrollRestoreOffsetRef.current === offset) {
+        pendingScrollRestoreOffsetRef.current = null;
+      }
+      setIsRestoringRoomScroll(false);
+    }, 1000);
+    scrollRetryTimersRef.current.push(finishTimer);
+  }, [clearScrollRetryTimers, visibleDreams.length]);
+
   const revealTimelineAtBottom = useCallback(() => {
     if (visibleDreams.length === 0 || isRoomTimelineReady) {
       return;
@@ -181,16 +222,30 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   useEffect(() => clearScrollRetryTimers, [clearScrollRetryTimers]);
 
   useEffect(() => {
+    if (pendingScrollRestoreOffsetRef.current !== null) {
+      shouldScrollToLatestRef.current = false;
+      restoreSavedScrollPosition();
+      return;
+    }
+
     shouldScrollToLatestRef.current = visibleDreams.length > 0;
     scrollToLatestDream();
-  }, [route.params.groupId, scrollToLatestDream, visibleDreams.length]);
+  }, [
+    restoreSavedScrollPosition,
+    route.params.groupId,
+    scrollToLatestDream,
+    visibleDreams.length,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
       let isCancelled = false;
       let animationFrame: number | null = null;
+      const shouldRestoreScroll =
+        pendingScrollRestoreOffsetRef.current !== null;
       setIsRoomContentHydrated(false);
-      setIsRoomTimelineReady(false);
+      setIsRoomTimelineReady(shouldRestoreScroll);
+      setIsRestoringRoomScroll(shouldRestoreScroll);
       setIsInviteCollapsed(true);
       shouldScrollToLatestRef.current = false;
       clearScrollRetryTimers();
@@ -212,7 +267,11 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             readInviteCollapsedState(route.params.groupId, sessionUserId),
           );
           setIsRoomContentHydrated(true);
-          shouldScrollToLatestRef.current = cachedDreams.length > 0;
+          if (shouldRestoreScroll) {
+            setIsRoomTimelineReady(true);
+          }
+          shouldScrollToLatestRef.current =
+            !shouldRestoreScroll && cachedDreams.length > 0;
 
           refetchRooms().catch(() => undefined);
           refetchDreams()
@@ -222,8 +281,9 @@ export function GroupRoomScreen({ navigation, route }: Props) {
               }
 
               const nextDreams = result.data ?? [];
-              shouldScrollToLatestRef.current = nextDreams.length > 0;
-              if (nextDreams.length === 0) {
+              shouldScrollToLatestRef.current =
+                !shouldRestoreScroll && nextDreams.length > 0;
+              if (shouldRestoreScroll || nextDreams.length === 0) {
                 setIsRoomTimelineReady(true);
               }
             })
@@ -243,6 +303,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         }
         setIsRoomContentHydrated(false);
         setIsRoomTimelineReady(false);
+        setIsRestoringRoomScroll(false);
         setIsInviteCollapsed(true);
         shouldScrollToLatestRef.current = false;
         clearScrollRetryTimers();
@@ -367,6 +428,13 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     );
   };
 
+  const openDreamDetail = (dream: Dream) => {
+    pendingScrollRestoreOffsetRef.current = savedScrollOffsetRef.current;
+    shouldScrollToLatestRef.current = false;
+    clearScrollRetryTimers();
+    navigation.navigate('DreamDetail', { dream });
+  };
+
   return (
     <View style={[styles.root, { paddingTop: Math.max(insets.top + 12, 42) }]}>
       <PaperTextureOverlay />
@@ -427,6 +495,10 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             shouldHideTimeline && styles.timelineHidden,
           ]}
           onContentSizeChange={() => {
+            if (pendingScrollRestoreOffsetRef.current !== null) {
+              restoreSavedScrollPosition();
+              return;
+            }
             if (shouldHideTimeline) {
               revealTimelineAtBottom();
               return;
@@ -437,6 +509,10 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             scrollToLatestDream();
           }}
           onLayout={() => {
+            if (pendingScrollRestoreOffsetRef.current !== null) {
+              restoreSavedScrollPosition();
+              return;
+            }
             if (shouldHideTimeline) {
               revealTimelineAtBottom();
               return;
@@ -446,9 +522,15 @@ export function GroupRoomScreen({ navigation, route }: Props) {
             }
           }}
           onScrollBeginDrag={() => {
+            pendingScrollRestoreOffsetRef.current = null;
+            setIsRestoringRoomScroll(false);
             shouldScrollToLatestRef.current = false;
             clearScrollRetryTimers();
           }}
+          onScroll={event => {
+            savedScrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
           contentContainerStyle={[
             styles.messages,
             visibleDreams.length === 0 && styles.emptyMessages,
@@ -480,9 +562,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
               dream={item}
               isRoomTimelineReady={isRoomTimelineReady}
               members={members}
-              onPress={() =>
-                navigation.navigate('DreamDetail', { dream: item })
-              }
+              onPress={() => openDreamDetail(item)}
             />
           )}
         />
