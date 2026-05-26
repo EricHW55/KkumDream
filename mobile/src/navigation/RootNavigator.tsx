@@ -227,6 +227,11 @@ function RootStack() {
       screenOptions={{
         headerTintColor: colors.textPrimary,
         headerStyle: { backgroundColor: colors.background },
+        headerTitleStyle: {
+          fontFamily: fontFamily.handwritten,
+          fontWeight: '700',
+          fontSize: 22,
+        },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.background },
       }}

@@ -298,7 +298,12 @@ export function DreamDetailScreen({ route }: Props) {
       ]}
     >
       <PaperTextureOverlay />
-      <DreamCard dream={dream} size="full" onBackOpen={onBackOpen} />
+      <DreamCard
+        dream={dream}
+        loadFullImageProgressively
+        onBackOpen={onBackOpen}
+        size="full"
+      />
 
       <View style={styles.reactionBox}>
         <View style={styles.reactionRow}>

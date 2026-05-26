@@ -365,8 +365,7 @@ export function DreamLibraryView({
                   const group = groupedDreamMap.get(cell.dateKey);
                   const isSelected = selectedDateKeys.includes(cell.dateKey);
                   const firstDream = group?.items[0];
-                  const previewImageUrl =
-                    firstDream?.thumbnailUrl ?? firstDream?.imageUrl;
+                  const previewImageUrl = firstDream?.thumbnailUrl;
                   const previewDesign = normalizeDreamDesign(
                     firstDream?.design,
                   );
@@ -592,7 +591,7 @@ export function DreamLibraryView({
               </View>
               <View style={styles.pickerGrid}>
                 {multiDreamDateGroup.items.map(dream => {
-                  const imageUrl = dream.thumbnailUrl ?? dream.imageUrl;
+                  const imageUrl = dream.thumbnailUrl;
                   const design = normalizeDreamDesign(dream.design);
                   const designTheme = CARD_COLOR_THEMES[design.cardColor];
                   return (
@@ -679,7 +678,11 @@ export function DreamLibraryView({
               >
                 <X color={colors.textSecondary} size={18} />
               </Pressable>
-              <DreamCard dream={selectedDream} size="full" />
+              <DreamCard
+                dream={selectedDream}
+                loadFullImageProgressively
+                size="full"
+              />
               <Pressable
                 accessibilityRole="button"
                 onPress={() => openDetail(selectedDream)}
@@ -1023,6 +1026,7 @@ const styles = StyleSheet.create({
   },
   monthTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 18,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1039,6 +1043,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1065,6 +1070,7 @@ const styles = StyleSheet.create({
   },
   dayText: {
     color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1098,6 +1104,7 @@ const styles = StyleSheet.create({
   },
   dayPreviewMood: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 10,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1114,6 +1121,7 @@ const styles = StyleSheet.create({
   },
   dayPreviewDay: {
     color: '#FFFFFF',
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1124,6 +1132,7 @@ const styles = StyleSheet.create({
     bottom: 3,
     textAlign: 'center',
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 11,
     fontWeight: '900',
     includeFontPadding: false,
@@ -1138,6 +1147,7 @@ const styles = StyleSheet.create({
   },
   calendarHintText: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
@@ -1165,6 +1175,7 @@ const styles = StyleSheet.create({
   pickerTitle: {
     flex: 1,
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 17,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1199,6 +1210,7 @@ const styles = StyleSheet.create({
   },
   monthPickerYearText: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 20,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1224,6 +1236,7 @@ const styles = StyleSheet.create({
   },
   monthPickerOptionText: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1274,6 +1287,7 @@ const styles = StyleSheet.create({
   },
   pickerThumbMood: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 12,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1282,6 +1296,7 @@ const styles = StyleSheet.create({
     width: '100%',
     textAlign: 'center',
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 11,
     fontWeight: '700',
     includeFontPadding: false,
@@ -1335,6 +1350,7 @@ const styles = StyleSheet.create({
   },
   detailButtonText: {
     color: colors.primary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 15,
     fontWeight: '700',
     includeFontPadding: false,

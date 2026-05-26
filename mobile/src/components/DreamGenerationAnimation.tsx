@@ -11,6 +11,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 
 import { colors } from '../theme/colors';
+import { fontFamily } from '../theme/typography';
 
 const INK = '#3C3530';
 const MOON_LIGHT = '#FFE08A';
@@ -291,6 +292,7 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 14,
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 18,
     fontWeight: '800',
     includeFontPadding: false,
@@ -302,6 +304,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 8,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 19,

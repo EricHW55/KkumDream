@@ -27,6 +27,7 @@ import {
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
+import { fontFamily } from '../theme/typography';
 import { saveDreamImage, shareDreamImage } from '../native/dreamImageActions';
 import type { Dream } from '../types/dream';
 import { getCachedRooms } from '../data/dreamRepository';
@@ -93,7 +94,7 @@ export function DreamCard({
       dream.thumbnailUrl !== dream.imageUrl,
   );
   const displayImageUrl = preferThumbnail
-    ? dream.thumbnailUrl ?? dream.imageUrl
+    ? dream.thumbnailUrl
     : shouldLoadFullImageProgressively
       ? dream.thumbnailUrl
       : dream.imageUrl ?? dream.thumbnailUrl;
@@ -325,7 +326,7 @@ export function DreamCard({
           <Text
             style={[
               styles.failureText,
-              { color: designTheme.accent, fontFamily: frontTitleFamily },
+              { color: designTheme.accent },
             ]}
           >
             이미지를 불러오지 못했어요
@@ -350,7 +351,7 @@ export function DreamCard({
           <Text
             style={[
               styles.failureText,
-              { color: designTheme.accent, fontFamily: frontTitleFamily },
+              { color: designTheme.accent },
             ]}
           >
             이미지 준비 실패
@@ -358,7 +359,7 @@ export function DreamCard({
           <Text
             style={[
               styles.placeholderHint,
-              { color: designTheme.secondaryText, fontFamily: frontBodyFamily },
+              { color: designTheme.secondaryText },
             ]}
           >
             다시 보내거나 새 카드로 시도해 주세요.
@@ -377,7 +378,7 @@ export function DreamCard({
           <Text
             style={[
               styles.placeholderText,
-              { color: designTheme.accent, fontFamily: frontTitleFamily },
+              { color: designTheme.accent },
             ]}
           >
             {dream.mainMood}
@@ -1158,6 +1159,7 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 30,
     fontWeight: '500',
     includeFontPadding: false,
@@ -1165,6 +1167,7 @@ const styles = StyleSheet.create({
   },
   failureText: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 20,
     fontWeight: '800',
     includeFontPadding: false,
@@ -1173,6 +1176,7 @@ const styles = StyleSheet.create({
   placeholderHint: {
     marginTop: 10,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '600',
     includeFontPadding: false,

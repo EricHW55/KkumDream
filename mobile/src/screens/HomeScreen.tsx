@@ -767,6 +767,7 @@ const styles = StyleSheet.create({
   },
   latestMood: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
@@ -800,6 +801,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 22,
     fontWeight: '700',
     includeFontPadding: false,
@@ -833,6 +835,7 @@ const styles = StyleSheet.create({
   },
   actionTitle: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 17,
     fontWeight: '700',
     includeFontPadding: false,
@@ -840,6 +843,7 @@ const styles = StyleSheet.create({
   actionSubtitle: {
     marginTop: 5,
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 18,
@@ -849,6 +853,7 @@ const styles = StyleSheet.create({
   },
   codeLabel: {
     color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
@@ -872,6 +877,7 @@ const styles = StyleSheet.create({
   },
   inviteCode: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 24,
     fontWeight: '700',
     letterSpacing: 1,
@@ -879,11 +885,13 @@ const styles = StyleSheet.create({
   },
   codeHelp: {
     color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     lineHeight: 20,
   },
   statusText: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
@@ -906,6 +914,7 @@ const styles = StyleSheet.create({
   },
   secondaryActionText: {
     color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
     fontSize: 14,
     fontWeight: '700',
     includeFontPadding: false,
@@ -918,6 +927,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     backgroundColor: colors.cardBase,
     paddingHorizontal: 16,
+    fontFamily: fontFamily.handwritten,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -933,12 +943,14 @@ const styles = StyleSheet.create({
   },
   primaryActionText: {
     color: '#FFFFFF',
+    fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
     includeFontPadding: false,
   },
   errorText: {
     color: colors.error,
+    fontFamily: fontFamily.handwritten,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
