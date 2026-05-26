@@ -35,6 +35,7 @@ export const DREAM_CARD_ASPECT_RATIO = 0.61;
 const FRAME_WIDTH = 340;
 const FRAME_HEIGHT = 510;
 const SHADOW_SPREAD = 34;
+const PAPER_SHADOW_COLOR = '#3F3124';
 const DARK_TEXTURE_LUMINANCE_THRESHOLD = 0.35;
 const paperSpecks = [
   [44, 48, 1.1],
@@ -153,8 +154,18 @@ export function DreamCardFrame({
       ? 0.32
       : 0.46;
   const outerStrokeWidth = compact ? 0.5 : 0.68;
-  const contactShadowOpacity = compact ? 0.08 : 0.1;
-  const softShadowOpacity = compact ? 0.07 : 0.09;
+  const contactShadowOpacity = compact ? 0.09 : 0.12;
+  const softShadowOpacity = compact ? 0.045 : 0.06;
+  const edgeShadowOpacity = compact ? 0.09 : 0.11;
+  const bedShadowOpacity = compact ? 0.045 : 0.055;
+  const contactShadowOffsetX = compact ? 2.5 : 4;
+  const contactShadowOffsetY = compact ? 3 : 5;
+  const softShadowOffsetX = compact ? 7 : 11;
+  const softShadowOffsetY = compact ? 8 : 13;
+  const edgeShadowOffsetX = compact ? 3 : 5;
+  const edgeShadowOffsetY = compact ? 3 : 5;
+  const bedShadowOffsetX = compact ? 6 : 9;
+  const bedShadowOffsetY = compact ? 7 : 11;
   const isAgedLetterFrame = frame === 'ticket';
   const isDarkTextureBase = isDarkColor(backgroundColor);
   const frameTexture = frame === 'ticket' ? agedLetterPaperTexture : paperTexture;
@@ -178,6 +189,7 @@ export function DreamCardFrame({
       : textureOpacity;
   const frameTextureColorWashOpacity =
     isAgedLetterFrame ? (isDarkTextureBase ? 0.18 : 0.3) : 0;
+  const frameShadowColor = shadowColor ? PAPER_SHADOW_COLOR : null;
 
   return (
     <View
@@ -187,7 +199,7 @@ export function DreamCardFrame({
         style,
       ]}
     >
-      {shadowColor ? (
+      {frameShadowColor ? (
         <Svg
           height="100%"
           pointerEvents="none"
@@ -207,7 +219,11 @@ export function DreamCardFrame({
               x={-SHADOW_SPREAD}
               y={-SHADOW_SPREAD}
             >
-              <FeOffset dx={0} dy={compact ? 2 : 3} result="contactOffset" />
+              <FeOffset
+                dx={contactShadowOffsetX}
+                dy={contactShadowOffsetY}
+                result="contactOffset"
+              />
               <FeGaussianBlur
                 in="contactOffset"
                 stdDeviation={compact ? 2.4 : 3.2}
@@ -221,23 +237,43 @@ export function DreamCardFrame({
               x={-SHADOW_SPREAD}
               y={-SHADOW_SPREAD}
             >
-              <FeOffset dx={0} dy={compact ? 7 : 10} result="softOffset" />
+              <FeOffset
+                dx={softShadowOffsetX}
+                dy={softShadowOffsetY}
+                result="softOffset"
+              />
               <FeGaussianBlur
                 in="softOffset"
                 stdDeviation={compact ? 6 : 8.5}
               />
             </Filter>
           </Defs>
+          <G transform={`translate(${bedShadowOffsetX} ${bedShadowOffsetY})`}>
+            <Path
+              d={shapePath}
+              fill={frameShadowColor}
+              opacity={bedShadowOpacity}
+            />
+          </G>
+          <G
+            transform={`translate(${edgeShadowOffsetX} ${edgeShadowOffsetY})`}
+          >
+            <Path
+              d={shapePath}
+              fill={frameShadowColor}
+              opacity={edgeShadowOpacity}
+            />
+          </G>
           <Path
             d={shapePath}
             filter={`url(#${softShadowId})`}
-            fill={shadowColor}
+            fill={frameShadowColor}
             opacity={softShadowOpacity}
           />
           <Path
             d={shapePath}
             filter={`url(#${contactShadowId})`}
-            fill={shadowColor}
+            fill={frameShadowColor}
             opacity={contactShadowOpacity}
           />
         </Svg>

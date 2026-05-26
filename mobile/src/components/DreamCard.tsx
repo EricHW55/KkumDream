@@ -950,28 +950,34 @@ const styles = StyleSheet.create({
   pressable: {
     alignSelf: 'center',
     alignItems: 'center',
+    overflow: 'visible',
   },
   scene: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
   scaledScene: {
     position: 'relative',
+    overflow: 'visible',
   },
   facePressable: {
     flex: 1,
   },
   card: {
     backgroundColor: 'transparent',
+    overflow: 'visible',
   },
   captureTarget: {
     width: '100%',
     height: '100%',
+    overflow: 'visible',
   },
   face: {
     width: '100%',
     backfaceVisibility: 'hidden',
+    overflow: 'visible',
   },
   faceVisible: {
     zIndex: 2,

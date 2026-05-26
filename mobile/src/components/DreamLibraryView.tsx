@@ -21,6 +21,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { readCache, writeCache } from '../data/cache';
 import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
@@ -41,6 +42,7 @@ type Props = {
   dreams: Dream[];
   isLoading?: boolean;
   isRefreshing?: boolean;
+  viewModeCacheKey?: string;
 };
 
 type DateGroup = {
@@ -61,6 +63,7 @@ const EMPTY_DREAMS: Dream[] = [];
 const INITIAL_ARCHIVE_RENDER_COUNT = 6;
 const ARCHIVE_RENDER_BATCH_SIZE = 6;
 const ARCHIVE_RENDER_BATCH_DELAY_MS = 90;
+const DEFAULT_LIBRARY_MODE: LibraryMode = 'archive';
 
 export function DreamLibraryView({
   title,
@@ -70,10 +73,13 @@ export function DreamLibraryView({
   dreams,
   isLoading = false,
   isRefreshing = false,
+  viewModeCacheKey,
 }: Props) {
   const navigation = useNavigation<Navigation>();
   const { width } = useWindowDimensions();
-  const [mode, setMode] = useState<LibraryMode>('calendar');
+  const [mode, setMode] = useState<LibraryMode>(() =>
+    readLibraryMode(viewModeCacheKey),
+  );
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null);
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([]);
   const [selectedCalendarMonthKey, setSelectedCalendarMonthKey] = useState<
@@ -159,6 +165,17 @@ export function DreamLibraryView({
     setSelectedDateKeys([]);
     setIsMonthPickerVisible(false);
   };
+  const updateMode = (nextMode: LibraryMode) => {
+    setMode(nextMode);
+    if (viewModeCacheKey) {
+      writeCache(viewModeCacheKey, nextMode);
+    }
+  };
+
+  useEffect(() => {
+    setMode(readLibraryMode(viewModeCacheKey));
+  }, [viewModeCacheKey]);
+
 
   useEffect(() => {
     if (mode !== 'calendar') {
@@ -248,7 +265,7 @@ export function DreamLibraryView({
       <View style={styles.segmented}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => setMode('archive')}
+          onPress={() => updateMode('archive')}
           style={({ pressed }) => [
             styles.segment,
             mode === 'archive' && styles.segmentActive,
@@ -270,7 +287,7 @@ export function DreamLibraryView({
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          onPress={() => setMode('calendar')}
+          onPress={() => updateMode('calendar')}
           style={({ pressed }) => [
             styles.segment,
             mode === 'calendar' && styles.segmentActive,
@@ -880,6 +897,17 @@ function formatCalendarLabel(
 function isImagePending(dream: Dream) {
   return dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
 }
+function readLibraryMode(cacheKey?: string): LibraryMode {
+  if (!cacheKey) {
+    return DEFAULT_LIBRARY_MODE;
+  }
+
+  const cachedMode = readCache<LibraryMode>(cacheKey);
+  return cachedMode === 'calendar' || cachedMode === 'archive'
+    ? cachedMode
+    : DEFAULT_LIBRARY_MODE;
+}
+
 
 const styles = StyleSheet.create({
   root: {

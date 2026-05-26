@@ -15,6 +15,7 @@ import { useSessionStore } from '../store/sessionStore';
 import type { Dream } from '../types/dream';
 
 const DREAM_LIBRARY_STALE_MS = 60 * 1000;
+const OUTBOX_VIEW_MODE_CACHE_PREFIX = 'ui:dream-library:outbox:view-mode';
 
 export function OutboxScreen() {
   const token = useSessionStore(state => state.token);
@@ -41,6 +42,9 @@ export function OutboxScreen() {
       hasPendingImage(query.state.data) ? 5000 : false,
   });
   const displayedOutbox = isLibraryHydrated ? outbox : [];
+  const viewModeCacheKey = `${OUTBOX_VIEW_MODE_CACHE_PREFIX}:${
+    userId ?? 'local'
+  }`;
 
   useFocusEffect(
     useCallback(() => {
@@ -90,6 +94,7 @@ export function OutboxScreen() {
         calendarLabel="보낸 꿈카드"
         emptyMessage="보낸 꿈 카드가 없습니다."
         dreams={displayedOutbox}
+        viewModeCacheKey={viewModeCacheKey}
         isLoading={
           !isLibraryHydrated ||
           (!hasLoadedCache && displayedOutbox.length === 0 && dataUpdatedAt === 0)

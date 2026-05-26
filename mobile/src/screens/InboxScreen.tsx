@@ -14,6 +14,7 @@ import {
 import { useSessionStore } from '../store/sessionStore';
 
 const DREAM_LIBRARY_STALE_MS = 60 * 1000;
+const INBOX_VIEW_MODE_CACHE_PREFIX = 'ui:dream-library:inbox:view-mode';
 
 export function InboxScreen() {
   const token = useSessionStore(state => state.token);
@@ -38,6 +39,9 @@ export function InboxScreen() {
     refetchOnMount: false,
   });
   const displayedInbox = isLibraryHydrated ? inbox : [];
+  const viewModeCacheKey = `${INBOX_VIEW_MODE_CACHE_PREFIX}:${
+    userId ?? 'local'
+  }`;
 
   useFocusEffect(
     useCallback(() => {
@@ -87,6 +91,7 @@ export function InboxScreen() {
         calendarLabel="받은 꿈카드"
         emptyMessage="받은 꿈 카드가 없습니다."
         dreams={displayedInbox}
+        viewModeCacheKey={viewModeCacheKey}
         isLoading={
           !isLibraryHydrated ||
           (!hasLoadedCache && displayedInbox.length === 0 && dataUpdatedAt === 0)
