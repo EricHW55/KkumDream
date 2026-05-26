@@ -481,6 +481,9 @@ export function HomeScreen() {
   );
 }
 
+const TODAY_GIVERS_PER_ROW = 5;
+const TODAY_GIVERS_MAX_DISPLAY = TODAY_GIVERS_PER_ROW * 2;
+
 function GroupRoomItem({
   room,
   sessionUserId,
@@ -491,9 +494,16 @@ function GroupRoomItem({
   onPress: () => void;
 }) {
   const todayGiverIds = room.todayGiverIds ?? [];
-  const uploaders = todayGiverIds
-    .slice(0, 3)
-    .map(giverId => resolveRoomMember(room, giverId, sessionUserId));
+  const shouldShowGiverStack =
+    todayGiverIds.length > 0 &&
+    todayGiverIds.length <= TODAY_GIVERS_MAX_DISPLAY;
+  const stackUploaders = shouldShowGiverStack
+    ? todayGiverIds.map(giverId =>
+        resolveRoomMember(room, giverId, sessionUserId),
+      )
+    : [];
+  const topRowUploaders = stackUploaders.slice(0, TODAY_GIVERS_PER_ROW);
+  const bottomRowUploaders = stackUploaders.slice(TODAY_GIVERS_PER_ROW);
   const latestGiverId = todayGiverIds[0] ?? null;
   const latestUploader = latestGiverId
     ? resolveRoomMember(room, latestGiverId, sessionUserId)
@@ -517,17 +527,41 @@ function GroupRoomItem({
           </Text>
         </View>
         <View style={styles.roomSide}>
-          <View style={styles.memberStack}>
-            {uploaders.map((member, index) => (
-              <View
-                key={member.id}
-                style={[styles.memberDot, index > 0 && styles.stackedMemberDot]}
-              >
-                <RoomMemberAvatar member={member} size={27} />
+          {shouldShowGiverStack ? (
+            <>
+              <View style={styles.memberStack}>
+                <View style={styles.memberRow}>
+                  {topRowUploaders.map((member, index) => (
+                    <View
+                      key={member.id}
+                      style={[
+                        styles.memberDot,
+                        index > 0 && styles.stackedMemberDot,
+                      ]}
+                    >
+                      <RoomMemberAvatar member={member} size={20} />
+                    </View>
+                  ))}
+                </View>
+                {bottomRowUploaders.length > 0 ? (
+                  <View style={styles.memberRow}>
+                    {bottomRowUploaders.map((member, index) => (
+                      <View
+                        key={member.id}
+                        style={[
+                          styles.memberDot,
+                          index > 0 && styles.stackedMemberDot,
+                        ]}
+                      >
+                        <RoomMemberAvatar member={member} size={20} />
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
-            ))}
-          </View>
-          <View style={styles.roomDivider} />
+              <View style={styles.roomDivider} />
+            </>
+          ) : null}
           {latestUploader ? (
             <View style={styles.latestBadge}>
               <RoomMemberAvatar member={latestUploader} size={36} />
@@ -754,13 +788,18 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   memberStack: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   memberDot: {
-    width: 29,
-    height: 29,
-    borderRadius: 14.5,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardBase,
@@ -769,7 +808,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   stackedMemberDot: {
-    marginLeft: -8,
+    marginLeft: -7,
   },
   roomDivider: {
     width: 1,
