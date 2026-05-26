@@ -158,6 +158,7 @@ function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
+        lazy: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
