@@ -31,26 +31,8 @@ export const DREAM_CARD_ASPECT_RATIO = 0.61;
 
 const FRAME_WIDTH = 340;
 const FRAME_HEIGHT = 510;
-const SHADOW_SPREAD = 56;
 const PAPER_SHADOW_COLOR = '#3F3124';
-
-type ShadowLayer = { dx: number; dy: number; opacity: number };
-
-const SHADOW_LAYERS_DEFAULT: readonly ShadowLayer[] = [
-  { dx: 2, dy: 3, opacity: 0.13 },
-  { dx: 5, dy: 8, opacity: 0.1 },
-  { dx: 9, dy: 14, opacity: 0.075 },
-  { dx: 14, dy: 22, opacity: 0.05 },
-  { dx: 20, dy: 32, opacity: 0.032 },
-];
-
-const SHADOW_LAYERS_COMPACT: readonly ShadowLayer[] = [
-  { dx: 1.5, dy: 2.5, opacity: 0.11 },
-  { dx: 3.5, dy: 6, opacity: 0.085 },
-  { dx: 6, dy: 10, opacity: 0.06 },
-  { dx: 10, dy: 16, opacity: 0.04 },
-  { dx: 14, dy: 22, opacity: 0.025 },
-];
+const SHADOW_BORDER_RADIUS = 18;
 const DARK_TEXTURE_LUMINANCE_THRESHOLD = 0.35;
 const paperSpecks = [
   [44, 48, 1.1],
@@ -167,8 +149,6 @@ export function DreamCardFrame({
       ? 0.32
       : 0.46;
   const outerStrokeWidth = compact ? 0.5 : 0.68;
-  const shadowLayers = compact ? SHADOW_LAYERS_COMPACT : SHADOW_LAYERS_DEFAULT;
-  const shadowLayerOpacityScale = minimal ? 0.78 : 1;
   const isAgedLetterFrame = frame === 'ticket';
   const isDarkTextureBase = isDarkColor(backgroundColor);
   const frameTexture = frame === 'ticket' ? agedLetterPaperTexture : paperTexture;
@@ -203,29 +183,32 @@ export function DreamCardFrame({
       ]}
     >
       {frameShadowColor ? (
-        <Svg
-          height="100%"
-          pointerEvents="none"
-          preserveAspectRatio="none"
-          style={styles.shadowSvg}
-          viewBox={`${-SHADOW_SPREAD} ${-SHADOW_SPREAD} ${
-            FRAME_WIDTH + SHADOW_SPREAD * 2
-          } ${FRAME_HEIGHT + SHADOW_SPREAD * 2}`}
-          width="100%"
-        >
-          {shadowLayers.map(layer => (
-            <G
-              key={`${layer.dx}-${layer.dy}`}
-              transform={`translate(${layer.dx} ${layer.dy})`}
-            >
-              <Path
-                d={shapePath}
-                fill={frameShadowColor}
-                opacity={layer.opacity * shadowLayerOpacityScale}
-              />
-            </G>
-          ))}
-        </Svg>
+        <>
+          <View
+            pointerEvents="none"
+            style={[
+              styles.shadowAmbient,
+              {
+                backgroundColor,
+                borderRadius: SHADOW_BORDER_RADIUS,
+                shadowColor: frameShadowColor,
+                shadowOpacity: compact ? 0.09 : 0.12,
+              },
+            ]}
+          />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.shadowContact,
+              {
+                backgroundColor,
+                borderRadius: SHADOW_BORDER_RADIUS,
+                shadowColor: frameShadowColor,
+                shadowOpacity: compact ? 0.08 : 0.1,
+              },
+            ]}
+          />
+        </>
       ) : null}
 
       <Svg
@@ -696,12 +679,24 @@ const styles = StyleSheet.create({
     aspectRatio: DREAM_CARD_ASPECT_RATIO,
     overflow: 'visible',
   },
-  shadowSvg: {
+  shadowAmbient: {
     position: 'absolute',
-    top: -SHADOW_SPREAD,
-    right: -SHADOW_SPREAD,
-    bottom: -SHADOW_SPREAD,
-    left: -SHADOW_SPREAD,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    shadowOffset: { width: 8, height: 18 },
+    shadowRadius: 22,
+  },
+  shadowContact: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    shadowOffset: { width: 2, height: 5 },
+    shadowRadius: 6,
+    elevation: 9,
   },
   svg: {
     position: 'absolute',
