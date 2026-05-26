@@ -4,9 +4,6 @@ import Svg, {
   Circle,
   ClipPath,
   Defs,
-  FeGaussianBlur,
-  FeOffset,
-  Filter,
   G,
   Image as SvgImage,
   Path,
@@ -34,8 +31,26 @@ export const DREAM_CARD_ASPECT_RATIO = 0.61;
 
 const FRAME_WIDTH = 340;
 const FRAME_HEIGHT = 510;
-const SHADOW_SPREAD = 48;
+const SHADOW_SPREAD = 56;
 const PAPER_SHADOW_COLOR = '#3F3124';
+
+type ShadowLayer = { dx: number; dy: number; opacity: number };
+
+const SHADOW_LAYERS_DEFAULT: readonly ShadowLayer[] = [
+  { dx: 2, dy: 3, opacity: 0.13 },
+  { dx: 5, dy: 8, opacity: 0.1 },
+  { dx: 9, dy: 14, opacity: 0.075 },
+  { dx: 14, dy: 22, opacity: 0.05 },
+  { dx: 20, dy: 32, opacity: 0.032 },
+];
+
+const SHADOW_LAYERS_COMPACT: readonly ShadowLayer[] = [
+  { dx: 1.5, dy: 2.5, opacity: 0.11 },
+  { dx: 3.5, dy: 6, opacity: 0.085 },
+  { dx: 6, dy: 10, opacity: 0.06 },
+  { dx: 10, dy: 16, opacity: 0.04 },
+  { dx: 14, dy: 22, opacity: 0.025 },
+];
 const DARK_TEXTURE_LUMINANCE_THRESHOLD = 0.35;
 const paperSpecks = [
   [44, 48, 1.1],
@@ -105,8 +120,6 @@ export function DreamCardFrame({
   const innerPath = getInnerFramePath(frame);
   const accentPath = getAccentFramePath(frame);
   const clipId = `dream-card-frame-${frame}`;
-  const contactShadowId = `${clipId}-contact-shadow`;
-  const softShadowId = `${clipId}-soft-shadow`;
   const textureOpacity = minimal
     ? compact
       ? 0.08
@@ -154,18 +167,8 @@ export function DreamCardFrame({
       ? 0.32
       : 0.46;
   const outerStrokeWidth = compact ? 0.5 : 0.68;
-  const contactShadowOpacity = compact ? 0.11 : 0.15;
-  const softShadowOpacity = compact ? 0.055 : 0.075;
-  const edgeShadowOpacity = compact ? 0.1 : 0.13;
-  const bedShadowOpacity = compact ? 0.05 : 0.065;
-  const contactShadowOffsetX = compact ? 5 : 8;
-  const contactShadowOffsetY = compact ? 6 : 10;
-  const softShadowOffsetX = compact ? 12 : 18;
-  const softShadowOffsetY = compact ? 14 : 22;
-  const edgeShadowOffsetX = compact ? 6 : 9;
-  const edgeShadowOffsetY = compact ? 7 : 11;
-  const bedShadowOffsetX = compact ? 10 : 15;
-  const bedShadowOffsetY = compact ? 12 : 18;
+  const shadowLayers = compact ? SHADOW_LAYERS_COMPACT : SHADOW_LAYERS_DEFAULT;
+  const shadowLayerOpacityScale = minimal ? 0.78 : 1;
   const isAgedLetterFrame = frame === 'ticket';
   const isDarkTextureBase = isDarkColor(backgroundColor);
   const frameTexture = frame === 'ticket' ? agedLetterPaperTexture : paperTexture;
@@ -210,72 +213,18 @@ export function DreamCardFrame({
           } ${FRAME_HEIGHT + SHADOW_SPREAD * 2}`}
           width="100%"
         >
-          <Defs>
-            <Filter
-              id={contactShadowId}
-              filterUnits="userSpaceOnUse"
-              height={FRAME_HEIGHT + SHADOW_SPREAD * 2}
-              width={FRAME_WIDTH + SHADOW_SPREAD * 2}
-              x={-SHADOW_SPREAD}
-              y={-SHADOW_SPREAD}
+          {shadowLayers.map(layer => (
+            <G
+              key={`${layer.dx}-${layer.dy}`}
+              transform={`translate(${layer.dx} ${layer.dy})`}
             >
-              <FeOffset
-                dx={contactShadowOffsetX}
-                dy={contactShadowOffsetY}
-                result="contactOffset"
+              <Path
+                d={shapePath}
+                fill={frameShadowColor}
+                opacity={layer.opacity * shadowLayerOpacityScale}
               />
-              <FeGaussianBlur
-                in="contactOffset"
-                stdDeviation={compact ? 2.2 : 3}
-              />
-            </Filter>
-            <Filter
-              id={softShadowId}
-              filterUnits="userSpaceOnUse"
-              height={FRAME_HEIGHT + SHADOW_SPREAD * 2}
-              width={FRAME_WIDTH + SHADOW_SPREAD * 2}
-              x={-SHADOW_SPREAD}
-              y={-SHADOW_SPREAD}
-            >
-              <FeOffset
-                dx={softShadowOffsetX}
-                dy={softShadowOffsetY}
-                result="softOffset"
-              />
-              <FeGaussianBlur
-                in="softOffset"
-                stdDeviation={compact ? 5 : 7}
-              />
-            </Filter>
-          </Defs>
-          <G transform={`translate(${bedShadowOffsetX} ${bedShadowOffsetY})`}>
-            <Path
-              d={shapePath}
-              fill={frameShadowColor}
-              opacity={bedShadowOpacity}
-            />
-          </G>
-          <G
-            transform={`translate(${edgeShadowOffsetX} ${edgeShadowOffsetY})`}
-          >
-            <Path
-              d={shapePath}
-              fill={frameShadowColor}
-              opacity={edgeShadowOpacity}
-            />
-          </G>
-          <Path
-            d={shapePath}
-            filter={`url(#${softShadowId})`}
-            fill={frameShadowColor}
-            opacity={softShadowOpacity}
-          />
-          <Path
-            d={shapePath}
-            filter={`url(#${contactShadowId})`}
-            fill={frameShadowColor}
-            opacity={contactShadowOpacity}
-          />
+            </G>
+          ))}
         </Svg>
       ) : null}
 
