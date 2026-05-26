@@ -243,25 +243,27 @@ export function HomeScreen() {
           </View>
         }
         ListFooterComponent={
-          <Pressable
-            accessibilityLabel="꿈방 참가 또는 생성"
-            accessibilityRole="button"
-            onPress={openRoomSheet}
-            style={({ pressed }) => [
-              styles.addRoomFooter,
-              pressed && interactionStyles.pressed,
-            ]}
-          >
-            <View style={styles.addRoomIcon}>
-              <Plus color={colors.primaryDark} size={24} strokeWidth={2.6} />
-            </View>
-            <View style={styles.addRoomText}>
-              <Text style={styles.addRoomTitle}>꿈방 참가 또는 생성</Text>
-              <Text style={styles.addRoomSubtitle}>
-                초대코드로 들어가거나 새 꿈방을 만들 수 있어요.
-              </Text>
-            </View>
-          </Pressable>
+          <View style={styles.addRoomShell}>
+            <Pressable
+              accessibilityLabel="꿈방 참가 또는 생성"
+              accessibilityRole="button"
+              onPress={openRoomSheet}
+              style={({ pressed }) => [
+                styles.addRoomFooter,
+                pressed && interactionStyles.pressed,
+              ]}
+            >
+              <View style={styles.addRoomIcon}>
+                <Plus color={colors.primaryDark} size={24} strokeWidth={2.6} />
+              </View>
+              <View style={styles.addRoomText}>
+                <Text style={styles.addRoomTitle}>꿈방 참가 또는 생성</Text>
+                <Text style={styles.addRoomSubtitle}>
+                  초대코드로 들어가거나 새 꿈방을 만들 수 있어요.
+                </Text>
+              </View>
+            </Pressable>
+          </View>
         }
         renderItem={({ item }) => (
           <GroupRoomItem
@@ -498,44 +500,46 @@ function GroupRoomItem({
     : null;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.roomItem,
-        pressed && interactionStyles.pressedSoft,
-      ]}
-    >
-      <View style={styles.roomText}>
-        <Text style={styles.roomName}>{room.name}</Text>
-        <Text style={styles.roomMeta} numberOfLines={1}>
-          {room.lastActivityLabel ? `${room.lastActivityLabel} · ` : ''}
-          {room.description}
-        </Text>
-      </View>
-      <View style={styles.roomSide}>
-        <View style={styles.memberStack}>
-          {uploaders.map((member, index) => (
-            <View
-              key={member.id}
-              style={[styles.memberDot, index > 0 && styles.stackedMemberDot]}
-            >
-              <RoomMemberAvatar member={member} size={27} />
-            </View>
-          ))}
+    <View style={styles.roomItemShell}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.roomItem,
+          pressed && interactionStyles.pressedSoft,
+        ]}
+      >
+        <View style={styles.roomText}>
+          <Text style={styles.roomName}>{room.name}</Text>
+          <Text style={styles.roomMeta} numberOfLines={1}>
+            {room.lastActivityLabel ? `${room.lastActivityLabel} · ` : ''}
+            {room.description}
+          </Text>
         </View>
-        <View style={styles.roomDivider} />
-        {latestUploader ? (
-          <View style={styles.latestBadge}>
-            <RoomMemberAvatar member={latestUploader} size={36} />
+        <View style={styles.roomSide}>
+          <View style={styles.memberStack}>
+            {uploaders.map((member, index) => (
+              <View
+                key={member.id}
+                style={[styles.memberDot, index > 0 && styles.stackedMemberDot]}
+              >
+                <RoomMemberAvatar member={member} size={27} />
+              </View>
+            ))}
           </View>
-        ) : (
-          <View style={styles.emptyDreamBadge}>
-            <SleepingMoonAvatar size={36} />
-          </View>
-        )}
-      </View>
-    </Pressable>
+          <View style={styles.roomDivider} />
+          {latestUploader ? (
+            <View style={styles.latestBadge}>
+              <RoomMemberAvatar member={latestUploader} size={36} />
+            </View>
+          ) : (
+            <View style={styles.emptyDreamBadge}>
+              <SleepingMoonAvatar size={36} />
+            </View>
+          )}
+        </View>
+      </Pressable>
+    </View>
   );
 }
 
@@ -651,6 +655,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
   },
+  addRoomShell: {
+    borderRadius: 24,
+    backgroundColor: 'transparent',
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.09,
+    shadowRadius: 28,
+  },
   addRoomFooter: {
     minHeight: 82,
     borderRadius: 24,
@@ -661,11 +673,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lavenderTint,
     borderWidth: 1,
     borderColor: colors.primaryLight,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 9 },
-    shadowOpacity: 0.18,
-    shadowRadius: 22,
-    elevation: 5,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 6,
   },
   addRoomIcon: {
     width: 46,
@@ -693,6 +705,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  roomItemShell: {
+    borderRadius: 28,
+    backgroundColor: 'transparent',
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+  },
   roomItem: {
     minHeight: 96,
     borderRadius: 28,
@@ -703,10 +723,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.divider,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 5,
   },
   roomText: {
