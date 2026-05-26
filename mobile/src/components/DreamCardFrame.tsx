@@ -31,6 +31,7 @@ export const DREAM_CARD_ASPECT_RATIO = 0.61;
 
 const FRAME_WIDTH = 340;
 const FRAME_HEIGHT = 510;
+const DARK_TEXTURE_LUMINANCE_THRESHOLD = 0.35;
 const paperSpecks = [
   [44, 48, 1.1],
   [118, 36, 0.8],
@@ -138,17 +139,29 @@ export function DreamCardFrame({
     : compact
       ? 0.08
       : 0.13;
+  const isAgedLetterFrame = frame === 'ticket';
+  const isDarkTextureBase = isDarkColor(backgroundColor);
   const frameTexture = frame === 'ticket' ? agedLetterPaperTexture : paperTexture;
   const frameTextureOpacity =
-    frame === 'ticket'
-      ? minimal
-        ? compact
-          ? 0.3
-          : 0.36
-        : compact
-          ? 0.34
-          : 0.44
+    isAgedLetterFrame
+      ? isDarkTextureBase
+        ? minimal
+          ? compact
+            ? 0.12
+            : 0.16
+          : compact
+            ? 0.14
+            : 0.18
+        : minimal
+          ? compact
+            ? 0.16
+            : 0.2
+          : compact
+            ? 0.18
+            : 0.24
       : textureOpacity;
+  const frameTextureColorWashOpacity =
+    isAgedLetterFrame ? (isDarkTextureBase ? 0.18 : 0.3) : 0;
 
   return (
     <View
@@ -185,6 +198,14 @@ export function DreamCardFrame({
           x={0}
           y={0}
         />
+        {frameTextureColorWashOpacity > 0 ? (
+          <Path
+            d={shapePath}
+            fill={backgroundColor}
+            fillRule="evenodd"
+            opacity={frameTextureColorWashOpacity}
+          />
+        ) : null}
 
         <G clipPath={`url(#${clipId})`} opacity={speckOpacity}>
           {paperSpecks.map(([cx, cy, r]) => (
@@ -337,6 +358,28 @@ export function DreamCardFrame({
       </View>
     </View>
   );
+}
+
+function isDarkColor(color: string) {
+  const normalized = color.replace('#', '');
+  const hex =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map(char => char + char)
+          .join('')
+      : normalized;
+
+  if (!/^[0-9A-Fa-f]{6}$/.test(hex)) {
+    return false;
+  }
+
+  const red = parseInt(hex.slice(0, 2), 16) / 255;
+  const green = parseInt(hex.slice(2, 4), 16) / 255;
+  const blue = parseInt(hex.slice(4, 6), 16) / 255;
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+  return luminance < DARK_TEXTURE_LUMINANCE_THRESHOLD;
 }
 
 function getFramePath(frame: DreamCardFrameType) {

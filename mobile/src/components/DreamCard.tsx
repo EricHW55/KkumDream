@@ -86,7 +86,8 @@ export function DreamCard({
     dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
   const design = normalizeDreamDesign(dream.design);
   const designTheme = CARD_COLOR_THEMES[design.cardColor];
-  const isClassicFrame = design.cardFrame === 'classic';
+  const usesCenteredFromTo =
+    design.cardFrame === 'classic' || design.cardFrame === 'ticket';
   const isMovieTicketFrame = design.cardFrame === 'beveled';
   const isDarkTheme = design.cardColor === 'midnight';
   const frameBorderColor = isDarkTheme ? designTheme.line : '#CBBFAE';
@@ -610,7 +611,7 @@ export function DreamCard({
                         <View
                           style={[
                             styles.fromToPaper,
-                            isClassicFrame && styles.classicFromToPaper,
+                            usesCenteredFromTo && styles.centeredFromToPaper,
                             isDarkTheme
                               ? styles.darkNotePaper
                               : styles.lightNotePaper,
@@ -622,7 +623,7 @@ export function DreamCard({
                           <Text
                             style={[
                               styles.fromToLabel,
-                              isClassicFrame && styles.classicFromToLabel,
+                              usesCenteredFromTo && styles.centeredFromToLabel,
                               {
                                 color: titleColor,
                                 fontFamily: serifTitleFamily,
@@ -655,7 +656,7 @@ export function DreamCard({
                         <View
                           style={[
                             styles.fromToPaper,
-                            isClassicFrame && styles.classicFromToPaper,
+                            usesCenteredFromTo && styles.centeredFromToPaper,
                             isDarkTheme
                               ? styles.darkNotePaper
                               : styles.lightNotePaper,
@@ -667,7 +668,7 @@ export function DreamCard({
                           <Text
                             style={[
                               styles.fromToLabel,
-                              isClassicFrame && styles.classicFromToLabel,
+                              usesCenteredFromTo && styles.centeredFromToLabel,
                               {
                                 color: titleColor,
                                 fontFamily: serifTitleFamily,
@@ -1219,7 +1220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  classicFromToPaper: {
+  centeredFromToPaper: {
     justifyContent: 'center',
   },
   lightNotePaper: {
@@ -1244,7 +1245,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     opacity: 0.72,
   },
-  classicFromToLabel: {
+  centeredFromToLabel: {
     fontSize: 9,
     fontWeight: '800',
   },
