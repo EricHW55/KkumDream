@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cardBase,
+    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
   latestMood: {
