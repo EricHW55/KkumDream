@@ -1,16 +1,21 @@
-import { useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Modal,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   ScrollView,
   Share,
   StyleSheet,
+  type StyleProp,
   Text,
   TextInput,
   View,
+  type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   Check,
   Palette,
@@ -528,9 +533,7 @@ export function ComposeScreen({ navigation }: Props) {
           />
 
           <Text style={styles.label}>무드</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
+          <FadingHorizontalScroll
             style={styles.horizontalPicker}
             contentContainerStyle={styles.moodScroller}
           >
@@ -557,7 +560,7 @@ export function ComposeScreen({ navigation }: Props) {
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </FadingHorizontalScroll>
 
           <Text style={styles.label}>어체</Text>
           <View style={styles.toneGrid}>
@@ -685,11 +688,10 @@ export function ComposeScreen({ navigation }: Props) {
               </View>
 
               <Text style={styles.designLabel}>카드 색감</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
+              <FadingHorizontalScroll
                 style={styles.horizontalPicker}
                 contentContainerStyle={styles.colorScroller}
+                fadeColor={colors.cardBase}
               >
                 {CARD_COLOR_OPTIONS.map(option => {
                   const isSelected = option.value === selectedDesign.cardColor;
@@ -735,7 +737,7 @@ export function ComposeScreen({ navigation }: Props) {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </FadingHorizontalScroll>
 
               <Text style={styles.designLabel}>뒷면 글씨체</Text>
               <View style={styles.fontGrid}>
@@ -899,11 +901,10 @@ export function ComposeScreen({ navigation }: Props) {
             </View>
 
             <Text style={styles.designLabel}>카드 색감</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
+            <FadingHorizontalScroll
               style={styles.horizontalPicker}
               contentContainerStyle={styles.colorScroller}
+              fadeColor={colors.cardBase}
             >
               {CARD_COLOR_OPTIONS.map(option => {
                 const isSelected = option.value === selectedDesign.cardColor;
@@ -949,7 +950,7 @@ export function ComposeScreen({ navigation }: Props) {
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </FadingHorizontalScroll>
 
             <Text style={styles.designLabel}>뒷면 글씨체</Text>
             <View style={styles.fontGrid}>
@@ -1363,6 +1364,111 @@ function buildExternalShareMessage(
   return `${recipientText}에게 보낸 꿈카드\n"${dream.shortMessage}"\n\n${shareUrl}\n\n링크를 열면 꿈드림 앱에서 바로 카드를 받을 수 있어요.`;
 }
 
+type FadingHorizontalScrollProps = {
+  children: ReactNode;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  fadeColor?: string;
+  style?: StyleProp<ViewStyle>;
+};
+
+function FadingHorizontalScroll({
+  children,
+  contentContainerStyle,
+  fadeColor = colors.background,
+  style,
+}: FadingHorizontalScrollProps) {
+  const reactId = useId();
+  const gradientId = `horizontalFade-${reactId.replace(/[^a-zA-Z0-9]/g, '')}`;
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [scrollX, setScrollX] = useState(0);
+  const showStartFade = scrollX > 2;
+  const showEndFade = contentWidth - viewportWidth - scrollX > 2;
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setScrollX(event.nativeEvent.contentOffset.x);
+  };
+
+  return (
+    <View
+      style={[styles.horizontalFadeWrap, style]}
+      onLayout={event => {
+        setViewportWidth(event.nativeEvent.layout.width);
+      }}
+    >
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onContentSizeChange={(width: number) => {
+          setContentWidth(width);
+        }}
+        onScroll={handleScroll}
+        style={styles.horizontalFadeScroll}
+        contentContainerStyle={contentContainerStyle}
+      >
+        {children}
+      </ScrollView>
+      {showStartFade ? (
+        <View pointerEvents="none" style={styles.horizontalFadeStart}>
+          <Svg
+            width="100%"
+            height="100%"
+            preserveAspectRatio="none"
+            pointerEvents="none"
+          >
+            <Defs>
+              <LinearGradient
+                id={`${gradientId}-start`}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="0"
+              >
+                <Stop offset="0" stopColor={fadeColor} stopOpacity={1} />
+                <Stop offset="0.32" stopColor={fadeColor} stopOpacity={0.78} />
+                <Stop offset="1" stopColor={fadeColor} stopOpacity={0} />
+              </LinearGradient>
+            </Defs>
+            <Rect
+              x="0"
+              y="0"
+              width="100%"
+              height="100%"
+              fill={`url(#${gradientId}-start)`}
+            />
+          </Svg>
+        </View>
+      ) : null}
+      {showEndFade ? (
+        <View pointerEvents="none" style={styles.horizontalFadeEnd}>
+          <Svg
+            width="100%"
+            height="100%"
+            preserveAspectRatio="none"
+            pointerEvents="none"
+          >
+            <Defs>
+              <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor={fadeColor} stopOpacity={0} />
+                <Stop offset="0.68" stopColor={fadeColor} stopOpacity={0.78} />
+                <Stop offset="1" stopColor={fadeColor} stopOpacity={1} />
+              </LinearGradient>
+            </Defs>
+            <Rect
+              x="0"
+              y="0"
+              width="100%"
+              height="100%"
+              fill={`url(#${gradientId})`}
+            />
+          </Svg>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
@@ -1397,10 +1503,31 @@ const styles = StyleSheet.create({
   horizontalPicker: {
     flexGrow: 0,
   },
+  horizontalFadeWrap: {
+    position: 'relative',
+    flexGrow: 0,
+  },
+  horizontalFadeScroll: {
+    flexGrow: 0,
+  },
+  horizontalFadeEnd: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 46,
+  },
+  horizontalFadeStart: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 46,
+  },
   moodScroller: {
     flexDirection: 'row',
     gap: 8,
-    paddingRight: 6,
+    paddingRight: 42,
   },
   moodButton: {
     minHeight: 42,
@@ -1597,7 +1724,7 @@ const styles = StyleSheet.create({
   colorScroller: {
     flexDirection: 'row',
     gap: 8,
-    paddingRight: 6,
+    paddingRight: 42,
   },
   colorOption: {
     minHeight: 42,
