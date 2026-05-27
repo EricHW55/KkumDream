@@ -166,12 +166,32 @@ export function GroupRoomScreen({ navigation, route }: Props) {
 
     const viewportTop = timelineScrollOffsetRef.current;
     const viewportBottom = viewportTop + viewportHeight;
+    const viewportCenter = (viewportTop + viewportBottom) / 2;
     const visibleScores: Array<{ id: string; index: number; ratio: number }> = [];
-    const visibleIds = new Set<string>();
+    const backgroundScores: Array<{
+      distance: number;
+      id: string;
+      index: number;
+    }> = [];
+    const measuredLayouts = Array.from(dreamItemLayoutsRef.current.values());
+    const estimatedItemHeight =
+      measuredLayouts.length > 0
+        ? measuredLayouts.reduce((sum, layout) => sum + layout.height, 0) /
+          measuredLayouts.length
+        : 260;
 
     visibleDreams.forEach((dream, fallbackIndex) => {
       const layout = dreamItemLayoutsRef.current.get(dream.id);
+      const index = layout?.index ?? fallbackIndex;
       if (!layout || layout.height <= 0) {
+        backgroundScores.push({
+          distance: Math.abs(
+            fallbackIndex * estimatedItemHeight + estimatedItemHeight / 2 -
+              viewportCenter,
+          ),
+          id: dream.id,
+          index,
+        });
         return;
       }
 
@@ -182,15 +202,19 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         Math.min(itemBottom, viewportBottom) - Math.max(itemTop, viewportTop),
       );
       const ratio = visibleHeight / layout.height;
-      if (ratio <= 0) {
+      if (ratio > 0) {
+        visibleScores.push({
+          id: dream.id,
+          index,
+          ratio,
+        });
         return;
       }
 
-      visibleIds.add(dream.id);
-      visibleScores.push({
+      backgroundScores.push({
+        distance: Math.abs(itemTop + layout.height / 2 - viewportCenter),
         id: dream.id,
-        index: layout.index ?? fallbackIndex,
-        ratio,
+        index,
       });
     });
 
@@ -200,13 +224,16 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       }
       return right.index - left.index;
     });
+    backgroundScores.sort((left, right) => {
+      if (left.distance !== right.distance) {
+        return left.distance - right.distance;
+      }
+      return Math.abs(left.index) - Math.abs(right.index);
+    });
 
-    const backgroundIds = visibleDreams
-      .filter(dream => !visibleIds.has(dream.id))
-      .map(dream => dream.id);
     setViewableDreamIds([
       ...visibleScores.map(score => score.id),
-      ...backgroundIds,
+      ...backgroundScores.map(score => score.id),
     ]);
   }, [visibleDreams]);
 
@@ -250,7 +277,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         fetchNextPage().catch(() => undefined);
       }
     },
-    [fetchNextPage, hasNextPage, isFetchingNextPage, updateDreamUpgradeQueue],
+    [fetchNextPage, hasNextPage, isFetchingNextPage],
   );
 
   useEffect(() => {
@@ -721,7 +748,6 @@ export function GroupRoomScreen({ navigation, route }: Props) {
                     이전 꿈카드를 불러오고 있어요
                   </Text>
                 ) : null}
-                <Text style={styles.dateDivider}>오늘</Text>
               </View>
             ) : null
           }
@@ -730,15 +756,27 @@ export function GroupRoomScreen({ navigation, route }: Props) {
               <View style={{ height: insets.bottom + 22 }} />
             ) : null
           }
-          renderItem={({ item, index }) => (
-            <DreamMessage
-              dream={item}
-              isUpgraded={upgradedDreamIds.has(item.id)}
-              members={members}
-              onLayout={event => handleDreamItemLayout(item.id, index, event)}
-              onPress={() => openDreamDetail(item)}
-            />
-          )}
+          renderItem={({ item, index }) => {
+            const previousDream = visibleDreams[index - 1];
+            const currentDateKey = getDreamDateKey(item);
+            const previousDateKey = previousDream
+              ? getDreamDateKey(previousDream)
+              : null;
+            return (
+              <DreamMessage
+                dateLabel={
+                  currentDateKey !== previousDateKey
+                    ? formatRoomDateLabel(currentDateKey)
+                    : null
+                }
+                dream={item}
+                isUpgraded={upgradedDreamIds.has(item.id)}
+                members={members}
+                onLayout={event => handleDreamItemLayout(item.id, index, event)}
+                onPress={() => openDreamDetail(item)}
+              />
+            );
+          }}
         />
       </View>
 
@@ -931,12 +969,14 @@ function DreamRoomLoadingState() {
 }
 
 function DreamMessage({
+  dateLabel,
   dream,
   isUpgraded,
   members,
   onLayout,
   onPress,
 }: {
+  dateLabel: string | null;
   dream: Dream;
   isUpgraded: boolean;
   members: GroupMember[];
@@ -958,43 +998,49 @@ function DreamMessage({
   const cardHeight = Math.round(cardWidth / DREAM_CARD_ASPECT_RATIO);
 
   return (
-    <View
-      onLayout={onLayout}
-      style={[styles.messageRow, isMine && styles.myMessageRow]}
-    >
-      {!isMine ? <Avatar member={sender} /> : null}
-      <View style={[styles.messageBody, isMine && styles.myMessageBody]}>
-        <Text style={[styles.senderName, isMine && styles.mySenderName]}>
-          {senderName}
-        </Text>
-        <View
-          style={[
-            styles.dreamBubble,
-            {
-              width: cardWidth,
-              height: cardHeight,
-            },
-          ]}
-        >
-          {isUpgraded ? (
-            <DreamCard
-              disableFlip
-              dream={dream}
-              giverName={sender.name}
-              onPress={onPress}
-              preferThumbnail
-              receiverName={receiver?.name}
-              showImageActions={false}
-              width={cardWidth}
-            />
-          ) : (
-            <DreamCardLite
-              compact
-              dream={dream}
-              onPress={onPress}
-              width={cardWidth}
-            />
-          )}
+    <View onLayout={onLayout}>
+      {dateLabel ? (
+        <View style={styles.roomDateDivider}>
+          <View style={styles.roomDateDividerLine} />
+          <Text style={styles.roomDateDividerText}>{dateLabel}</Text>
+          <View style={styles.roomDateDividerLine} />
+        </View>
+      ) : null}
+      <View style={[styles.messageRow, isMine && styles.myMessageRow]}>
+        {!isMine ? <Avatar member={sender} /> : null}
+        <View style={[styles.messageBody, isMine && styles.myMessageBody]}>
+          <Text style={[styles.senderName, isMine && styles.mySenderName]}>
+            {senderName}
+          </Text>
+          <View
+            style={[
+              styles.dreamBubble,
+              {
+                width: cardWidth,
+                height: cardHeight,
+              },
+            ]}
+          >
+            {isUpgraded ? (
+              <DreamCard
+                disableFlip
+                dream={dream}
+                giverName={sender.name}
+                onPress={onPress}
+                preferThumbnail
+                receiverName={receiver?.name}
+                showImageActions={false}
+                width={cardWidth}
+              />
+            ) : (
+              <DreamCardLite
+                compact
+                dream={dream}
+                onPress={onPress}
+                width={cardWidth}
+              />
+            )}
+          </View>
         </View>
       </View>
     </View>
@@ -1070,6 +1116,26 @@ function hasPendingImage(dreams?: Dream[]) {
 
 function isImagePending(dream: Dream) {
   return dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
+}
+
+function getDreamDateKey(dream: Dream) {
+  const value = dream.givenAt ?? dream.createdAt;
+  if (!value) {
+    return 'unknown';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'unknown';
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function formatRoomDateLabel(dateKey: string) {
+  if (dateKey === 'unknown') {
+    return '날짜 없음';
+  }
+  const [year, month, day] = dateKey.split('-');
+  return `${year}.${month}.${day}`;
 }
 
 function Avatar({
@@ -1311,6 +1377,25 @@ const styles = StyleSheet.create({
   historyLoadingText: {
     marginBottom: 10,
     textAlign: 'center',
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 12,
+    includeFontPadding: false,
+  },
+  roomDateDivider: {
+    marginTop: 4,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  roomDateDividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(154, 139, 120, 0.34)',
+  },
+  roomDateDividerText: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',

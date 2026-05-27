@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
   InteractionManager,
+  type LayoutChangeEvent,
   Modal,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  type ViewToken,
   useWindowDimensions,
 } from 'react-native';
 import {
@@ -104,19 +106,11 @@ export function DreamLibraryView({
   const [upgradedArchiveIds, setUpgradedArchiveIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const archiveViewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 45,
-    minimumViewTime: 120,
-  }).current;
-  const onArchiveViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      setViewableArchiveIds(
-        viewableItems
-          .map(item => (item.item as Dream | undefined)?.id)
-          .filter((id): id is string => Boolean(id)),
-      );
-    },
-  ).current;
+  const archiveItemLayoutsRef = useRef(
+    new Map<string, { height: number; index: number; y: number }>(),
+  );
+  const archiveViewportHeightRef = useRef(0);
+  const archiveScrollOffsetRef = useRef(0);
   const previewPanResponder = useMemo(
     () =>
       PanResponder.create({
@@ -170,6 +164,109 @@ export function DreamLibraryView({
     Math.min(62, Math.floor((width - 72) / 7)),
   );
   const dayPreviewSize = Math.max(40, Math.min(56, calendarCellSize - 4));
+
+  const updateArchiveUpgradeQueue = useCallback(() => {
+    if (mode !== 'archive' || archiveDreams.length === 0) {
+      setViewableArchiveIds([]);
+      return;
+    }
+
+    const viewportHeight = archiveViewportHeightRef.current;
+    if (viewportHeight <= 0) {
+      setViewableArchiveIds(
+        archiveDreams
+          .slice(0, INITIAL_ARCHIVE_RENDER_COUNT)
+          .map(dream => dream.id),
+      );
+      return;
+    }
+
+    const viewportTop = archiveScrollOffsetRef.current;
+    const viewportBottom = viewportTop + viewportHeight;
+    const viewportCenter = (viewportTop + viewportBottom) / 2;
+    const visibleScores: Array<{ id: string; index: number; ratio: number }> = [];
+    const backgroundScores: Array<{
+      distance: number;
+      id: string;
+      index: number;
+    }> = [];
+
+    archiveDreams.forEach((dream, fallbackIndex) => {
+      const layout = archiveItemLayoutsRef.current.get(dream.id);
+      const index = layout?.index ?? fallbackIndex;
+      if (!layout || layout.height <= 0) {
+        backgroundScores.push({
+          distance: Math.abs(fallbackIndex - Math.floor(archiveScrollOffsetRef.current / archiveRowHeight) * 3),
+          id: dream.id,
+          index,
+        });
+        return;
+      }
+
+      const itemTop = layout.y;
+      const itemBottom = layout.y + layout.height;
+      const visibleHeight = Math.max(
+        0,
+        Math.min(itemBottom, viewportBottom) - Math.max(itemTop, viewportTop),
+      );
+      const ratio = visibleHeight / layout.height;
+      if (ratio > 0) {
+        visibleScores.push({ id: dream.id, index, ratio });
+        return;
+      }
+
+      const itemCenter = itemTop + layout.height / 2;
+      backgroundScores.push({
+        distance: Math.abs(itemCenter - viewportCenter),
+        id: dream.id,
+        index,
+      });
+    });
+
+    visibleScores.sort((left, right) => {
+      if (right.ratio !== left.ratio) {
+        return right.ratio - left.ratio;
+      }
+      return left.index - right.index;
+    });
+    backgroundScores.sort((left, right) => {
+      if (left.distance !== right.distance) {
+        return left.distance - right.distance;
+      }
+      return left.index - right.index;
+    });
+
+    setViewableArchiveIds([
+      ...visibleScores.map(score => score.id),
+      ...backgroundScores.map(score => score.id),
+    ]);
+  }, [archiveDreams, archiveRowHeight, mode]);
+
+  const handleArchiveItemLayout = useCallback(
+    (dreamId: string, index: number, event: LayoutChangeEvent) => {
+      const { height } = event.nativeEvent.layout;
+      const y = Math.floor(index / 3) * archiveRowHeight;
+      archiveItemLayoutsRef.current.set(dreamId, { height, index, y });
+      updateArchiveUpgradeQueue();
+    },
+    [archiveRowHeight, updateArchiveUpgradeQueue],
+  );
+
+  const handleArchiveLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      archiveViewportHeightRef.current = event.nativeEvent.layout.height;
+      updateArchiveUpgradeQueue();
+    },
+    [updateArchiveUpgradeQueue],
+  );
+
+  const handleArchiveScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      archiveScrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+      updateArchiveUpgradeQueue();
+    },
+    [updateArchiveUpgradeQueue],
+  );
 
   const openDetail = (dream: Dream) => {
     setSelectedDream(null);
@@ -256,6 +353,8 @@ export function DreamLibraryView({
   useEffect(() => {
     const dreamIds = new Set(dreams.map(dream => dream.id));
     setViewableArchiveIds([]);
+    archiveItemLayoutsRef.current.clear();
+    archiveScrollOffsetRef.current = 0;
     setUpgradedArchiveIds(current => {
       const next = new Set<string>();
       current.forEach(id => {
@@ -266,6 +365,10 @@ export function DreamLibraryView({
       return next;
     });
   }, [dreams]);
+
+  useEffect(() => {
+    updateArchiveUpgradeQueue();
+  }, [updateArchiveUpgradeQueue]);
 
   useEffect(() => {
     if (!isFocused) {
@@ -475,12 +578,13 @@ export function DreamLibraryView({
           keyExtractor={item => item.id}
           maxToRenderPerBatch={6}
           numColumns={3}
-          onViewableItemsChanged={onArchiveViewableItemsChanged}
+          onLayout={handleArchiveLayout}
+          onScroll={handleArchiveScroll}
           refreshing={isRefreshing && dreams.length === 0}
           removeClippedSubviews
           showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
           updateCellsBatchingPeriod={60}
-          viewabilityConfig={archiveViewabilityConfig}
           windowSize={5}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={[
@@ -495,10 +599,11 @@ export function DreamLibraryView({
               </Text>
             ) : null
           }
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <MiniDreamCard
               dream={item}
               isUpgraded={upgradedArchiveIds.has(item.id)}
+              onLayout={event => handleArchiveItemLayout(item.id, index, event)}
               width={archiveCardWidth}
               onPress={() => setSelectedDream(item)}
             />
@@ -930,33 +1035,39 @@ function DreamLibraryLoadingState({ cardWidth }: { cardWidth: number }) {
 function MiniDreamCard({
   dream,
   isUpgraded,
+  onLayout,
   width,
   onPress,
 }: {
   dream: Dream;
   isUpgraded: boolean;
+  onLayout: (event: LayoutChangeEvent) => void;
   width: number;
   onPress: () => void;
 }) {
   if (isUpgraded) {
     return (
-      <DreamCard
-        disableFlip
-        dream={dream}
-        onPress={onPress}
-        preferThumbnail
-        showImageActions={false}
-        width={width}
-      />
+      <View onLayout={onLayout}>
+        <DreamCard
+          disableFlip
+          dream={dream}
+          onPress={onPress}
+          preferThumbnail
+          showImageActions={false}
+          width={width}
+        />
+      </View>
     );
   }
 
   return (
-    <DreamCardLite
-      dream={dream}
-      onPress={onPress}
-      width={width}
-    />
+    <View onLayout={onLayout}>
+      <DreamCardLite
+        dream={dream}
+        onPress={onPress}
+        width={width}
+      />
+    </View>
   );
 }
 
