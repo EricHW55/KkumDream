@@ -4,6 +4,12 @@ import Svg, {
   Circle,
   ClipPath,
   Defs,
+  FeComposite,
+  FeFlood,
+  FeGaussianBlur,
+  FeMerge,
+  FeMergeNode,
+  Filter,
   G,
   Image as SvgImage,
   Path,
@@ -32,7 +38,14 @@ export const DREAM_CARD_ASPECT_RATIO = 0.61;
 const FRAME_WIDTH = 340;
 const FRAME_HEIGHT = 510;
 const PAPER_SHADOW_COLOR = '#3F3124';
-const SHADOW_BORDER_RADIUS = 18;
+const SHADOW_PADDING = 56;
+const SHADOW_VIEWBOX = `${-SHADOW_PADDING} ${-SHADOW_PADDING} ${
+  FRAME_WIDTH + SHADOW_PADDING * 2
+} ${FRAME_HEIGHT + SHADOW_PADDING * 2}`;
+const SHADOW_INSET_X = `-${(SHADOW_PADDING / FRAME_WIDTH) * 100}%`;
+const SHADOW_INSET_Y = `-${(SHADOW_PADDING / FRAME_HEIGHT) * 100}%`;
+const SHADOW_WIDTH = `${100 + ((SHADOW_PADDING * 2) / FRAME_WIDTH) * 100}%`;
+const SHADOW_HEIGHT = `${100 + ((SHADOW_PADDING * 2) / FRAME_HEIGHT) * 100}%`;
 const DARK_TEXTURE_LUMINANCE_THRESHOLD = 0.35;
 const paperSpecks = [
   [44, 48, 1.1],
@@ -173,6 +186,9 @@ export function DreamCardFrame({
   const frameTextureColorWashOpacity =
     isAgedLetterFrame ? (isDarkTextureBase ? 0.18 : 0.3) : 0;
   const frameShadowColor = shadowColor ? PAPER_SHADOW_COLOR : null;
+  const shadowFilterId = `dream-card-shadow-${frame}`;
+  const ambientShadowOpacity = compact ? 0.09 : 0.12;
+  const contactShadowOpacity = compact ? 0.08 : 0.1;
 
   return (
     <View
@@ -183,32 +199,69 @@ export function DreamCardFrame({
       ]}
     >
       {frameShadowColor ? (
-        <>
-          <View
-            pointerEvents="none"
-            style={[
-              styles.shadowAmbient,
-              {
-                backgroundColor,
-                borderRadius: SHADOW_BORDER_RADIUS,
-                shadowColor: frameShadowColor,
-                shadowOpacity: compact ? 0.09 : 0.12,
-              },
-            ]}
-          />
-          <View
-            pointerEvents="none"
-            style={[
-              styles.shadowContact,
-              {
-                backgroundColor,
-                borderRadius: SHADOW_BORDER_RADIUS,
-                shadowColor: frameShadowColor,
-                shadowOpacity: compact ? 0.08 : 0.1,
-              },
-            ]}
-          />
-        </>
+        <View pointerEvents="none" style={styles.shadowWrap}>
+          <Svg
+            height="100%"
+            preserveAspectRatio="none"
+            viewBox={SHADOW_VIEWBOX}
+            width="100%"
+          >
+            <Defs>
+              <Filter
+                id={shadowFilterId}
+                x="-30%"
+                y="-30%"
+                width="160%"
+                height="160%"
+              >
+                <FeGaussianBlur
+                  in="SourceAlpha"
+                  stdDeviation="16"
+                  result="ambBlur"
+                />
+                <FeFlood
+                  floodColor={frameShadowColor}
+                  floodOpacity={ambientShadowOpacity}
+                  result="ambColor"
+                />
+                <FeComposite
+                  in="ambColor"
+                  in2="ambBlur"
+                  operator="in"
+                  result="ambShadow"
+                />
+
+                <FeGaussianBlur
+                  in="SourceAlpha"
+                  stdDeviation="5"
+                  result="contBlur"
+                />
+                <FeFlood
+                  floodColor={frameShadowColor}
+                  floodOpacity={contactShadowOpacity}
+                  result="contColor"
+                />
+                <FeComposite
+                  in="contColor"
+                  in2="contBlur"
+                  operator="in"
+                  result="contShadow"
+                />
+
+                <FeMerge>
+                  <FeMergeNode in="ambShadow" />
+                  <FeMergeNode in="contShadow" />
+                </FeMerge>
+              </Filter>
+            </Defs>
+            <Path
+              d={shapePath}
+              fill={frameShadowColor}
+              fillRule="evenodd"
+              filter={`url(#${shadowFilterId})`}
+            />
+          </Svg>
+        </View>
       ) : null}
 
       <Svg
@@ -679,24 +732,12 @@ const styles = StyleSheet.create({
     aspectRatio: DREAM_CARD_ASPECT_RATIO,
     overflow: 'visible',
   },
-  shadowAmbient: {
+  shadowWrap: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    shadowOffset: { width: 8, height: 18 },
-    shadowRadius: 22,
-  },
-  shadowContact: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    shadowOffset: { width: 2, height: 5 },
-    shadowRadius: 6,
-    elevation: 9,
+    top: SHADOW_INSET_Y as never,
+    left: SHADOW_INSET_X as never,
+    width: SHADOW_WIDTH as never,
+    height: SHADOW_HEIGHT as never,
   },
   svg: {
     position: 'absolute',
