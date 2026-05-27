@@ -1,4 +1,12 @@
-import { useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   Modal,
   type NativeScrollEvent,
@@ -28,6 +36,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   createDreamDraft,
+  fetchLatestDreamDraft,
   giveDream,
   shareDream,
   updateDream,
@@ -38,6 +47,7 @@ import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { readCache, removeCache, writeCache } from '../data/cache';
 import { getCachedRooms, loadRooms } from '../data/dreamRepository';
 import { LOCAL_MOCK_USER_ID } from '../data/currentUser';
 import { getDisplayMember, getSeedFriends } from '../data/members';
@@ -124,6 +134,21 @@ type RecipientFriend = {
 };
 type ToneValue = (typeof toneOptions)[number]['value'];
 
+type ComposeDraftSnapshot = {
+  version: 1;
+  rawInput: string;
+  mood: string;
+  tone: ToneValue;
+  storyLength: DreamStoryLength;
+  selectedDesign: DreamDesign;
+  draft: Dream | null;
+  recipientMode: RecipientMode;
+  selectedReceiverId: string | null;
+  externalLabel: string;
+  selectedGroupIds: string[];
+  privatePostscript: string;
+};
+
 type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
 export function ComposeScreen({ navigation }: Props) {
@@ -133,6 +158,10 @@ export function ComposeScreen({ navigation }: Props) {
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
   const currentUserId = sessionUserId ?? LOCAL_MOCK_USER_ID;
+  const composeDraftCacheKey = useMemo(
+    () => getComposeDraftCacheKey(sessionUserId),
+    [sessionUserId],
+  );
   const [rawInput, setRawInput] = useState('');
   const [mood, setMood] = useState('몽환');
   const [tone, setTone] = useState<ToneValue>('warm');
@@ -157,6 +186,7 @@ export function ComposeScreen({ navigation }: Props) {
   const [privatePostscript, setPrivatePostscript] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [isGiving, setIsGiving] = useState(false);
+  const [hasHydratedComposeDraft, setHasHydratedComposeDraft] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
   const { data: rooms = getCachedRooms(sessionUserId) } = useQuery({
     queryKey: roomsQueryKey,
@@ -165,6 +195,147 @@ export function ComposeScreen({ navigation }: Props) {
     staleTime: 0,
     refetchOnMount: 'always',
   });
+
+  const hydrateComposeSnapshot = useCallback(
+    (snapshot: ComposeDraftSnapshot) => {
+      const nextDesign = normalizeDreamDesign(
+        snapshot.draft?.design ?? snapshot.selectedDesign,
+      );
+      const nextDraft =
+        snapshot.draft?.status === 'draft'
+          ? { ...snapshot.draft, design: nextDesign }
+          : null;
+
+      setRawInput(
+        typeof snapshot.rawInput === 'string'
+          ? snapshot.rawInput
+          : nextDraft?.rawInput ?? '',
+      );
+      setMood(typeof snapshot.mood === 'string' ? snapshot.mood : moods[0]);
+      setTone(isToneValue(snapshot.tone) ? snapshot.tone : 'warm');
+      setStoryLength(
+        isStoryLength(snapshot.storyLength)
+          ? snapshot.storyLength
+          : 'standard',
+      );
+      setSelectedDesign(nextDesign);
+      setDraft(nextDraft);
+      setEditTitle(nextDraft?.title ?? '');
+      setEditStory(nextDraft?.story ?? '');
+      setRecipientMode(
+        snapshot.recipientMode === 'external' ? 'external' : 'friend',
+      );
+      setSelectedReceiverId(
+        typeof snapshot.selectedReceiverId === 'string'
+          ? snapshot.selectedReceiverId
+          : null,
+      );
+      setExternalLabel(
+        typeof snapshot.externalLabel === 'string' ? snapshot.externalLabel : '',
+      );
+      setSelectedGroupIds(
+        Array.isArray(snapshot.selectedGroupIds)
+          ? snapshot.selectedGroupIds.filter(
+              (groupId): groupId is string => typeof groupId === 'string',
+            )
+          : [],
+      );
+      setPrivatePostscript(
+        typeof snapshot.privatePostscript === 'string'
+          ? snapshot.privatePostscript
+          : '',
+      );
+    },
+    [],
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+    const cachedSnapshot = readCache<ComposeDraftSnapshot>(composeDraftCacheKey);
+
+    if (cachedSnapshot) {
+      hydrateComposeSnapshot(cachedSnapshot);
+    }
+
+    if (!token || cachedSnapshot?.draft?.status === 'draft') {
+      setHasHydratedComposeDraft(true);
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    fetchLatestDreamDraft(token)
+      .then(serverDraft => {
+        if (isCancelled || serverDraft?.status !== 'draft') {
+          return;
+        }
+        hydrateComposeSnapshot({
+          version: 1,
+          rawInput: serverDraft.rawInput,
+          mood: serverDraft.mainMood || moods[0],
+          tone: 'warm',
+          storyLength: 'standard',
+          selectedDesign: normalizeDreamDesign(serverDraft.design),
+          draft: serverDraft,
+          recipientMode: 'friend',
+          selectedReceiverId: null,
+          externalLabel: '',
+          selectedGroupIds: [],
+          privatePostscript: '',
+        });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!isCancelled) {
+          setHasHydratedComposeDraft(true);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [composeDraftCacheKey, hydrateComposeSnapshot, token]);
+
+  useEffect(() => {
+    if (!hasHydratedComposeDraft) {
+      return;
+    }
+
+    const currentDraft = draft?.status === 'draft' ? draft : null;
+    if (!currentDraft && (draft || rawInput.trim().length === 0)) {
+      removeCache(composeDraftCacheKey);
+      return;
+    }
+
+    writeCache<ComposeDraftSnapshot>(composeDraftCacheKey, {
+      version: 1,
+      rawInput,
+      mood,
+      tone,
+      storyLength,
+      selectedDesign: normalizeDreamDesign(selectedDesign),
+      draft: currentDraft,
+      recipientMode,
+      selectedReceiverId,
+      externalLabel,
+      selectedGroupIds,
+      privatePostscript,
+    });
+  }, [
+    composeDraftCacheKey,
+    draft,
+    externalLabel,
+    hasHydratedComposeDraft,
+    mood,
+    privatePostscript,
+    rawInput,
+    recipientMode,
+    selectedDesign,
+    selectedGroupIds,
+    selectedReceiverId,
+    storyLength,
+    tone,
+  ]);
 
   const friends = useMemo(() => {
     const membersById = new Map<string, RecipientFriend>();
@@ -444,6 +615,7 @@ export function ComposeScreen({ navigation }: Props) {
         },
         token,
       );
+      removeCache(composeDraftCacheKey);
       setDraft(result);
       setIsRecipientModalVisible(false);
       queryClient.setQueryData<Dream[]>(
@@ -522,7 +694,7 @@ export function ComposeScreen({ navigation }: Props) {
           <TextInput
             autoCorrect={false}
             spellCheck={false}
-            defaultValue={rawInput}
+            value={rawInput}
             onChangeText={setRawInput}
             multiline
             maxLength={500}
@@ -811,7 +983,7 @@ export function ComposeScreen({ navigation }: Props) {
               <TextInput
                 autoCorrect={false}
                 spellCheck={false}
-                defaultValue={editTitle}
+                value={editTitle}
                 onChangeText={setEditTitle}
                 placeholder="카드 제목"
                 placeholderTextColor={colors.textMuted}
@@ -821,7 +993,7 @@ export function ComposeScreen({ navigation }: Props) {
               <TextInput
                 autoCorrect={false}
                 spellCheck={false}
-                defaultValue={editStory}
+                value={editStory}
                 onChangeText={setEditStory}
                 multiline
                 textAlignVertical="top"
@@ -1349,6 +1521,18 @@ export function ComposeScreen({ navigation }: Props) {
       </Modal>
     </ScrollView>
   );
+}
+
+function getComposeDraftCacheKey(userId?: string | null) {
+  return `compose:draft:${userId ?? 'anonymous'}`;
+}
+
+function isToneValue(value: unknown): value is ToneValue {
+  return toneOptions.some(option => option.value === value);
+}
+
+function isStoryLength(value: unknown): value is DreamStoryLength {
+  return lengthOptions.some(option => option.value === value);
 }
 
 function toApiGroupId(groupId: string) {

@@ -207,6 +207,22 @@ async def list_outbox(session: AsyncSession, user_id: UUID, limit: int) -> list[
     return await _attach_group_ids_batch(session, dreams)
 
 
+async def get_latest_dream_draft(
+    session: AsyncSession,
+    user_id: UUID,
+) -> Dream | None:
+    stmt = (
+        select(Dream)
+        .where(Dream.giver_id == user_id, Dream.status == "draft")
+        .order_by(Dream.created_at.desc())
+        .limit(1)
+    )
+    dream = await session.scalar(stmt)
+    if dream is None:
+        return None
+    return await _attach_group_ids(session, dream)
+
+
 async def get_dream_for_user(session: AsyncSession, user_id: UUID, dream_id: UUID) -> Dream:
     dream = await _get_dream(session, dream_id)
     if not await _can_access_dream(session, dream, user_id):

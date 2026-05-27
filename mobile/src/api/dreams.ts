@@ -19,6 +19,10 @@ export function createDreamDraft(payload: DreamDraftPayload, token?: string | nu
   });
 }
 
+export function fetchLatestDreamDraft(token?: string | null) {
+  return requestJson<Dream | null>('/dreams/draft/current', { token });
+}
+
 export function giveDream(dreamId: string, payload: DreamGivePayload, token?: string | null) {
   return requestJson<Dream>(
     `/dreams/${dreamId}/give`,

@@ -25,6 +25,11 @@ export function writeCache<T>(key: string, value: T) {
   cache.set(updatedAtKey(key), Date.now());
 }
 
+export function removeCache(key: string) {
+  cache.remove(key);
+  cache.remove(updatedAtKey(key));
+}
+
 export function hasCache(key: string) {
   return cache.contains(key);
 }

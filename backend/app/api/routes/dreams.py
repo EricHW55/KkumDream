@@ -24,6 +24,7 @@ from app.services.dream_service import (
     create_dream_draft,
     delete_dream_comment,
     get_dream_for_user,
+    get_latest_dream_draft,
     give_dream,
     issue_dream_share_token,
     list_dream_comments,
@@ -47,6 +48,17 @@ async def create_draft(
     session: AsyncSession = Depends(db_session),
 ) -> DreamOut:
     dream = await create_dream_draft(session, user_id, payload)
+    return to_dream_out(dream, user_id)
+
+
+@router.get("/draft/current", response_model=DreamOut | None)
+async def current_draft(
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> DreamOut | None:
+    dream = await get_latest_dream_draft(session, user_id)
+    if dream is None:
+        return None
     return to_dream_out(dream, user_id)
 
 
