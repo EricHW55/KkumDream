@@ -117,6 +117,9 @@ export function DreamCard({
   const isDarkTheme = design.cardColor === 'midnight';
   const frameBorderColor = isDarkTheme ? designTheme.line : '#CBBFAE';
   const titleColor = isDarkTheme ? designTheme.text : '#2D2923';
+  const movieTicketImageBorderColor = isDarkTheme
+    ? designTheme.line
+    : colors.textSecondary;
   const metaColor = isDarkTheme ? designTheme.accent : '#6F675D';
   const letterColor = isDarkTheme ? designTheme.secondaryText : '#6F675D';
   const dreamFontStyle = getDreamFontStyle(design.fontStyle);
@@ -309,7 +312,9 @@ export function DreamCard({
         {
           height: imageHeight,
           backgroundColor: designTheme.image,
-          borderColor: isMovieTicketFrame ? titleColor : frameBorderColor,
+          borderColor: isMovieTicketFrame
+            ? movieTicketImageBorderColor
+            : frameBorderColor,
         },
       ]}
     >
