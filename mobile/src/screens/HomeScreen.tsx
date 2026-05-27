@@ -25,6 +25,7 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { HaloShadow } from '../components/HaloShadow';
 import { SleepingMoonAvatar } from '../components/MoonAvatar';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
@@ -196,33 +197,55 @@ export function HomeScreen() {
           <Text style={styles.subtitle}>함께 꿈을 주고받는 방</Text>
         </View>
         <View style={styles.headerActions}>
-          <Pressable
-            accessibilityLabel="꿈 작성"
-            accessibilityRole="button"
-            onPress={() => navigation.navigate('Compose')}
-            style={({ pressed }) => [
-              styles.circleButton,
-              pressed && interactionStyles.pressed,
-            ]}
-          >
-            <PenLine color={colors.textPrimary} size={26} strokeWidth={2.5} />
-          </Pressable>
-          <Pressable
-            accessibilityLabel="내 정보"
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={() => navigation.navigate('Profile')}
-            style={({ pressed }) => [
-              styles.profileBadge,
-              pressed && interactionStyles.pressed,
-            ]}
-          >
-            <ProfileAvatar
-              value={user?.profileImageUrl}
-              name={user?.nickname}
-              size={48}
+          <View style={styles.headerIconShell}>
+            <HaloShadow
+              borderRadius={27}
+              color={colors.primaryDark}
+              inset={14}
+              ambientBlur={8}
+              ambientOpacity={0.1}
+              contactBlur={2}
+              contactOpacity={0.07}
             />
-          </Pressable>
+            <Pressable
+              accessibilityLabel="꿈 작성"
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('Compose')}
+              style={({ pressed }) => [
+                styles.circleButton,
+                pressed && interactionStyles.pressed,
+              ]}
+            >
+              <PenLine color={colors.textPrimary} size={26} strokeWidth={2.5} />
+            </Pressable>
+          </View>
+          <View style={styles.headerIconShell}>
+            <HaloShadow
+              borderRadius={28}
+              color={colors.primaryDark}
+              inset={14}
+              ambientBlur={8}
+              ambientOpacity={0.1}
+              contactBlur={2}
+              contactOpacity={0.07}
+            />
+            <Pressable
+              accessibilityLabel="내 정보"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => navigation.navigate('Profile')}
+              style={({ pressed }) => [
+                styles.profileBadge,
+                pressed && interactionStyles.pressed,
+              ]}
+            >
+              <ProfileAvatar
+                value={user?.profileImageUrl}
+                name={user?.nickname}
+                size={48}
+              />
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -244,6 +267,7 @@ export function HomeScreen() {
         }
         ListFooterComponent={
           <View style={styles.addRoomShell}>
+            <HaloShadow borderRadius={24} color={colors.primaryLight} />
             <Pressable
               accessibilityLabel="꿈방 참가 또는 생성"
               accessibilityRole="button"
@@ -511,6 +535,7 @@ function GroupRoomItem({
 
   return (
     <View style={styles.roomItemShell}>
+      <HaloShadow borderRadius={28} color={colors.divider} />
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
@@ -644,6 +669,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  headerIconShell: {
+    position: 'relative',
+    overflow: 'visible',
+  },
   circleButton: {
     width: 54,
     height: 54,
@@ -691,11 +720,9 @@ const styles = StyleSheet.create({
   },
   addRoomShell: {
     borderRadius: 24,
-    backgroundColor: colors.lavenderTint,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 4, height: 14 },
-    shadowOpacity: 0.14,
-    shadowRadius: 26,
+    position: 'relative',
+    backgroundColor: 'transparent',
+    overflow: 'visible',
   },
   addRoomFooter: {
     minHeight: 82,
@@ -707,11 +734,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lavenderTint,
     borderWidth: 1,
     borderColor: colors.primaryLight,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 2, height: 5 },
-    shadowOpacity: 0.12,
-    shadowRadius: 9,
-    elevation: 8,
+    position: 'relative',
+    zIndex: 1,
   },
   addRoomIcon: {
     width: 46,
@@ -741,11 +765,9 @@ const styles = StyleSheet.create({
   },
   roomItemShell: {
     borderRadius: 28,
-    backgroundColor: colors.lavenderMist,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 4, height: 12 },
-    shadowOpacity: 0.13,
-    shadowRadius: 22,
+    position: 'relative',
+    backgroundColor: 'transparent',
+    overflow: 'visible',
   },
   roomItem: {
     minHeight: 96,
@@ -757,11 +779,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.divider,
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 2, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 7,
-    elevation: 7,
+    position: 'relative',
+    zIndex: 1,
   },
   roomText: {
     flex: 1,
