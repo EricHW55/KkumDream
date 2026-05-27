@@ -5,7 +5,7 @@ from string import ascii_uppercase, digits
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
@@ -34,6 +34,12 @@ class RoomMember:
     nickname: str
     profile_image_url: str | None
     role: str
+
+
+@dataclass
+class RoomDreamPage:
+    dreams: list[Dream]
+    next_cursor: str | None
 
 
 async def create_room(session: AsyncSession, user_id: UUID, name: str) -> DreamRoom:
@@ -188,20 +194,46 @@ async def list_room_dreams(
     user_id: UUID,
     room_id: str,
     limit: int,
-) -> list[Dream]:
+    before: str | None = None,
+) -> RoomDreamPage:
     from app.services.dream_service import _attach_group_ids_batch
 
     group_id = _parse_room_id(room_id)
     await _require_group_member(session, group_id, user_id)
+    activity_at = func.coalesce(Dream.given_at, Dream.created_at)
     stmt = (
         select(Dream)
         .join(DreamGroup, DreamGroup.dream_id == Dream.id)
         .where(DreamGroup.group_id == group_id, Dream.status != "draft")
-        .order_by(Dream.given_at.asc().nullsfirst(), Dream.created_at.asc())
-        .limit(limit)
+        .order_by(activity_at.desc(), Dream.created_at.desc(), Dream.id.desc())
+        .limit(limit + 1)
     )
-    dreams = list((await session.scalars(stmt)).all())
-    return await _attach_group_ids_batch(session, dreams)
+    if before:
+        before_activity_at, before_created_at, before_dream_id = _decode_dream_cursor(before)
+        stmt = stmt.where(
+            or_(
+                activity_at < before_activity_at,
+                and_(
+                    activity_at == before_activity_at,
+                    or_(
+                        Dream.created_at < before_created_at,
+                        and_(
+                            Dream.created_at == before_created_at,
+                            Dream.id < before_dream_id,
+                        ),
+                    ),
+                ),
+            )
+        )
+    dreams_desc = list((await session.scalars(stmt)).all())
+    has_more = len(dreams_desc) > limit
+    page_dreams_desc = dreams_desc[:limit]
+    page_dreams = list(reversed(page_dreams_desc))
+    page_dreams = await _attach_group_ids_batch(session, page_dreams)
+    next_cursor = (
+        _encode_dream_cursor(page_dreams_desc[-1]) if has_more and page_dreams_desc else None
+    )
+    return RoomDreamPage(dreams=page_dreams, next_cursor=next_cursor)
 
 
 async def _build_room(
@@ -368,3 +400,20 @@ def _parse_room_id(room_id: str) -> UUID:
 
 def _normalize_invite_code(invite_code: str) -> str:
     return invite_code.strip().upper()
+
+
+def _encode_dream_cursor(dream: Dream) -> str:
+    activity_at = dream.given_at or dream.created_at
+    return f"{activity_at.isoformat()}|{dream.created_at.isoformat()}|{dream.id}"
+
+
+def _decode_dream_cursor(cursor: str) -> tuple[datetime, datetime, UUID]:
+    try:
+        activity_at_raw, created_at_raw, dream_id_raw = cursor.split("|", 2)
+        return (
+            datetime.fromisoformat(activity_at_raw),
+            datetime.fromisoformat(created_at_raw),
+            UUID(dream_id_raw),
+        )
+    except (TypeError, ValueError) as exc:
+        raise BadRequestError("Invalid room dream cursor") from exc

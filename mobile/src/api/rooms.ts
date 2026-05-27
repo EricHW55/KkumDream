@@ -19,6 +19,11 @@ export type ApiDreamRoom = {
   todayGiverIds: string[];
 };
 
+export type ApiRoomDreamPage = {
+  dreams: Dream[];
+  nextCursor: string | null;
+};
+
 export function fetchRooms(token?: string | null) {
   return requestJson<ApiDreamRoom[]>('/rooms', { token });
 }
@@ -61,10 +66,15 @@ export function leaveRoom(roomId: string, token?: string | null) {
 export function fetchRoomDreams(
   roomId: string,
   token?: string | null,
-  limit = 30,
+  limit = 20,
+  before?: string | null,
 ) {
-  return requestJson<Dream[]>(
-    `/rooms/${encodeURIComponent(roomId)}/dreams?limit=${limit}`,
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (before) {
+    params.set('before', before);
+  }
+  return requestJson<ApiRoomDreamPage>(
+    `/rooms/${encodeURIComponent(roomId)}/dreams?${params.toString()}`,
     { token },
   );
 }

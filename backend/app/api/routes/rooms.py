@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
-from app.schemas.dream import DreamOut
-from app.schemas.room import DreamRoomOut, RoomCreate, RoomJoin, RoomUpdate
+from app.schemas.room import DreamRoomOut, RoomCreate, RoomDreamPageOut, RoomJoin, RoomUpdate
 from app.services.dream_service import to_dream_out
 from app.services.room_service import (
     create_room,
@@ -69,12 +68,16 @@ async def leave(
     return {"ok": True}
 
 
-@router.get("/{room_id}/dreams", response_model=list[DreamOut])
+@router.get("/{room_id}/dreams", response_model=RoomDreamPageOut)
 async def room_dreams(
     room_id: str,
-    limit: int = Query(default=30, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=100),
+    before: str | None = Query(default=None),
     user_id: UUID = Depends(current_user_id),
     session: AsyncSession = Depends(db_session),
-) -> list[DreamOut]:
-    dreams = await list_room_dreams(session, user_id, room_id, limit)
-    return [to_dream_out(dream, user_id) for dream in dreams]
+) -> RoomDreamPageOut:
+    page = await list_room_dreams(session, user_id, room_id, limit, before=before)
+    return RoomDreamPageOut(
+        dreams=[to_dream_out(dream, user_id) for dream in page.dreams],
+        next_cursor=page.next_cursor,
+    )

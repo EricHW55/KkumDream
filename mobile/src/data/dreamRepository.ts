@@ -6,6 +6,7 @@ import {
   joinRoom,
   leaveRoom,
   updateRoom,
+  type ApiRoomDreamPage,
   type ApiDreamRoom,
 } from '../api/rooms';
 import { mockDreams } from '../mocks/dreams';
@@ -25,6 +26,11 @@ const CACHE_KEYS = {
   allDreams: (userId?: string | null) => scopedKey(userId, 'dreams:all'),
   roomDreams: (roomId: string, userId?: string | null) =>
     scopedKey(userId, `rooms:${roomId}:dreams`),
+};
+
+export type CachedRoomDreamPage = {
+  dreams: Dream[];
+  nextCursor: string | null;
 };
 
 export function getCachedRooms(userId?: string | null) {
@@ -140,23 +146,45 @@ export async function loadOutbox(token?: string | null, userId?: string | null) 
 }
 
 export function getCachedRoomDreams(roomId: string, userId?: string | null) {
-  return sortDreamsOldestFirst(
-    readCache<Dream[]>(CACHE_KEYS.roomDreams(roomId, userId)) ??
-      getSeedRoomDreams(roomId, userId),
-  );
+  return getCachedRoomDreamPage(roomId, userId).dreams;
 }
 
-export async function loadRoomDreams(
+export function getCachedRoomDreamPage(roomId: string, userId?: string | null): CachedRoomDreamPage {
+  const cachedPage = readCache<CachedRoomDreamPage | Dream[]>(
+    CACHE_KEYS.roomDreams(roomId, userId),
+  );
+  if (Array.isArray(cachedPage)) {
+    return {
+      dreams: sortDreamsOldestFirst(cachedPage),
+      nextCursor: null,
+    };
+  }
+  if (cachedPage) {
+    return {
+      dreams: sortDreamsOldestFirst(cachedPage.dreams),
+      nextCursor: cachedPage.nextCursor ?? null,
+    };
+  }
+  return {
+    dreams: sortDreamsOldestFirst(getSeedRoomDreams(roomId, userId)),
+    nextCursor: null,
+  };
+}
+
+export async function loadRoomDreamPage(
   roomId: string,
   token?: string | null,
   userId?: string | null,
+  cursor?: string | null,
 ) {
   try {
-    const dreams = sortDreamsOldestFirst(await fetchRoomDreams(roomId, token));
-    writeDreamCaches(CACHE_KEYS.roomDreams(roomId, userId), dreams, userId);
-    return dreams;
+    const page = normalizeRoomDreamPage(
+      await fetchRoomDreams(roomId, token, 20, cursor),
+    );
+    writeRoomDreamPageCache(roomId, page, userId, cursor ?? null);
+    return page;
   } catch {
-    return getCachedRoomDreams(roomId, userId);
+    return cursor ? { dreams: [], nextCursor: null } : getCachedRoomDreamPage(roomId, userId);
   }
 }
 
@@ -170,6 +198,10 @@ export function getCachedDream(dreamId: string, userId?: string | null) {
 
 function writeDreamCaches(key: string, dreams: Dream[], userId?: string | null) {
   writeCache(key, dreams);
+  updateAllDreamCache(dreams, userId);
+}
+
+function updateAllDreamCache(dreams: Dream[], userId?: string | null) {
   const cachedDreams = readCache<Dream[]>(CACHE_KEYS.allDreams(userId)) ?? [];
   const merged = new Map(cachedDreams.map(dream => [dream.id, dream]));
   dreams.forEach(dream => merged.set(dream.id, dream));
@@ -177,6 +209,30 @@ function writeDreamCaches(key: string, dreams: Dream[], userId?: string | null) 
     CACHE_KEYS.allDreams(userId),
     limitDreamCache(Array.from(merged.values()), ALL_DREAM_CACHE_LIMIT),
   );
+}
+
+function writeRoomDreamPageCache(
+  roomId: string,
+  page: CachedRoomDreamPage,
+  userId?: string | null,
+  cursor?: string | null,
+) {
+  const existingPage = getCachedRoomDreamPage(roomId, userId);
+  const mergedDreams = cursor
+    ? mergeDreams(existingPage.dreams, page.dreams)
+    : page.dreams;
+  writeCache(CACHE_KEYS.roomDreams(roomId, userId), {
+    dreams: mergedDreams,
+    nextCursor: page.nextCursor,
+  } satisfies CachedRoomDreamPage);
+  updateAllDreamCache(mergedDreams, userId);
+}
+
+function normalizeRoomDreamPage(page: ApiRoomDreamPage): CachedRoomDreamPage {
+  return {
+    dreams: sortDreamsOldestFirst(page.dreams),
+    nextCursor: page.nextCursor ?? null,
+  };
 }
 
 function sortDreamsOldestFirst(dreams: Dream[]) {
@@ -195,6 +251,12 @@ function limitDreamCache(dreams: Dream[], limit: number) {
       return rightTime - leftTime;
     })
     .slice(0, limit);
+}
+
+function mergeDreams(existingDreams: Dream[], nextDreams: Dream[]) {
+  const merged = new Map(existingDreams.map(dream => [dream.id, dream]));
+  nextDreams.forEach(dream => merged.set(dream.id, dream));
+  return sortDreamsOldestFirst(Array.from(merged.values()));
 }
 
 function toGroupRoom(room: ApiDreamRoom): GroupRoom {

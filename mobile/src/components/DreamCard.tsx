@@ -47,6 +47,8 @@ type Props = {
   preferThumbnail?: boolean;
   loadFullImageProgressively?: boolean;
   showImageActions?: boolean;
+  giverName?: string;
+  receiverName?: string;
 };
 
 export function DreamCard({
@@ -59,6 +61,8 @@ export function DreamCard({
   preferThumbnail = false,
   loadFullImageProgressively = false,
   showImageActions = true,
+  giverName: giverNameOverride,
+  receiverName: receiverNameOverride,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const sessionUserId = useSessionStore(state => state.userId);
@@ -76,13 +80,19 @@ export function DreamCard({
   const cardHeight = Math.round(layoutCardWidth / DREAM_CARD_ASPECT_RATIO);
   const sceneHeight = Math.round(cardHeight * cardScale);
   const imageHeight = Math.round(cardHeight * 0.54);
-  const rooms = useMemo(() => getCachedRooms(sessionUserId), [sessionUserId]);
-  const roomMembers = rooms.flatMap(room => room.members ?? []);
+  const roomMembers = useMemo(() => {
+    if (giverNameOverride && (receiverNameOverride || !dream.receiverId)) {
+      return [];
+    }
+    return getCachedRooms(sessionUserId).flatMap(room => room.members ?? []);
+  }, [dream.receiverId, giverNameOverride, receiverNameOverride, sessionUserId]);
   const giverName =
+    giverNameOverride ??
     roomMembers.find(member => member.id === dream.giverId)?.name ??
     getDisplayMember(dream.giverId, sessionUserId).name;
   const receiverName = dream.receiverId
-    ? roomMembers.find(member => member.id === dream.receiverId)?.name ??
+    ? receiverNameOverride ??
+      roomMembers.find(member => member.id === dream.receiverId)?.name ??
       getDisplayMember(dream.receiverId, sessionUserId).name
     : dream.receiverLabel ?? '받는 사람 미정';
 

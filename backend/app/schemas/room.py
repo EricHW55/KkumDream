@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.schemas.base import ApiModel
+from app.schemas.dream import DreamOut
 
 
 class RoomCreate(ApiModel):
@@ -36,3 +37,8 @@ class DreamRoomOut(ApiModel):
     members: list[RoomMemberOut]
     latest_dream_id: UUID | None = None
     today_giver_ids: list[UUID] = Field(default_factory=list)
+
+
+class RoomDreamPageOut(ApiModel):
+    dreams: list[DreamOut]
+    next_cursor: str | None = None

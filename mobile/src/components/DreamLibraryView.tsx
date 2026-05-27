@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewToken,
   useWindowDimensions,
 } from 'react-native';
 import {
@@ -19,7 +20,7 @@ import {
   Grid2X2,
   X,
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { readCache, writeCache } from '../data/cache';
@@ -30,6 +31,7 @@ import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
+import { DreamCardLite } from './DreamCardLite';
 import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
 import { HaloShadow } from './HaloShadow';
 
@@ -65,7 +67,7 @@ const EMPTY_DREAMS: Dream[] = [];
 const INITIAL_ARCHIVE_RENDER_COUNT = 6;
 const ARCHIVE_RENDER_BATCH_SIZE = 6;
 const ARCHIVE_RENDER_BATCH_DELAY_MS = 90;
-const THUMBNAIL_PREFETCH_LIMIT = 30;
+const THUMBNAIL_PREFETCH_LIMIT = 8;
 const DEFAULT_LIBRARY_MODE: LibraryMode = 'archive';
 
 export function DreamLibraryView({
@@ -79,6 +81,7 @@ export function DreamLibraryView({
   viewModeCacheKey,
 }: Props) {
   const navigation = useNavigation<Navigation>();
+  const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
   const [mode, setMode] = useState<LibraryMode>(() =>
     readLibraryMode(viewModeCacheKey),
@@ -97,6 +100,23 @@ export function DreamLibraryView({
   const [visibleArchiveCount, setVisibleArchiveCount] = useState(
     INITIAL_ARCHIVE_RENDER_COUNT,
   );
+  const [viewableArchiveIds, setViewableArchiveIds] = useState<string[]>([]);
+  const [upgradedArchiveIds, setUpgradedArchiveIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const archiveViewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 45,
+    minimumViewTime: 120,
+  }).current;
+  const onArchiveViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      setViewableArchiveIds(
+        viewableItems
+          .map(item => (item.item as Dream | undefined)?.id)
+          .filter((id): id is string => Boolean(id)),
+      );
+    },
+  ).current;
   const previewPanResponder = useMemo(
     () =>
       PanResponder.create({
@@ -234,6 +254,98 @@ export function DreamLibraryView({
   }, [dreams]);
 
   useEffect(() => {
+    const dreamIds = new Set(dreams.map(dream => dream.id));
+    setViewableArchiveIds([]);
+    setUpgradedArchiveIds(current => {
+      const next = new Set<string>();
+      current.forEach(id => {
+        if (dreamIds.has(id)) {
+          next.add(id);
+        }
+      });
+      return next;
+    });
+  }, [dreams]);
+
+  useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
+    setViewableArchiveIds([]);
+    setUpgradedArchiveIds(new Set());
+  }, [isFocused]);
+
+  useEffect(() => {
+    if (
+      !isFocused ||
+      mode !== 'archive' ||
+      viewableArchiveIds.length > 0 ||
+      archiveDreams.length === 0
+    ) {
+      return undefined;
+    }
+
+    let frameId: number | null = null;
+    let isCancelled = false;
+    const task = InteractionManager.runAfterInteractions(() => {
+      frameId = requestAnimationFrame(() => {
+        if (!isCancelled) {
+          setViewableArchiveIds(
+            archiveDreams
+              .slice(0, INITIAL_ARCHIVE_RENDER_COUNT)
+              .map(dream => dream.id),
+          );
+        }
+      });
+    });
+
+    return () => {
+      isCancelled = true;
+      task.cancel?.();
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+    };
+  }, [archiveDreams, isFocused, mode, viewableArchiveIds.length]);
+
+  useEffect(() => {
+    if (mode !== 'archive' || viewableArchiveIds.length === 0) {
+      return undefined;
+    }
+
+    const nextId = viewableArchiveIds.find(id => !upgradedArchiveIds.has(id));
+    if (!nextId) {
+      return undefined;
+    }
+
+    let frameId: number | null = null;
+    let isCancelled = false;
+    const task = InteractionManager.runAfterInteractions(() => {
+      frameId = requestAnimationFrame(() => {
+        if (isCancelled) {
+          return;
+        }
+        setUpgradedArchiveIds(current => {
+          if (current.has(nextId)) {
+            return current;
+          }
+          const next = new Set(current);
+          next.add(nextId);
+          return next;
+        });
+      });
+    });
+
+    return () => {
+      isCancelled = true;
+      task.cancel?.();
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+    };
+  }, [mode, upgradedArchiveIds, viewableArchiveIds]);
+
+  useEffect(() => {
     const thumbnailUrls = Array.from(
       new Set(
         dreams
@@ -363,10 +475,12 @@ export function DreamLibraryView({
           keyExtractor={item => item.id}
           maxToRenderPerBatch={6}
           numColumns={3}
+          onViewableItemsChanged={onArchiveViewableItemsChanged}
           refreshing={isRefreshing && dreams.length === 0}
           removeClippedSubviews
           showsVerticalScrollIndicator={false}
           updateCellsBatchingPeriod={60}
+          viewabilityConfig={archiveViewabilityConfig}
           windowSize={5}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={[
@@ -384,6 +498,7 @@ export function DreamLibraryView({
           renderItem={({ item }) => (
             <MiniDreamCard
               dream={item}
+              isUpgraded={upgradedArchiveIds.has(item.id)}
               width={archiveCardWidth}
               onPress={() => setSelectedDream(item)}
             />
@@ -814,20 +929,32 @@ function DreamLibraryLoadingState({ cardWidth }: { cardWidth: number }) {
 
 function MiniDreamCard({
   dream,
+  isUpgraded,
   width,
   onPress,
 }: {
   dream: Dream;
+  isUpgraded: boolean;
   width: number;
   onPress: () => void;
 }) {
+  if (isUpgraded) {
+    return (
+      <DreamCard
+        disableFlip
+        dream={dream}
+        onPress={onPress}
+        preferThumbnail
+        showImageActions={false}
+        width={width}
+      />
+    );
+  }
+
   return (
-    <DreamCard
-      disableFlip
+    <DreamCardLite
       dream={dream}
       onPress={onPress}
-      preferThumbnail
-      showImageActions={false}
       width={width}
     />
   );

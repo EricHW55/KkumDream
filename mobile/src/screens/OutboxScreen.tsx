@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
-import { InteractionManager } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { DreamLibraryView } from '../components/DreamLibraryView';
@@ -52,45 +51,22 @@ export function OutboxScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      let isCancelled = false;
-      let animationFrame: number | null = null;
-
       const cachedAt = getOutboxCacheUpdatedAt(userId);
       const cachedDreams = getCachedOutbox(userId);
       const hasCache = hasCachedOutbox(userId);
-      if (hasCache) {
+      if (hasCache || cachedDreams.length > 0) {
         queryClient.setQueryData(queryKey, cachedDreams, {
           updatedAt: cachedAt || Date.now(),
         });
-        setHasLoadedCache(true);
-        setIsLibraryHydrated(true);
+      }
+      setHasLoadedCache(hasCache);
+      setIsLibraryHydrated(true);
+
+      if (!hasCache || Date.now() - cachedAt > DREAM_LIBRARY_STALE_MS) {
+        refetchOutbox().catch(() => undefined);
       }
 
-      const task = InteractionManager.runAfterInteractions(() => {
-        animationFrame = requestAnimationFrame(() => {
-          if (isCancelled) {
-            return;
-          }
-
-          queryClient.setQueryData(queryKey, cachedDreams, {
-            updatedAt: cachedAt || Date.now(),
-          });
-          setHasLoadedCache(hasCache);
-          setIsLibraryHydrated(true);
-
-          if (!hasCache || Date.now() - cachedAt > DREAM_LIBRARY_STALE_MS) {
-            refetchOutbox().catch(() => undefined);
-          }
-        });
-      });
-
-      return () => {
-        isCancelled = true;
-        task.cancel();
-        if (animationFrame !== null) {
-          cancelAnimationFrame(animationFrame);
-        }
-      };
+      return undefined;
     }, [queryClient, queryKey, refetchOutbox, userId]),
   );
 
