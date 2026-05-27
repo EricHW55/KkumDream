@@ -51,6 +51,7 @@ class DreamGiveRequest(ApiModel):
     receiver_id: UUID | None = None
     receiver_label: str | None = Field(default=None, max_length=50)
     group_ids: list[UUID] = Field(default_factory=list)
+    private_postscript: str | None = Field(default=None, max_length=120)
 
     @model_validator(mode="after")
     def validate_target(self) -> "DreamGiveRequest":
@@ -64,6 +65,7 @@ class DreamOut(ApiModel):
     giver_id: UUID
     receiver_id: UUID | None = None
     receiver_label: str | None = None
+    private_postscript: str | None = None
     group_ids: list[UUID] = Field(default_factory=list)
     raw_input: str
     title: str

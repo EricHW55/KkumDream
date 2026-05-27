@@ -25,6 +25,7 @@ from app.schemas.dream import (
     DreamDesign,
     DreamDraftCreate,
     DreamGiveRequest,
+    DreamOut,
     DreamUpdate,
     ReactionType,
 )
@@ -130,6 +131,9 @@ async def give_dream(
         raise BadRequestError("Cannot give a dream to yourself")
 
     label = payload.receiver_label.strip() if payload.receiver_label else None
+    private_postscript = (
+        payload.private_postscript.strip() if payload.private_postscript else None
+    )
 
     if payload.receiver_id is not None:
         await _require_shared_group_member(session, user_id, payload.receiver_id)
@@ -145,6 +149,7 @@ async def give_dream(
 
     dream.receiver_id = payload.receiver_id
     dream.receiver_label = label
+    dream.private_postscript = private_postscript or None
     dream.status = "given"
     dream.image_status = "queued"
     dream.given_at = datetime.now(UTC)
@@ -171,6 +176,13 @@ async def give_dream(
             dream.title,
         )
     return await _attach_group_ids(session, dream)
+
+
+def to_dream_out(dream: Dream, user_id: UUID) -> DreamOut:
+    result = DreamOut.model_validate(dream)
+    if dream.giver_id != user_id and dream.receiver_id != user_id:
+        result.private_postscript = None
+    return result
 
 
 async def list_inbox(session: AsyncSession, user_id: UUID, limit: int) -> list[Dream]:

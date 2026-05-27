@@ -139,6 +139,9 @@ export function DreamCard({
   const ticketTagText = visibleTags.length
     ? visibleTags.map(tag => `#${tag}`).join(' ')
     : '-';
+  const backStory = dream.privatePostscript
+    ? `${dream.story}\n\np.s. ${dream.privatePostscript}`
+    : dream.story;
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
   }));
@@ -915,7 +918,7 @@ export function DreamCard({
                         { color: designTheme.text },
                       ]}
                     >
-                      {dream.story}
+                      {backStory}
                     </Text>
                   </ScrollView>
                 </View>

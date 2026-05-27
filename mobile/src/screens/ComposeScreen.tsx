@@ -30,8 +30,8 @@ import {
 import { DreamCard } from '../components/DreamCard';
 import { DreamCardFrame } from '../components/DreamCardFrame';
 import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
-import { MoonAvatar } from '../components/MoonAvatar';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
+import { ProfileAvatar } from '../components/ProfileAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { getCachedRooms, loadRooms } from '../data/dreamRepository';
 import { LOCAL_MOCK_USER_ID } from '../data/currentUser';
@@ -51,6 +51,9 @@ import {
 import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
 import type { Dream, DreamDesign, DreamStoryLength } from '../types/dream';
+
+const PRIVATE_POSTSCRIPT_MAX_LENGTH = 120;
+const VISIBLE_ROOM_PICKER_COUNT = 4;
 
 const moods = ['몽환', '판타지', '공포', '코믹', '따뜻함', '추억', '기괴함'];
 const toneOptions = [
@@ -108,6 +111,12 @@ const lengthOptions: readonly {
 ];
 
 type RecipientMode = 'friend' | 'external';
+type RecipientFriend = {
+  id: string;
+  name: string;
+  avatarColor: string;
+  profileImageUrl?: string | null;
+};
 type ToneValue = (typeof toneOptions)[number]['value'];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
@@ -140,6 +149,7 @@ export function ComposeScreen({ navigation }: Props) {
   );
   const [externalLabel, setExternalLabel] = useState('');
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [privatePostscript, setPrivatePostscript] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [isGiving, setIsGiving] = useState(false);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
@@ -152,7 +162,7 @@ export function ComposeScreen({ navigation }: Props) {
   });
 
   const friends = useMemo(() => {
-    const membersById = new Map<string, ReturnType<typeof getDisplayMember>>();
+    const membersById = new Map<string, RecipientFriend>();
 
     rooms.forEach(room => {
       (room.members ?? []).forEach(member => {
@@ -208,6 +218,7 @@ export function ComposeScreen({ navigation }: Props) {
     FONT_STYLE_OPTIONS.find(item => item.value === selectedDesign.fontStyle) ??
     FONT_STYLE_OPTIONS[0];
   const trimmedLabel = externalLabel.trim();
+  const trimmedPrivatePostscript = privatePostscript.trim();
   const recipientReady =
     recipientMode === 'friend'
       ? Boolean(selectedReceiverId)
@@ -215,8 +226,13 @@ export function ComposeScreen({ navigation }: Props) {
   const isExternalRecipientReady =
     recipientMode === 'external' && recipientReady;
   const selectedReceiver = selectedReceiverId
-    ? getDisplayMember(selectedReceiverId, sessionUserId)
+    ? friends.find(friend => friend.id === selectedReceiverId) ??
+      {
+        ...getDisplayMember(selectedReceiverId, sessionUserId),
+        profileImageUrl: null,
+      }
     : null;
+  const shouldConstrainRoomPicker = myRooms.length > VISIBLE_ROOM_PICKER_COUNT;
 
   const recipientSummary = (() => {
     if (recipientMode === 'friend') {
@@ -238,6 +254,7 @@ export function ComposeScreen({ navigation }: Props) {
         receiverId: recipientMode === 'friend' ? selectedReceiverId : null,
         receiverLabel:
           recipientMode === 'external' ? trimmedLabel || null : null,
+        privatePostscript: trimmedPrivatePostscript || null,
         groupIds: selectedGroupIds,
         design: selectedDesign,
       }
@@ -418,6 +435,7 @@ export function ComposeScreen({ navigation }: Props) {
           receiverLabel:
             recipientMode === 'external' ? trimmedLabel : undefined,
           groupIds: selectedGroupIds.map(toApiGroupId),
+          privatePostscript: trimmedPrivatePostscript || undefined,
         },
         token,
       );
@@ -1103,9 +1121,10 @@ export function ComposeScreen({ navigation }: Props) {
                     ]}
                   >
                     {selectedReceiver ? (
-                      <MoonAvatar
+                      <ProfileAvatar
                         size={42}
-                        color={selectedReceiver.avatarColor}
+                        value={selectedReceiver.profileImageUrl}
+                        fallbackColor={selectedReceiver.avatarColor}
                       />
                     ) : (
                       <View style={styles.searchIconWrap}>
@@ -1155,7 +1174,17 @@ export function ComposeScreen({ navigation }: Props) {
                 <Text style={styles.sectionTitle}>
                   공유할 꿈방 (다중 선택, 선택사항)
                 </Text>
-                <View style={styles.groupList}>
+                <ScrollView
+                  nestedScrollEnabled
+                  scrollEnabled={shouldConstrainRoomPicker}
+                  showsVerticalScrollIndicator={shouldConstrainRoomPicker}
+                  style={
+                    shouldConstrainRoomPicker
+                      ? styles.groupListConstrained
+                      : undefined
+                  }
+                  contentContainerStyle={styles.groupList}
+                >
                   {myRooms.map(room => {
                     const isSelected = selectedGroupIds.includes(room.id);
                     return (
@@ -1194,7 +1223,31 @@ export function ComposeScreen({ navigation }: Props) {
                       만들어보세요.
                     </Text>
                   ) : null}
+                </ScrollView>
+              </View>
+
+              <View style={styles.sectionBlock}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={styles.sectionTitle}>비밀 추신</Text>
+                  <Text style={styles.characterCount}>
+                    {privatePostscript.length}/{PRIVATE_POSTSCRIPT_MAX_LENGTH}
+                  </Text>
                 </View>
+                <TextInput
+                  autoCorrect={false}
+                  spellCheck={false}
+                  value={privatePostscript}
+                  onChangeText={setPrivatePostscript}
+                  multiline
+                  maxLength={PRIVATE_POSTSCRIPT_MAX_LENGTH}
+                  textAlignVertical="top"
+                  placeholder="받는 사람에게만 남길 짧은 말을 적어보세요."
+                  placeholderTextColor={colors.textMuted}
+                  style={[styles.labelInput, styles.postscriptInput]}
+                />
+                <Text style={styles.hintText}>
+                  보낸 사람과 받은 사람에게만 보여요. 꿈방에 공유되어도 다른 멤버는 볼 수 없어요.
+                </Text>
               </View>
             </ScrollView>
 
@@ -1273,7 +1326,11 @@ export function ComposeScreen({ navigation }: Props) {
                     pressed && interactionStyles.pressedSoft,
                   ]}
                 >
-                  <MoonAvatar size={38} color={friend.avatarColor} />
+                  <ProfileAvatar
+                    size={38}
+                    value={friend.profileImageUrl}
+                    fallbackColor={friend.avatarColor}
+                  />
                   <Text style={styles.friendName}>{friend.name}</Text>
                   {selectedReceiverId === friend.id ? (
                     <Check color={colors.primary} size={20} />
@@ -1810,6 +1867,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     includeFontPadding: false,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  characterCount: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 12,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
   labelInput: {
     minHeight: 48,
     borderRadius: 14,
@@ -1821,6 +1891,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontSize: 15,
     fontWeight: '600',
+  },
+  postscriptInput: {
+    minHeight: 86,
+    paddingTop: 12,
+    paddingBottom: 12,
+    lineHeight: 22,
   },
   hintText: {
     color: colors.textMuted,
@@ -1921,6 +1997,9 @@ const styles = StyleSheet.create({
   },
   groupList: {
     gap: 10,
+  },
+  groupListConstrained: {
+    maxHeight: 286,
   },
   groupItem: {
     minHeight: 64,

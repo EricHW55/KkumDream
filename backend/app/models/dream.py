@@ -50,6 +50,7 @@ class Dream(Base):
     giver_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     receiver_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     receiver_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    private_postscript: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     raw_input: Mapped[str] = mapped_column(String(500), nullable=False)
     title: Mapped[str] = mapped_column(String(80), nullable=False)

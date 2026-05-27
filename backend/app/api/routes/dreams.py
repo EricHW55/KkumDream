@@ -20,8 +20,8 @@ from app.schemas.dream import (
 )
 from app.services.dream_service import (
     claim_dream_via_token,
-    create_dream_draft,
     create_dream_comment,
+    create_dream_draft,
     delete_dream_comment,
     get_dream_for_user,
     give_dream,
@@ -32,6 +32,7 @@ from app.services.dream_service import (
     list_outbox,
     mark_opened_back,
     mark_read,
+    to_dream_out,
     toggle_dream_reaction,
     update_dream_text,
 )
@@ -46,7 +47,7 @@ async def create_draft(
     session: AsyncSession = Depends(db_session),
 ) -> DreamOut:
     dream = await create_dream_draft(session, user_id, payload)
-    return DreamOut.model_validate(dream)
+    return to_dream_out(dream, user_id)
 
 
 @router.patch("/{dream_id}", response_model=DreamOut)
@@ -57,7 +58,7 @@ async def update_dream(
     session: AsyncSession = Depends(db_session),
 ) -> DreamOut:
     dream = await update_dream_text(session, user_id, dream_id, payload)
-    return DreamOut.model_validate(dream)
+    return to_dream_out(dream, user_id)
 
 
 @router.post("/{dream_id}/give", response_model=DreamOut, status_code=status.HTTP_202_ACCEPTED)
@@ -68,7 +69,7 @@ async def give(
     session: AsyncSession = Depends(db_session),
 ) -> DreamOut:
     dream = await give_dream(session, user_id, dream_id, payload)
-    return DreamOut.model_validate(dream)
+    return to_dream_out(dream, user_id)
 
 
 @router.get("/inbox", response_model=list[DreamOut])
@@ -78,7 +79,7 @@ async def inbox(
     session: AsyncSession = Depends(db_session),
 ) -> list[DreamOut]:
     dreams = await list_inbox(session, user_id, limit)
-    return [DreamOut.model_validate(dream) for dream in dreams]
+    return [to_dream_out(dream, user_id) for dream in dreams]
 
 
 @router.get("/outbox", response_model=list[DreamOut])
@@ -88,7 +89,7 @@ async def outbox(
     session: AsyncSession = Depends(db_session),
 ) -> list[DreamOut]:
     dreams = await list_outbox(session, user_id, limit)
-    return [DreamOut.model_validate(dream) for dream in dreams]
+    return [to_dream_out(dream, user_id) for dream in dreams]
 
 
 @router.get("/{dream_id}/comments", response_model=list[DreamCommentOut])
@@ -167,7 +168,7 @@ async def claim(
     session: AsyncSession = Depends(db_session),
 ) -> DreamOut:
     dream = await claim_dream_via_token(session, user_id, payload.token)
-    return DreamOut.model_validate(dream)
+    return to_dream_out(dream, user_id)
 
 
 @router.get("/{dream_id}", response_model=DreamOut)
@@ -177,7 +178,7 @@ async def detail(
     session: AsyncSession = Depends(db_session),
 ) -> DreamOut:
     dream = await get_dream_for_user(session, user_id, dream_id)
-    return DreamOut.model_validate(dream)
+    return to_dream_out(dream, user_id)
 
 
 @router.post("/{dream_id}/read", response_model=DreamOut)
@@ -187,7 +188,7 @@ async def read(
     session: AsyncSession = Depends(db_session),
 ) -> DreamOut:
     dream = await mark_read(session, user_id, dream_id)
-    return DreamOut.model_validate(dream)
+    return to_dream_out(dream, user_id)
 
 
 @router.post("/{dream_id}/open-back", response_model=DreamOut)
@@ -197,4 +198,4 @@ async def open_back(
     session: AsyncSession = Depends(db_session),
 ) -> DreamOut:
     dream = await mark_opened_back(session, user_id, dream_id)
-    return DreamOut.model_validate(dream)
+    return to_dream_out(dream, user_id)

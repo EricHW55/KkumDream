@@ -31,6 +31,7 @@ import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
 import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
+import { HaloShadow } from './HaloShadow';
 
 type LibraryMode = 'archive' | 'calendar';
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -459,6 +460,15 @@ export function DreamLibraryView({
                             },
                           ]}
                         >
+                          <HaloShadow
+                            ambientBlur={5}
+                            ambientOpacity={0.11}
+                            borderRadius={dayPreviewSize / 2}
+                            color={colors.textPrimary}
+                            contactBlur={1.4}
+                            contactOpacity={0.07}
+                            inset={8}
+                          />
                           {previewImageUrl ? (
                             <Image
                               source={{ uri: previewImageUrl }}
@@ -1156,25 +1166,20 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    borderWidth: 3,
-    borderColor: colors.cardBase,
-    overflow: 'hidden',
-    backgroundColor: colors.lavenderTint,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    position: 'relative',
+    backgroundColor: 'transparent',
   },
   dayPreviewImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 999,
   },
   dayPreviewFallback: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.lavenderTint,
+    borderRadius: 999,
   },
   dayPreviewMood: {
     color: colors.primaryDark,
@@ -1192,6 +1197,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(40, 35, 63, 0.28)',
+    borderRadius: 999,
   },
   dayPreviewDay: {
     color: '#FFFFFF',

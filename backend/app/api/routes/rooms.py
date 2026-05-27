@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import current_user_id, db_session
 from app.schemas.dream import DreamOut
 from app.schemas.room import DreamRoomOut, RoomCreate, RoomJoin, RoomUpdate
+from app.services.dream_service import to_dream_out
 from app.services.room_service import (
     create_room,
     join_room,
@@ -76,4 +77,4 @@ async def room_dreams(
     session: AsyncSession = Depends(db_session),
 ) -> list[DreamOut]:
     dreams = await list_room_dreams(session, user_id, room_id, limit)
-    return [DreamOut.model_validate(dream) for dream in dreams]
+    return [to_dream_out(dream, user_id) for dream in dreams]

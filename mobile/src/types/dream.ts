@@ -43,6 +43,7 @@ export interface Dream {
   giverId: string;
   receiverId: string | null;
   receiverLabel: string | null;
+  privatePostscript: string | null;
   groupIds: string[];
   rawInput: string;
   title: string;
@@ -77,6 +78,7 @@ export interface DreamGivePayload {
   receiverId?: string;
   receiverLabel?: string;
   groupIds?: string[];
+  privatePostscript?: string;
 }
 
 export interface DreamUpdatePayload {
