@@ -1,4 +1,6 @@
+import asyncio
 import json
+from contextlib import asynccontextmanager
 from html import escape
 from urllib.parse import quote
 
@@ -8,10 +10,24 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.scheduler import run_midnight_cleanup_loop
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    cleanup_task = asyncio.create_task(run_midnight_cleanup_loop())
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title=settings.app_name, version="0.1.0")
+    app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=_lifespan)
 
     app.add_middleware(
         CORSMiddleware,

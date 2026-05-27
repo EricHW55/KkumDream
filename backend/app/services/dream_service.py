@@ -1,10 +1,10 @@
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time as datetime_time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -38,6 +38,62 @@ from app.services.push_service import (
 )
 
 
+_KST = ZoneInfo("Asia/Seoul")
+
+
+def _kst_today_start_utc(now: datetime | None = None) -> datetime:
+    now_kst = (now or datetime.now(UTC)).astimezone(_KST)
+    midnight_kst = datetime.combine(now_kst.date(), datetime_time.min, tzinfo=_KST)
+    return midnight_kst.astimezone(UTC)
+
+
+async def _purge_stale_drafts_for_user(session: AsyncSession, user_id: UUID) -> None:
+    cutoff = _kst_today_start_utc()
+    await _delete_drafts_matching(
+        session,
+        Dream.giver_id == user_id,
+        Dream.status == "draft",
+        Dream.created_at < cutoff,
+    )
+
+
+async def purge_all_stale_drafts(session: AsyncSession) -> int:
+    cutoff = _kst_today_start_utc()
+    deleted_count = await _delete_drafts_matching(
+        session,
+        Dream.status == "draft",
+        Dream.created_at < cutoff,
+    )
+    await session.commit()
+    return deleted_count
+
+
+async def _delete_drafts_matching(session: AsyncSession, *criteria: object) -> int:
+    draft_ids = select(Dream.id).where(*criteria).scalar_subquery()
+    await session.execute(
+        update(AiGenerationLog)
+        .where(AiGenerationLog.dream_id.in_(draft_ids))
+        .values(dream_id=None)
+    )
+    result = await session.execute(delete(Dream).where(Dream.id.in_(draft_ids)))
+    return result.rowcount or 0
+
+
+async def _has_text_generation_today(session: AsyncSession, user_id: UUID) -> bool:
+    cutoff = _kst_today_start_utc()
+    existing_log_id = await session.scalar(
+        select(AiGenerationLog.id)
+        .where(
+            AiGenerationLog.user_id == user_id,
+            AiGenerationLog.generation_type == "text",
+            AiGenerationLog.status == "success",
+            AiGenerationLog.created_at >= cutoff,
+        )
+        .limit(1)
+    )
+    return existing_log_id is not None
+
+
 class DreamCommentView:
     def __init__(self, comment: DreamComment, author: User) -> None:
         self.id = comment.id
@@ -55,6 +111,23 @@ async def create_dream_draft(
     giver_id: UUID,
     payload: DreamDraftCreate,
 ) -> Dream:
+    await _purge_stale_drafts_for_user(session, giver_id)
+    existing = await session.scalar(
+        select(Dream)
+        .where(Dream.giver_id == giver_id, Dream.status == "draft")
+        .order_by(Dream.created_at.desc())
+        .limit(1)
+    )
+    if existing is not None:
+        await session.commit()
+        return await _attach_group_ids(session, existing)
+
+    if await _has_text_generation_today(session, giver_id):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="You can generate only one dream text per day",
+        )
+
     result = await generate_dream_text(
         payload.raw_input,
         payload.mood,
@@ -211,6 +284,8 @@ async def get_latest_dream_draft(
     session: AsyncSession,
     user_id: UUID,
 ) -> Dream | None:
+    await _purge_stale_drafts_for_user(session, user_id)
+    await session.commit()
     stmt = (
         select(Dream)
         .where(Dream.giver_id == user_id, Dream.status == "draft")

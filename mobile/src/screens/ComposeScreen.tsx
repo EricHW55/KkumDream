@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  AppState,
   Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -47,7 +48,14 @@ import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { readCache, removeCache, writeCache } from '../data/cache';
+import {
+  readComposeDraftSnapshot,
+  removeComposeDraftSnapshot,
+  writeComposeDraftSnapshot,
+  type ComposeDraftSnapshot,
+  type ComposeRecipientMode,
+  type ComposeToneValue,
+} from '../data/composeDraftCache';
 import { getCachedRooms, loadRooms } from '../data/dreamRepository';
 import { LOCAL_MOCK_USER_ID } from '../data/currentUser';
 import { getDisplayMember, getSeedFriends } from '../data/members';
@@ -125,29 +133,14 @@ const lengthOptions: readonly {
   },
 ];
 
-type RecipientMode = 'friend' | 'external';
+type RecipientMode = ComposeRecipientMode;
 type RecipientFriend = {
   id: string;
   name: string;
   avatarColor: string;
   profileImageUrl?: string | null;
 };
-type ToneValue = (typeof toneOptions)[number]['value'];
-
-type ComposeDraftSnapshot = {
-  version: 1;
-  rawInput: string;
-  mood: string;
-  tone: ToneValue;
-  storyLength: DreamStoryLength;
-  selectedDesign: DreamDesign;
-  draft: Dream | null;
-  recipientMode: RecipientMode;
-  selectedReceiverId: string | null;
-  externalLabel: string;
-  selectedGroupIds: string[];
-  privatePostscript: string;
-};
+type ToneValue = ComposeToneValue;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
@@ -158,35 +151,75 @@ export function ComposeScreen({ navigation }: Props) {
   const token = useSessionStore(state => state.token);
   const sessionUserId = useSessionStore(state => state.userId);
   const currentUserId = sessionUserId ?? LOCAL_MOCK_USER_ID;
-  const composeDraftCacheKey = useMemo(
-    () => getComposeDraftCacheKey(sessionUserId),
+  const initialComposeSnapshot = useMemo(
+    () => readComposeDraftSnapshot(sessionUserId),
     [sessionUserId],
   );
-  const [rawInput, setRawInput] = useState('');
-  const [mood, setMood] = useState('몽환');
-  const [tone, setTone] = useState<ToneValue>('warm');
-  const [storyLength, setStoryLength] = useState<DreamStoryLength>('standard');
+  const initialComposeDesign = useMemo(
+    () => getSnapshotDesign(initialComposeSnapshot),
+    [initialComposeSnapshot],
+  );
+  const initialComposeDraft = useMemo(
+    () => getSnapshotDraft(initialComposeSnapshot, initialComposeDesign),
+    [initialComposeDesign, initialComposeSnapshot],
+  );
+  const [rawInput, setRawInput] = useState(() =>
+    getSnapshotRawInput(initialComposeSnapshot, initialComposeDraft),
+  );
+  const [mood, setMood] = useState(() =>
+    getSnapshotMood(initialComposeSnapshot),
+  );
+  const [tone, setTone] = useState<ToneValue>(() =>
+    getSnapshotTone(initialComposeSnapshot),
+  );
+  const [storyLength, setStoryLength] = useState<DreamStoryLength>(() =>
+    getSnapshotStoryLength(initialComposeSnapshot),
+  );
   const [selectedDesign, setSelectedDesign] =
-    useState<DreamDesign>(DEFAULT_DREAM_DESIGN);
-  const [draft, setDraft] = useState<Dream | null>(null);
+    useState<DreamDesign>(initialComposeDesign);
+  const [draft, setDraft] = useState<Dream | null>(initialComposeDraft);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editStory, setEditStory] = useState('');
+  const [editTitle, setEditTitle] = useState(initialComposeDraft?.title ?? '');
+  const [editStory, setEditStory] = useState(initialComposeDraft?.story ?? '');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isRecipientModalVisible, setIsRecipientModalVisible] = useState(false);
   const [isFriendPickerVisible, setIsFriendPickerVisible] = useState(false);
   const [friendSearch, setFriendSearch] = useState('');
-  const [recipientMode, setRecipientMode] = useState<RecipientMode>('friend');
-  const [selectedReceiverId, setSelectedReceiverId] = useState<string | null>(
-    null,
+  const [recipientMode, setRecipientMode] = useState<RecipientMode>(() =>
+    initialComposeSnapshot?.recipientMode === 'external'
+      ? 'external'
+      : 'friend',
   );
-  const [externalLabel, setExternalLabel] = useState('');
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
-  const [privatePostscript, setPrivatePostscript] = useState('');
+  const [selectedReceiverId, setSelectedReceiverId] = useState<string | null>(
+    () =>
+      typeof initialComposeSnapshot?.selectedReceiverId === 'string'
+        ? initialComposeSnapshot.selectedReceiverId
+        : null,
+  );
+  const [externalLabel, setExternalLabel] = useState(
+    typeof initialComposeSnapshot?.externalLabel === 'string'
+      ? initialComposeSnapshot.externalLabel
+      : '',
+  );
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(() =>
+    sanitizeGroupIds(initialComposeSnapshot?.selectedGroupIds),
+  );
+  const [privatePostscript, setPrivatePostscript] = useState(
+    typeof initialComposeSnapshot?.privatePostscript === 'string'
+      ? initialComposeSnapshot.privatePostscript
+      : '',
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [isGiving, setIsGiving] = useState(false);
   const [hasHydratedComposeDraft, setHasHydratedComposeDraft] = useState(false);
+  const cacheWriteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const draftDesignSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const lastSyncedDraftDesignRef = useRef<string | null>(null);
   const roomsQueryKey = ['rooms', sessionUserId, token] as const;
   const { data: rooms = getCachedRooms(sessionUserId) } = useQuery({
     queryKey: roomsQueryKey,
@@ -197,7 +230,10 @@ export function ComposeScreen({ navigation }: Props) {
   });
 
   const hydrateComposeSnapshot = useCallback(
-    (snapshot: ComposeDraftSnapshot) => {
+    (
+      snapshot: ComposeDraftSnapshot,
+      options?: { markDesignSynced?: boolean },
+    ) => {
       const nextDesign = normalizeDreamDesign(
         snapshot.draft?.design ?? snapshot.selectedDesign,
       );
@@ -222,6 +258,12 @@ export function ComposeScreen({ navigation }: Props) {
       setDraft(nextDraft);
       setEditTitle(nextDraft?.title ?? '');
       setEditStory(nextDraft?.story ?? '');
+      if (nextDraft && options?.markDesignSynced) {
+        lastSyncedDraftDesignRef.current = getDraftDesignSyncKey(
+          nextDraft.id,
+          nextDesign,
+        );
+      }
       setRecipientMode(
         snapshot.recipientMode === 'external' ? 'external' : 'friend',
       );
@@ -233,13 +275,7 @@ export function ComposeScreen({ navigation }: Props) {
       setExternalLabel(
         typeof snapshot.externalLabel === 'string' ? snapshot.externalLabel : '',
       );
-      setSelectedGroupIds(
-        Array.isArray(snapshot.selectedGroupIds)
-          ? snapshot.selectedGroupIds.filter(
-              (groupId): groupId is string => typeof groupId === 'string',
-            )
-          : [],
-      );
+      setSelectedGroupIds(sanitizeGroupIds(snapshot.selectedGroupIds));
       setPrivatePostscript(
         typeof snapshot.privatePostscript === 'string'
           ? snapshot.privatePostscript
@@ -251,7 +287,7 @@ export function ComposeScreen({ navigation }: Props) {
 
   useEffect(() => {
     let isCancelled = false;
-    const cachedSnapshot = readCache<ComposeDraftSnapshot>(composeDraftCacheKey);
+    const cachedSnapshot = readComposeDraftSnapshot(sessionUserId);
 
     if (cachedSnapshot) {
       hydrateComposeSnapshot(cachedSnapshot);
@@ -269,20 +305,23 @@ export function ComposeScreen({ navigation }: Props) {
         if (isCancelled || serverDraft?.status !== 'draft') {
           return;
         }
-        hydrateComposeSnapshot({
-          version: 1,
-          rawInput: serverDraft.rawInput,
-          mood: serverDraft.mainMood || moods[0],
-          tone: 'warm',
-          storyLength: 'standard',
-          selectedDesign: normalizeDreamDesign(serverDraft.design),
-          draft: serverDraft,
-          recipientMode: 'friend',
-          selectedReceiverId: null,
-          externalLabel: '',
-          selectedGroupIds: [],
-          privatePostscript: '',
-        });
+        hydrateComposeSnapshot(
+          {
+            version: 1,
+            rawInput: serverDraft.rawInput,
+            mood: serverDraft.mainMood || moods[0],
+            tone: 'warm',
+            storyLength: 'standard',
+            selectedDesign: normalizeDreamDesign(serverDraft.design),
+            draft: serverDraft,
+            recipientMode: 'friend',
+            selectedReceiverId: null,
+            externalLabel: '',
+            selectedGroupIds: [],
+            privatePostscript: '',
+          },
+          { markDesignSynced: true },
+        );
       })
       .catch(() => undefined)
       .finally(() => {
@@ -294,20 +333,20 @@ export function ComposeScreen({ navigation }: Props) {
     return () => {
       isCancelled = true;
     };
-  }, [composeDraftCacheKey, hydrateComposeSnapshot, token]);
+  }, [hydrateComposeSnapshot, sessionUserId, token]);
 
-  useEffect(() => {
+  const flushComposeDraftCache = useCallback(() => {
     if (!hasHydratedComposeDraft) {
       return;
     }
 
     const currentDraft = draft?.status === 'draft' ? draft : null;
     if (!currentDraft && (draft || rawInput.trim().length === 0)) {
-      removeCache(composeDraftCacheKey);
+      removeComposeDraftSnapshot(sessionUserId);
       return;
     }
 
-    writeCache<ComposeDraftSnapshot>(composeDraftCacheKey, {
+    writeComposeDraftSnapshot(sessionUserId, {
       version: 1,
       rawInput,
       mood,
@@ -322,7 +361,6 @@ export function ComposeScreen({ navigation }: Props) {
       privatePostscript,
     });
   }, [
-    composeDraftCacheKey,
     draft,
     externalLabel,
     hasHydratedComposeDraft,
@@ -331,11 +369,103 @@ export function ComposeScreen({ navigation }: Props) {
     rawInput,
     recipientMode,
     selectedDesign,
+    sessionUserId,
     selectedGroupIds,
     selectedReceiverId,
     storyLength,
     tone,
   ]);
+
+  useEffect(() => {
+    if (!hasHydratedComposeDraft) {
+      return undefined;
+    }
+
+    if (cacheWriteTimeoutRef.current) {
+      clearTimeout(cacheWriteTimeoutRef.current);
+    }
+    cacheWriteTimeoutRef.current = setTimeout(flushComposeDraftCache, 250);
+
+    return () => {
+      if (cacheWriteTimeoutRef.current) {
+        clearTimeout(cacheWriteTimeoutRef.current);
+      }
+    };
+  }, [flushComposeDraftCache, hasHydratedComposeDraft]);
+
+  const flushDraftDesignToServer = useCallback(async () => {
+    if (!token || draft?.status !== 'draft') {
+      return;
+    }
+
+    const requestDesign = normalizeDreamDesign(selectedDesign);
+    const syncKey = getDraftDesignSyncKey(draft.id, requestDesign);
+    if (lastSyncedDraftDesignRef.current === syncKey) {
+      return;
+    }
+    lastSyncedDraftDesignRef.current = syncKey;
+
+    try {
+      const updatedDream = await updateDream(
+        draft.id,
+        { design: requestDesign },
+        token,
+      );
+      setDraft(currentDraft =>
+        currentDraft?.id === updatedDream.id && currentDraft.status === 'draft'
+          ? { ...updatedDream, design: requestDesign }
+          : currentDraft,
+      );
+    } catch {
+      lastSyncedDraftDesignRef.current = null;
+    }
+  }, [draft?.id, draft?.status, selectedDesign, token]);
+
+  useEffect(() => {
+    if (!hasHydratedComposeDraft || !token || draft?.status !== 'draft') {
+      return undefined;
+    }
+
+    if (draftDesignSyncTimeoutRef.current) {
+      clearTimeout(draftDesignSyncTimeoutRef.current);
+    }
+    draftDesignSyncTimeoutRef.current = setTimeout(() => {
+      void flushDraftDesignToServer();
+    }, 1000);
+
+    return () => {
+      if (draftDesignSyncTimeoutRef.current) {
+        clearTimeout(draftDesignSyncTimeoutRef.current);
+      }
+    };
+  }, [
+    draft?.id,
+    draft?.status,
+    flushDraftDesignToServer,
+    hasHydratedComposeDraft,
+    selectedDesign,
+    token,
+  ]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') {
+        return;
+      }
+      if (cacheWriteTimeoutRef.current) {
+        clearTimeout(cacheWriteTimeoutRef.current);
+      }
+      if (draftDesignSyncTimeoutRef.current) {
+        clearTimeout(draftDesignSyncTimeoutRef.current);
+      }
+      flushComposeDraftCache();
+      void flushDraftDesignToServer();
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [flushComposeDraftCache, flushDraftDesignToServer]);
 
   const friends = useMemo(() => {
     const membersById = new Map<string, RecipientFriend>();
@@ -492,6 +622,11 @@ export function ComposeScreen({ navigation }: Props) {
       ...nextDraft,
       design: normalizeDreamDesign(nextDraft.design ?? requestDesign),
     };
+    lastSyncedDraftDesignRef.current = getDraftDesignSyncKey(
+      normalizedDraft.id,
+      normalizedDraft.design,
+    );
+    setRawInput(normalizedDraft.rawInput);
     setSelectedDesign(normalizedDraft.design);
     setDraft(normalizedDraft);
     setEditTitle(nextDraft.title);
@@ -542,6 +677,10 @@ export function ComposeScreen({ navigation }: Props) {
         draft.id,
         { title, story, summary, design: requestDesign },
         token,
+      );
+      lastSyncedDraftDesignRef.current = getDraftDesignSyncKey(
+        updatedDream.id,
+        requestDesign,
       );
       setDraft(updatedDream);
       setIsEditOpen(false);
@@ -594,11 +733,18 @@ export function ComposeScreen({ navigation }: Props) {
     setIsGiving(true);
     const requestDesign = normalizeDreamDesign(selectedDesign);
     setSelectedDesign(requestDesign);
+    if (draftDesignSyncTimeoutRef.current) {
+      clearTimeout(draftDesignSyncTimeoutRef.current);
+    }
     try {
       const dreamToGive = await updateDream(
         draft.id,
         { design: requestDesign },
         token,
+      );
+      lastSyncedDraftDesignRef.current = getDraftDesignSyncKey(
+        dreamToGive.id,
+        requestDesign,
       );
       setDraft(dreamToGive);
       const result = await giveDream(
@@ -615,7 +761,7 @@ export function ComposeScreen({ navigation }: Props) {
         },
         token,
       );
-      removeCache(composeDraftCacheKey);
+      removeComposeDraftSnapshot(sessionUserId);
       setDraft(result);
       setIsRecipientModalVisible(false);
       queryClient.setQueryData<Dream[]>(
@@ -1523,8 +1669,60 @@ export function ComposeScreen({ navigation }: Props) {
   );
 }
 
-function getComposeDraftCacheKey(userId?: string | null) {
-  return `compose:draft:${userId ?? 'anonymous'}`;
+function getSnapshotDesign(snapshot: ComposeDraftSnapshot | null) {
+  return normalizeDreamDesign(
+    snapshot?.draft?.design ?? snapshot?.selectedDesign ?? DEFAULT_DREAM_DESIGN,
+  );
+}
+
+function getSnapshotDraft(
+  snapshot: ComposeDraftSnapshot | null,
+  design: DreamDesign,
+) {
+  return snapshot?.draft?.status === 'draft'
+    ? { ...snapshot.draft, design }
+    : null;
+}
+
+function getSnapshotRawInput(
+  snapshot: ComposeDraftSnapshot | null,
+  draft: Dream | null,
+) {
+  return typeof snapshot?.rawInput === 'string'
+    ? snapshot.rawInput
+    : draft?.rawInput ?? '';
+}
+
+function getSnapshotMood(snapshot: ComposeDraftSnapshot | null) {
+  return typeof snapshot?.mood === 'string' ? snapshot.mood : moods[0];
+}
+
+function getSnapshotTone(snapshot: ComposeDraftSnapshot | null): ToneValue {
+  return isToneValue(snapshot?.tone) ? snapshot.tone : 'warm';
+}
+
+function getSnapshotStoryLength(
+  snapshot: ComposeDraftSnapshot | null,
+): DreamStoryLength {
+  return isStoryLength(snapshot?.storyLength)
+    ? snapshot.storyLength
+    : 'standard';
+}
+
+function sanitizeGroupIds(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((groupId): groupId is string => typeof groupId === 'string')
+    : [];
+}
+
+function getDraftDesignSyncKey(draftId: string, design: DreamDesign) {
+  const normalized = normalizeDreamDesign(design);
+  return [
+    draftId,
+    normalized.cardColor,
+    normalized.cardFrame,
+    normalized.fontStyle,
+  ].join(':');
 }
 
 function isToneValue(value: unknown): value is ToneValue {
