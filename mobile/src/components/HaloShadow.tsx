@@ -84,10 +84,11 @@ export function HaloShadow({
           <Defs>
             <Filter
               id={filterId}
-              x="-30%"
-              y="-30%"
-              width="160%"
-              height="160%"
+              filterUnits="userSpaceOnUse"
+              x={-inset}
+              y={-inset}
+              width={size.width + inset * 2}
+              height={size.height + inset * 2}
             >
               <FeGaussianBlur
                 in="SourceAlpha"
