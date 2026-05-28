@@ -91,29 +91,29 @@ STORY_LENGTH_GUIDES = {
     LENGTH_SHORT: {
         "label": "concise",
         "instruction": (
-            "story: 180-320 Korean characters. Keep only the clearest dream "
+            "story: 160-300 Korean characters. Keep only the clearest dream "
             "scene and emotion."
         ),
-        "max_chars": 360,
-        "max_tokens": 1100,
+        "max_chars": 340,
+        "max_tokens": 950,
     },
     LENGTH_STANDARD: {
         "label": "balanced",
         "instruction": (
-            "story: 300-700 Korean characters. Connect the dream naturally "
+            "story: 300-600 Korean characters. Connect the dream naturally "
             "without making it a long fantasy plot."
         ),
-        "max_chars": 760,
-        "max_tokens": 1400,
+        "max_chars": 660,
+        "max_tokens": 1250,
     },
     LENGTH_LONG: {
         "label": "rich",
         "instruction": (
-            "story: 650-1000 Korean characters. Let the scene breathe with "
+            "story: 600-900 Korean characters. Let the scene breathe with "
             "more sensory detail while keeping the user's original scenes visible."
         ),
-        "max_chars": 1000,
-        "max_tokens": 1800,
+        "max_chars": 940,
+        "max_tokens": 1650,
     },
 }
 ANTHROPIC_TOKEN_PRICES = {
@@ -124,7 +124,7 @@ ANTHROPIC_TOKEN_PRICES = {
 
 CREATE_DREAM_CARD_TOOL = {
     "name": "create_dream_card",
-    "description": "Create the final Korean dream-card text and image prompt.",
+    "description": "Create the Korean dream-card text and a short image scene.",
     "input_schema": {
         "type": "object",
         "additionalProperties": False,
@@ -133,65 +133,60 @@ CREATE_DREAM_CARD_TOOL = {
             "shortMessage",
             "summary",
             "story",
-            "mainMood",
             "tags",
-            "imagePrompt",
+            "imageScene",
         ],
         "properties": {
             "title": {
                 "type": "string",
-                "description": "Korean title, 8-28 Korean characters.",
+                "description": "Korean title, 8-20 Korean characters.",
             },
             "shortMessage": {
                 "type": "string",
-                "description": "Korean gift-card message, 20-60 Korean characters.",
+                "description": (
+                    "Korean gift-card message, 16-45 Korean characters, "
+                    "dream-specific and friendly."
+                ),
             },
             "summary": {
                 "type": "string",
-                "description": "Korean one-sentence summary, 45-110 Korean characters.",
+                "description": "One Korean sentence, 45-90 Korean characters.",
             },
             "story": {
                 "type": "string",
-                "description": "Korean polished dream story, 300-700 Korean characters.",
-            },
-            "mainMood": {
-                "type": "string",
-                "enum": list(VALID_MOODS),
+                "description": "Korean polished dream story following requested length.",
             },
             "tags": {
                 "type": "array",
                 "minItems": 2,
                 "maxItems": 3,
                 "items": {"type": "string"},
-                "description": "Two or three short Korean tags.",
+                "description": "2-3 short Korean words, no hashtags.",
             },
-            "imagePrompt": {
+            "imageScene": {
                 "type": "string",
-                "description": "English prompt for a square dream-card illustration.",
+                "description": (
+                    "English visual scene only, 30-60 words, no style terms."
+                ),
             },
         },
     },
 }
 
 SYSTEM_PROMPT = """
-You are the Korean dream-card writer for KkumDream.
-Your job is to turn a user's rough dream memo into a warm gift-card text.
-
-Priorities:
-1. Preserve the user's dream scenes, symbols, and emotional direction.
-2. Make the Korean natural, connected, and suitable to send to another person.
-3. Do not over-explain the dream or interpret it like a fortune teller.
-4. Add only gentle connective details when the memo is too fragmented.
-5. Match the selected writing tone while keeping the card suitable to send as a gift.
-6. Never mention AI, prompts, models, policies, JSON, or image generation to the user.
-7. Use the create_dream_card tool exactly once.
+You write warm Korean dream cards for KkumDream.
+Preserve the user's core dream scenes and symbols.
+Make the result suitable to send to a close friend.
+Do not interpret the dream or explain its meaning.
+Add only gentle connective details when needed.
+Never mention AI, prompts, tools, JSON, policies, or image generation to the user.
+Use the create_dream_card tool exactly once.
 """.strip()
 
 IMAGE_STYLE_GUIDE = """
 soft Korean storybook illustration, mood-matched colors, gentle paper texture,
 rounded shapes, subtle cinematic light, dreamlike but calm, emotionally expressive,
-clean centered composition, clear focal object, mobile card thumbnail friendly,
-not photorealistic, not anime, no text, no logo, no watermark
+clear focal object, mobile card thumbnail friendly, not photorealistic, not anime
 """.replace("\n", " ").strip()
 MOOD_IMAGE_GUIDES = {
     MOOD_DREAMY: (
@@ -273,7 +268,9 @@ def _mock_dream_text(
         ),
         main_mood=selected_mood,
         tags=[selected_mood, "\uae30\uc5b5", "\uc120\ubb3c"],
-        image_prompt=_build_mock_image_prompt(clipped, selected_mood),
+        image_prompt=_build_final_image_prompt(
+            _fallback_image_scene(clipped, ""), selected_mood
+        ),
         model_name="mock",
     )
 
@@ -333,31 +330,18 @@ def _build_user_prompt(
 User dream memo:
 {raw_input}
 
-Preferred mood:
-{mood}
+Mood: {mood}
+Writing tone — {tone_guide["label"]}: {tone_guide["instruction"]}
+Story length — {length_guide["label"]}: {length_guide["instruction"]}
 
-Preferred writing tone:
-{tone_guide["label"]}: {tone_guide["instruction"]}
+Write the dream card:
+- Apply the writing tone to shortMessage, summary, and story.
+- shortMessage: a sender-facing line that feels like a small gift, specific to this dream.
+- imageScene: English visual scene only. Describe the main objects, place,
+  atmosphere, and visual action. No style words, no "no text" phrases.
 
-Preferred story length:
-{length_guide["label"]}: {length_guide["instruction"]}
-
-Create a polished Korean dream card with these constraints:
-- title: short, evocative Korean title.
-- shortMessage: a sender-facing message that feels like a small gift.
-- summary: one natural Korean sentence.
-- {length_guide["instruction"]}
-- Apply the preferred writing tone to shortMessage, summary, and story.
-- mainMood: use the preferred mood exactly: {mood}.
-- tags: 2-3 short Korean words, no hashtags.
-- imagePrompt: English only. Describe the main visual scene, explicitly express
-  the preferred mood, and include this mood guide: {MOOD_IMAGE_GUIDES[mood]}.
-  Also include this fixed art direction exactly in meaning: {IMAGE_STYLE_GUIDE}.
-
-Avoid:
-- moral lessons, dream interpretation, fortune-telling, therapy language.
-- excessive new characters, violence, gore, sexual content, real brand names.
-- text, captions, logos, speech bubbles, letters, or watermarks in the image prompt.
+Avoid: dream interpretation, fortune-telling, therapy or moral lessons; new
+characters, violence, gore, sexual content, and real brand names.
 """.strip()
 
 
@@ -402,12 +386,12 @@ def _normalize_result(
     )
     main_mood = selected_mood
     tags = _normalize_tags(data.get("tags"), main_mood)
-    image_prompt = _text(
-        data.get("imagePrompt"),
-        _build_mock_image_prompt(summary, main_mood),
-        1600,
+    image_scene = _text(
+        data.get("imageScene"),
+        _fallback_image_scene(summary, story),
+        600,
     )
-    image_prompt = _apply_image_style(image_prompt, main_mood)
+    image_prompt = _build_final_image_prompt(image_scene, main_mood)
 
     token_count = input_tokens + output_tokens
     cost_estimate = _estimate_cost(model_name, input_tokens, output_tokens)
@@ -530,18 +514,20 @@ def _normalize_tags(value: Any, main_mood: str) -> list[str]:
     return unique_tags[:3]
 
 
-def _apply_image_style(image_prompt: str, mood: str) -> str:
-    prompt = image_prompt.strip()
-    mood_guide = MOOD_IMAGE_GUIDES[mood]
-    lower_prompt = prompt.lower()
-    additions: list[str] = []
-    if mood_guide.lower() not in lower_prompt:
-        additions.append(mood_guide)
-    if "no text" not in lower_prompt:
-        additions.append("no text, no logo, no watermark")
-    if additions:
-        prompt = f"{prompt}, {', '.join(additions)}"
-    return prompt
+def _build_final_image_prompt(image_scene: str, mood: str) -> str:
+    scene = " ".join(image_scene.split()).strip()
+    mood_guide = MOOD_IMAGE_GUIDES.get(mood, MOOD_IMAGE_GUIDES[DEFAULT_MOOD])
+    return (
+        f"{scene}, {mood_guide}, {IMAGE_STYLE_GUIDE}, "
+        "square composition, no text, no logo, no watermark"
+    )
+
+
+def _fallback_image_scene(summary: str, story: str) -> str:
+    base = " ".join((summary or story or "").split())[:120]
+    if not base:
+        base = "조용한 꿈의 장면"
+    return f"A gentle dream scene inspired by: {base}"
 
 
 def _estimate_cost(model_name: str, input_tokens: int, output_tokens: int) -> float | None:
@@ -552,10 +538,3 @@ def _estimate_cost(model_name: str, input_tokens: int, output_tokens: int) -> fl
                 + (output_tokens / 1_000_000) * output_price
             )
     return None
-
-
-def _build_mock_image_prompt(scene: str, mood: str) -> str:
-    return (
-        f"A square Korean dream-card illustration about {scene}, mood: {mood}, "
-        f"{MOOD_IMAGE_GUIDES[mood]}, {IMAGE_STYLE_GUIDE}"
-    )
