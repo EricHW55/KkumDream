@@ -851,6 +851,7 @@ export function DreamCard({
             </View>
           </Animated.View>
 
+          {disableFlip ? null : (
           <Animated.View
             pointerEvents={isBackVisible ? 'auto' : 'none'}
             style={[
@@ -940,6 +941,7 @@ export function DreamCard({
               </View>
             </DreamCardFrame>
           </Animated.View>
+          )}
           {showImageActions && !isBackVisible ? renderImageActions() : null}
         </View>
       </View>
