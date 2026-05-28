@@ -4,7 +4,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, delete, func, select, update
+from sqlalchemy import Select, delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -79,6 +79,18 @@ async def _delete_drafts_matching(session: AsyncSession, *criteria: object) -> i
     return result.rowcount or 0
 
 
+async def _lock_text_generation_for_user(session: AsyncSession, user_id: UUID) -> None:
+    # Serialize draft creation per user for the rest of this transaction. The
+    # paid AI text call happens before the row that records the daily quota is
+    # committed, so without this lock concurrent /draft requests would each pass
+    # the "already generated today?" check and trigger a separate paid generation.
+    # pg_advisory_xact_lock auto-releases on commit/rollback.
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"dream_text:{user_id}"},
+    )
+
+
 async def _has_text_generation_today(session: AsyncSession, user_id: UUID) -> bool:
     cutoff = _kst_today_start_utc()
     existing_log_id = await session.scalar(
@@ -111,6 +123,7 @@ async def create_dream_draft(
     giver_id: UUID,
     payload: DreamDraftCreate,
 ) -> Dream:
+    await _lock_text_generation_for_user(session, giver_id)
     await _purge_stale_drafts_for_user(session, giver_id)
     existing = await session.scalar(
         select(Dream)
