@@ -10,14 +10,8 @@ import {
   X as XIcon,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DreamCard } from '../components/DreamCard';

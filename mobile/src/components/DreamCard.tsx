@@ -6,12 +6,12 @@ import {
   InteractionManager,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { Download, Share2 } from 'lucide-react-native';
 import Animated, {
   useAnimatedStyle,
@@ -301,9 +301,7 @@ export function DreamCard({
     }
 
     const { pageX, pageY } = event.nativeEvent;
-    const distanceX = Math.abs(pageX - start.x);
-    const distanceY = Math.abs(pageY - start.y);
-    if (distanceX > 8 || distanceY > 8) {
+    if (Math.abs(pageX - start.x) > 8 || Math.abs(pageY - start.y) > 8) {
       backTouchMoved.current = true;
     }
   };
