@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { InfiniteData } from '@tanstack/react-query';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +16,6 @@ import {
 import {
   Clipboard,
   FlatList,
-  InteractionManager,
   type LayoutChangeEvent,
   Modal,
   type NativeScrollEvent,
@@ -146,12 +145,15 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   );
   const latestVisibleDreamId = visibleDreams[visibleDreams.length - 1]?.id ?? null;
   const shouldShowTimelineLoading = !isRoomContentHydrated;
-  const members =
-    (room?.members ?? []).length > 0
-      ? room?.members ?? []
-      : (room?.memberIds ?? []).map(memberId =>
-          getDisplayMember(memberId, sessionUserId),
-        );
+  const members = useMemo(
+    () =>
+      (room?.members ?? []).length > 0
+        ? room?.members ?? []
+        : (room?.memberIds ?? []).map(memberId =>
+            getDisplayMember(memberId, sessionUserId),
+          ),
+    [room?.members, room?.memberIds, sessionUserId],
+  );
 
   const updateDreamUpgradeQueue = useCallback(() => {
     if (isTimelineInputActiveRef.current) {
@@ -317,30 +319,24 @@ export function GroupRoomScreen({ navigation, route }: Props) {
       return undefined;
     }
 
-    let frameId: number | null = null;
     let isCancelled = false;
-    const task = InteractionManager.runAfterInteractions(() => {
-      frameId = requestAnimationFrame(() => {
-        if (isCancelled) {
-          return;
+    const frameId = requestAnimationFrame(() => {
+      if (isCancelled || isTimelineInputActiveRef.current) {
+        return;
+      }
+      setUpgradedDreamIds(current => {
+        if (current.has(nextId)) {
+          return current;
         }
-        setUpgradedDreamIds(current => {
-          if (current.has(nextId)) {
-            return current;
-          }
-          const next = new Set(current);
-          next.add(nextId);
-          return next;
-        });
+        const next = new Set(current);
+        next.add(nextId);
+        return next;
       });
     });
 
     return () => {
       isCancelled = true;
-      task.cancel?.();
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId);
-      }
+      cancelAnimationFrame(frameId);
     };
   }, [upgradedDreamIds, viewableDreamIds]);
 
@@ -632,12 +628,15 @@ export function GroupRoomScreen({ navigation, route }: Props) {
     );
   };
 
-  const openDreamDetail = (dream: Dream) => {
-    pendingScrollRestoreOffsetRef.current = savedScrollOffsetRef.current;
-    shouldScrollToLatestRef.current = false;
-    clearScrollRetryTimers();
-    navigation.navigate('DreamDetail', { dream });
-  };
+  const openDreamDetail = useCallback(
+    (dream: Dream) => {
+      pendingScrollRestoreOffsetRef.current = savedScrollOffsetRef.current;
+      shouldScrollToLatestRef.current = false;
+      clearScrollRetryTimers();
+      navigation.navigate('DreamDetail', { dream });
+    },
+    [clearScrollRetryTimers, navigation],
+  );
 
   return (
     <View style={[styles.root, { paddingTop: Math.max(insets.top + 12, 42) }]}>
@@ -770,10 +769,11 @@ export function GroupRoomScreen({ navigation, route }: Props) {
                     : null
                 }
                 dream={item}
+                index={index}
                 isUpgraded={upgradedDreamIds.has(item.id)}
                 members={members}
-                onLayout={event => handleDreamItemLayout(item.id, index, event)}
-                onPress={() => openDreamDetail(item)}
+                onLayout={handleDreamItemLayout}
+                onPress={openDreamDetail}
               />
             );
           }}
@@ -968,9 +968,10 @@ function DreamRoomLoadingState() {
   );
 }
 
-function DreamMessage({
+const DreamMessage = memo(function DreamMessage({
   dateLabel,
   dream,
+  index,
   isUpgraded,
   members,
   onLayout,
@@ -978,10 +979,11 @@ function DreamMessage({
 }: {
   dateLabel: string | null;
   dream: Dream;
+  index: number;
   isUpgraded: boolean;
   members: GroupMember[];
-  onLayout: (event: LayoutChangeEvent) => void;
-  onPress: () => void;
+  onLayout: (dreamId: string, index: number, event: LayoutChangeEvent) => void;
+  onPress: (dream: Dream) => void;
 }) {
   const sessionUserId = useSessionStore(state => state.userId);
   const { width: windowWidth } = useWindowDimensions();
@@ -997,8 +999,14 @@ function DreamMessage({
   const cardWidth = Math.min(Math.floor(windowWidth * 0.56), 260);
   const cardHeight = Math.round(cardWidth / DREAM_CARD_ASPECT_RATIO);
 
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => onLayout(dream.id, index, event),
+    [onLayout, dream.id, index],
+  );
+  const handlePress = useCallback(() => onPress(dream), [onPress, dream]);
+
   return (
-    <View onLayout={onLayout}>
+    <View onLayout={handleLayout}>
       {dateLabel ? (
         <View style={styles.roomDateDivider}>
           <View style={styles.roomDateDividerLine} />
@@ -1026,7 +1034,7 @@ function DreamMessage({
                 disableFlip
                 dream={dream}
                 giverName={sender.name}
-                onPress={onPress}
+                onPress={handlePress}
                 preferThumbnail
                 receiverName={receiver?.name}
                 showImageActions={false}
@@ -1036,7 +1044,7 @@ function DreamMessage({
               <DreamCardLite
                 compact
                 dream={dream}
-                onPress={onPress}
+                onPress={handlePress}
                 width={cardWidth}
               />
             )}
@@ -1045,7 +1053,7 @@ function DreamMessage({
       </View>
     </View>
   );
-}
+});
 
 function InviteCodeCard({
   inSheet = false,

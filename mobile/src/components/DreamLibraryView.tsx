@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -111,6 +111,10 @@ export function DreamLibraryView({
   );
   const archiveViewportHeightRef = useRef(0);
   const archiveScrollOffsetRef = useRef(0);
+  const isArchiveInputActiveRef = useRef(false);
+  const archiveUpgradeResumeTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const previewPanResponder = useMemo(
     () =>
       PanResponder.create({
@@ -166,6 +170,9 @@ export function DreamLibraryView({
   const dayPreviewSize = Math.max(40, Math.min(56, calendarCellSize - 4));
 
   const updateArchiveUpgradeQueue = useCallback(() => {
+    if (isArchiveInputActiveRef.current) {
+      return;
+    }
     if (mode !== 'archive' || archiveDreams.length === 0) {
       setViewableArchiveIds([]);
       return;
@@ -268,10 +275,35 @@ export function DreamLibraryView({
     [updateArchiveUpgradeQueue],
   );
 
+  const clearArchiveUpgradeResumeTimer = useCallback(() => {
+    if (archiveUpgradeResumeTimerRef.current !== null) {
+      clearTimeout(archiveUpgradeResumeTimerRef.current);
+      archiveUpgradeResumeTimerRef.current = null;
+    }
+  }, []);
+
+  const pauseArchiveUpgradeWork = useCallback(() => {
+    isArchiveInputActiveRef.current = true;
+    clearArchiveUpgradeResumeTimer();
+  }, [clearArchiveUpgradeResumeTimer]);
+
+  const resumeArchiveUpgradeWork = useCallback(() => {
+    clearArchiveUpgradeResumeTimer();
+    archiveUpgradeResumeTimerRef.current = setTimeout(() => {
+      isArchiveInputActiveRef.current = false;
+      archiveUpgradeResumeTimerRef.current = null;
+      updateArchiveUpgradeQueue();
+    }, 80);
+  }, [clearArchiveUpgradeResumeTimer, updateArchiveUpgradeQueue]);
+
   const openDetail = (dream: Dream) => {
     setSelectedDream(null);
     navigation.navigate('DreamDetail', { dream });
   };
+
+  const handleSelectDream = useCallback((dream: Dream) => {
+    setSelectedDream(dream);
+  }, []);
 
   const openMonthPicker = () => {
     setMonthPickerYear(Number(visibleCalendarMonthKey.slice(0, 4)));
@@ -415,38 +447,37 @@ export function DreamLibraryView({
     if (mode !== 'archive' || viewableArchiveIds.length === 0) {
       return undefined;
     }
+    if (isArchiveInputActiveRef.current) {
+      return undefined;
+    }
 
     const nextId = viewableArchiveIds.find(id => !upgradedArchiveIds.has(id));
     if (!nextId) {
       return undefined;
     }
 
-    let frameId: number | null = null;
     let isCancelled = false;
-    const task = InteractionManager.runAfterInteractions(() => {
-      frameId = requestAnimationFrame(() => {
-        if (isCancelled) {
-          return;
+    const frameId = requestAnimationFrame(() => {
+      if (isCancelled || isArchiveInputActiveRef.current) {
+        return;
+      }
+      setUpgradedArchiveIds(current => {
+        if (current.has(nextId)) {
+          return current;
         }
-        setUpgradedArchiveIds(current => {
-          if (current.has(nextId)) {
-            return current;
-          }
-          const next = new Set(current);
-          next.add(nextId);
-          return next;
-        });
+        const next = new Set(current);
+        next.add(nextId);
+        return next;
       });
     });
 
     return () => {
       isCancelled = true;
-      task.cancel?.();
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId);
-      }
+      cancelAnimationFrame(frameId);
     };
   }, [mode, upgradedArchiveIds, viewableArchiveIds]);
+
+  useEffect(() => clearArchiveUpgradeResumeTimer, [clearArchiveUpgradeResumeTimer]);
 
   useEffect(() => {
     const thumbnailUrls = Array.from(
@@ -580,6 +611,13 @@ export function DreamLibraryView({
           numColumns={3}
           onLayout={handleArchiveLayout}
           onScroll={handleArchiveScroll}
+          onScrollBeginDrag={pauseArchiveUpgradeWork}
+          onScrollEndDrag={resumeArchiveUpgradeWork}
+          onMomentumScrollBegin={pauseArchiveUpgradeWork}
+          onMomentumScrollEnd={resumeArchiveUpgradeWork}
+          onTouchStart={pauseArchiveUpgradeWork}
+          onTouchEnd={resumeArchiveUpgradeWork}
+          onTouchCancel={resumeArchiveUpgradeWork}
           refreshing={isRefreshing && dreams.length === 0}
           removeClippedSubviews
           showsVerticalScrollIndicator={false}
@@ -602,10 +640,11 @@ export function DreamLibraryView({
           renderItem={({ item, index }) => (
             <MiniDreamCard
               dream={item}
+              index={index}
               isUpgraded={upgradedArchiveIds.has(item.id)}
-              onLayout={event => handleArchiveItemLayout(item.id, index, event)}
+              onLayout={handleArchiveItemLayout}
               width={archiveCardWidth}
-              onPress={() => setSelectedDream(item)}
+              onPress={handleSelectDream}
             />
           )}
         />
@@ -1032,26 +1071,34 @@ function DreamLibraryLoadingState({ cardWidth }: { cardWidth: number }) {
   );
 }
 
-function MiniDreamCard({
+const MiniDreamCard = memo(function MiniDreamCard({
   dream,
+  index,
   isUpgraded,
   onLayout,
   width,
   onPress,
 }: {
   dream: Dream;
+  index: number;
   isUpgraded: boolean;
-  onLayout: (event: LayoutChangeEvent) => void;
+  onLayout: (dreamId: string, index: number, event: LayoutChangeEvent) => void;
   width: number;
-  onPress: () => void;
+  onPress: (dream: Dream) => void;
 }) {
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => onLayout(dream.id, index, event),
+    [onLayout, dream.id, index],
+  );
+  const handlePress = useCallback(() => onPress(dream), [onPress, dream]);
+
   if (isUpgraded) {
     return (
-      <View onLayout={onLayout}>
+      <View onLayout={handleLayout}>
         <DreamCard
           disableFlip
           dream={dream}
-          onPress={onPress}
+          onPress={handlePress}
           preferThumbnail
           showImageActions={false}
           width={width}
@@ -1061,15 +1108,15 @@ function MiniDreamCard({
   }
 
   return (
-    <View onLayout={onLayout}>
+    <View onLayout={handleLayout}>
       <DreamCardLite
         dream={dream}
-        onPress={onPress}
+        onPress={handlePress}
         width={width}
       />
     </View>
   );
-}
+});
 
 function groupDreamsByDate(
   dreams: Dream[],
