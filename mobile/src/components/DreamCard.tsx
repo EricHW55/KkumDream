@@ -37,6 +37,8 @@ import { useSessionStore } from '../store/sessionStore';
 import { DREAM_CARD_ASPECT_RATIO, DreamCardFrame } from './DreamCardFrame';
 import { DreamGenerationAnimation } from './DreamGenerationAnimation';
 
+const BACK_SCROLL_EDGE_EPS = 2;
+
 type Props = {
   dream: Dream;
   size?: 'feed' | 'full';
@@ -50,6 +52,7 @@ type Props = {
   giverName?: string;
   receiverName?: string;
   variant?: 'full' | 'lite';
+  onParentScrollEnabledChange?: (enabled: boolean) => void;
 };
 
 export function DreamCard({
@@ -65,6 +68,7 @@ export function DreamCard({
   giverName: giverNameOverride,
   receiverName: receiverNameOverride,
   variant = 'full',
+  onParentScrollEnabledChange,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const sessionUserId = useSessionStore(state => state.userId);
@@ -77,6 +81,11 @@ export function DreamCard({
   const frontCardCaptureRef = useRef<View>(null);
   const backTouchStart = useRef<{ x: number; y: number } | null>(null);
   const backTouchMoved = useRef(false);
+  const backScrollY = useRef(0);
+  const backContentHeight = useRef(0);
+  const backLayoutHeight = useRef(0);
+  const backDragLastY = useRef<number | null>(null);
+  const parentScrollEnabled = useRef(true);
   const rotation = useSharedValue(0);
   const horizontalMargin = size === 'full' ? 44 : 36;
   const requestedCardWidth =
@@ -217,6 +226,14 @@ export function DreamCard({
     });
   };
 
+  useEffect(() => {
+    if (!isBackVisible) {
+      setParentScrollEnabled(true);
+    }
+    // setParentScrollEnabled is a stable ref-backed closure; only react to flips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBackVisible]);
+
   const runImageAction = async (action: 'share' | 'save') => {
     if (!imageUrl) {
       const message =
@@ -291,25 +308,63 @@ export function DreamCard({
   );
 
   const cardPressHandler = onPress ?? flip;
+  const setParentScrollEnabled = (enabled: boolean) => {
+    if (!onParentScrollEnabledChange || parentScrollEnabled.current === enabled) {
+      return;
+    }
+    parentScrollEnabled.current = enabled;
+    onParentScrollEnabledChange(enabled);
+  };
+  const getBackScrollEdges = () => {
+    const scrollable =
+      backContentHeight.current > backLayoutHeight.current + BACK_SCROLL_EDGE_EPS;
+    const atTop = backScrollY.current <= BACK_SCROLL_EDGE_EPS;
+    const atBottom =
+      backScrollY.current + backLayoutHeight.current >=
+      backContentHeight.current - BACK_SCROLL_EDGE_EPS;
+    return { scrollable, atTop, atBottom };
+  };
+  // Hand the gesture to the parent only when the body is pinned to the edge it is being pulled past.
+  const syncParentScrollForDrag = (dy: number) => {
+    const { scrollable, atTop, atBottom } = getBackScrollEdges();
+    if (!scrollable) {
+      setParentScrollEnabled(true);
+      return;
+    }
+    const pullingDownFromTop = atTop && dy > 0;
+    const pullingUpFromBottom = atBottom && dy < 0;
+    setParentScrollEnabled(pullingDownFromTop || pullingUpFromBottom);
+  };
   const resetBackTouch = () => {
     backTouchStart.current = null;
     backTouchMoved.current = false;
+    backDragLastY.current = null;
+    setParentScrollEnabled(true);
   };
   const handleBackTouchStart = (event: GestureResponderEvent) => {
     const { pageX, pageY } = event.nativeEvent;
     backTouchStart.current = { x: pageX, y: pageY };
     backTouchMoved.current = false;
+    backDragLastY.current = pageY;
+    const { scrollable } = getBackScrollEdges();
+    setParentScrollEnabled(!scrollable);
   };
   const handleBackTouchMove = (event: GestureResponderEvent) => {
     const start = backTouchStart.current;
-    if (!start) {
-      return;
-    }
-
     const { pageX, pageY } = event.nativeEvent;
-    if (Math.abs(pageX - start.x) > 8 || Math.abs(pageY - start.y) > 8) {
+    if (
+      start &&
+      (Math.abs(pageX - start.x) > 8 || Math.abs(pageY - start.y) > 8)
+    ) {
       backTouchMoved.current = true;
     }
+
+    const last = backDragLastY.current;
+    backDragLastY.current = pageY;
+    if (last === null || pageY === last) {
+      return;
+    }
+    syncParentScrollForDrag(pageY - last);
   };
   const handleBackTouchEnd = () => {
     if (!backTouchMoved.current) {
@@ -924,6 +979,16 @@ export function DreamCard({
                   <ScrollView
                     bounces={false}
                     nestedScrollEnabled
+                    scrollEventThrottle={16}
+                    onScroll={event => {
+                      backScrollY.current = event.nativeEvent.contentOffset.y;
+                    }}
+                    onContentSizeChange={(_width, height) => {
+                      backContentHeight.current = height;
+                    }}
+                    onLayout={event => {
+                      backLayoutHeight.current = event.nativeEvent.layout.height;
+                    }}
                     onScrollBeginDrag={() => {
                       backTouchMoved.current = true;
                     }}
