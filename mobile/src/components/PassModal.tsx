@@ -15,6 +15,7 @@ import { usePassInfo } from '../hooks/usePass';
 import { usePassModalStore } from '../store/passModalStore';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
+import { fontFamily } from '../theme/typography';
 import {
   endBilling,
   fetchPassProduct,
@@ -223,12 +224,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   title: {
-    fontSize: 20,
+    fontFamily: fontFamily.korean,
+    fontSize: 21,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 8,
   },
   description: {
+    fontFamily: fontFamily.korean,
     fontSize: 14,
     lineHeight: 21,
     color: colors.textSecondary,
@@ -240,22 +243,27 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   originalPrice: {
-    fontSize: 14,
-    color: colors.textMuted,
+    fontFamily: fontFamily.korean,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#C2857C',
     textDecorationLine: 'line-through',
     marginBottom: 2,
   },
   price: {
-    fontSize: 26,
+    fontFamily: fontFamily.korean,
+    fontSize: 28,
     fontWeight: '800',
     color: colors.primary,
   },
   priceUnit: {
+    fontFamily: fontFamily.korean,
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   error: {
+    fontFamily: fontFamily.korean,
     fontSize: 13,
     color: colors.error,
     textAlign: 'center',
@@ -273,11 +281,13 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   primaryButtonText: {
+    fontFamily: fontFamily.korean,
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   laterText: {
+    fontFamily: fontFamily.korean,
     fontSize: 14,
     color: colors.textMuted,
     marginTop: 14,
@@ -287,6 +297,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   successText: {
+    fontFamily: fontFamily.korean,
     fontSize: 15,
     color: colors.textPrimary,
     marginBottom: 18,
