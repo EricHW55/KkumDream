@@ -125,7 +125,7 @@ async def create_dream_draft(
     giver_id: UUID,
     payload: DreamDraftCreate,
 ) -> Dream:
-    await _assert_premium_design_allowed(session, giver_id, payload.design.model_dump())
+    await _assert_draft_features_allowed(session, giver_id, payload)
     await _lock_text_generation_for_user(session, giver_id)
     await _purge_stale_drafts_for_user(session, giver_id)
     existing = await session.scalar(
@@ -226,6 +226,16 @@ async def give_dream(
     private_postscript = (
         payload.private_postscript.strip() if payload.private_postscript else None
     )
+
+    if (
+        private_postscript
+        and settings.private_postscript_requires_pass
+        and not await has_active_pass(session, user_id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Private postscript requires an active pass",
+        )
 
     if payload.receiver_id is not None:
         await _require_shared_group_member(session, user_id, payload.receiver_id)
@@ -681,6 +691,21 @@ async def _assert_premium_design_allowed(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Premium design requires an active pass",
+        )
+
+
+async def _assert_draft_features_allowed(
+    session: AsyncSession, user_id: UUID, payload: DreamDraftCreate
+) -> None:
+    locked = (
+        premium_design.requires_pass(payload.design.model_dump())
+        or premium_design.tone_requires_pass(payload.tone)
+        or premium_design.story_length_requires_pass(payload.story_length)
+    )
+    if locked and not await has_active_pass(session, user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This option requires an active pass",
         )
 
 

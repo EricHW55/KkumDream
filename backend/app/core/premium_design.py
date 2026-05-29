@@ -24,3 +24,11 @@ def premium_values(design: dict) -> list[str]:
 
 def requires_pass(design: dict) -> bool:
     return bool(premium_values(design))
+
+
+def tone_requires_pass(tone: str | None) -> bool:
+    return tone is not None and tone not in settings.free_tones
+
+
+def story_length_requires_pass(length: str | None) -> bool:
+    return length is not None and length not in settings.free_story_lengths

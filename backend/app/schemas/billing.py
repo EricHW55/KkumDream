@@ -30,3 +30,6 @@ class PassInfoOut(ApiModel):
     description: str
     original_price_label: str
     free_design: FreeDesignOut
+    free_tones: list[str]
+    free_story_lengths: list[str]
+    private_postscript_requires_pass: bool
