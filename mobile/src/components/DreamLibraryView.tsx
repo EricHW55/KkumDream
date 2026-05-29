@@ -65,7 +65,7 @@ const monthNumbers = Array.from({ length: 12 }, (_, index) => index + 1);
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 const EMPTY_DREAMS: Dream[] = [];
-const INITIAL_ARCHIVE_RENDER_COUNT = 6;
+const INITIAL_ARCHIVE_RENDER_COUNT = 12;
 const ARCHIVE_RENDER_BATCH_SIZE = 6;
 const ARCHIVE_RENDER_BATCH_DELAY_MS = 90;
 const THUMBNAIL_PREFETCH_LIMIT = 8;
@@ -604,7 +604,7 @@ export function DreamLibraryView({
             offset: archiveRowHeight * Math.floor(index / 3),
             index,
           })}
-          initialNumToRender={6}
+          initialNumToRender={12}
           keyExtractor={item => item.id}
           maxToRenderPerBatch={6}
           numColumns={3}

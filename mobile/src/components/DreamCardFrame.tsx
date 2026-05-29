@@ -32,6 +32,7 @@ type Props = {
   contentStyle?: StyleProp<ViewStyle>;
   frame: DreamCardFrameType;
   height?: number;
+  lite?: boolean;
   minimal?: boolean;
   shadowColor?: string;
   style?: StyleProp<ViewStyle>;
@@ -113,6 +114,7 @@ export function DreamCardFrame({
   contentStyle,
   frame,
   height,
+  lite = false,
   minimal = false,
   shadowColor,
   style,
@@ -228,39 +230,43 @@ export function DreamCardFrame({
         </Defs>
 
         <Path d={shapePath} fill={backgroundColor} fillRule="evenodd" />
-        <SvgImage
-          clipPath={`url(#${clipId})`}
-          height={FRAME_HEIGHT}
-          href={frameTexture}
-          opacity={frameTextureOpacity}
-          preserveAspectRatio="xMidYMid slice"
-          width={FRAME_WIDTH}
-          x={0}
-          y={0}
-        />
-        {frameTextureColorWashOpacity > 0 ? (
-          <Path
-            d={shapePath}
-            fill={backgroundColor}
-            fillRule="evenodd"
-            opacity={frameTextureColorWashOpacity}
-          />
-        ) : null}
-
-        <G clipPath={`url(#${clipId})`} opacity={speckOpacity}>
-          {paperSpecks.map(([cx, cy, r]) => (
-            <Circle
-              key={`${cx}-${cy}`}
-              cx={cx}
-              cy={cy}
-              fill={textureColor}
-              opacity={0.34}
-              r={r}
+        {lite ? null : (
+          <>
+            <SvgImage
+              clipPath={`url(#${clipId})`}
+              height={FRAME_HEIGHT}
+              href={frameTexture}
+              opacity={frameTextureOpacity}
+              preserveAspectRatio="xMidYMid slice"
+              width={FRAME_WIDTH}
+              x={0}
+              y={0}
             />
-          ))}
-        </G>
+            {frameTextureColorWashOpacity > 0 ? (
+              <Path
+                d={shapePath}
+                fill={backgroundColor}
+                fillRule="evenodd"
+                opacity={frameTextureColorWashOpacity}
+              />
+            ) : null}
 
-        {minimal ? (
+            <G clipPath={`url(#${clipId})`} opacity={speckOpacity}>
+              {paperSpecks.map(([cx, cy, r]) => (
+                <Circle
+                  key={`${cx}-${cy}`}
+                  cx={cx}
+                  cy={cy}
+                  fill={textureColor}
+                  opacity={0.34}
+                  r={r}
+                />
+              ))}
+            </G>
+          </>
+        )}
+
+        {lite ? null : minimal ? (
           frame === 'ticket' ? (
             <G clipPath={`url(#${clipId})`} opacity={agedMarkOpacity}>
               {agedLetterMarks.map(line => (

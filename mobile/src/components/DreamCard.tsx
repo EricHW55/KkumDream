@@ -474,7 +474,8 @@ export function DreamCard({
                 borderColor={frameBorderColor}
                 frame={design.cardFrame}
                 height={cardHeight}
-                shadowColor={designTheme.shadow}
+                lite={isLite}
+                shadowColor={isLite ? undefined : designTheme.shadow}
                 textureColor={designTheme.texture}
               >
                 <Pressable
