@@ -1,20 +1,25 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Image,
+  StyleSheet,
+  View,
+  type ImageSourcePropType,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import Svg, {
   Circle,
   ClipPath,
   Defs,
-  FeComposite,
-  FeFlood,
-  FeGaussianBlur,
-  FeMerge,
-  FeMergeNode,
-  Filter,
   G,
   Image as SvgImage,
   Path,
 } from 'react-native-svg';
 
+import shadowBeveled from '../assets/shadows/shadow-beveled.png';
+import shadowClassic from '../assets/shadows/shadow-classic.png';
+import shadowTag from '../assets/shadows/shadow-tag.png';
+import shadowTicket from '../assets/shadows/shadow-ticket.png';
 import agedLetterPaperTexture from '../assets/textures/aged_letter_paper.webp';
 import paperTexture from '../assets/textures/paper_texture.webp';
 import type { DreamCardFrame as DreamCardFrameType } from '../types/dream';
@@ -37,16 +42,18 @@ export const DREAM_CARD_ASPECT_RATIO = 0.61;
 
 const FRAME_WIDTH = 340;
 const FRAME_HEIGHT = 510;
-const PAPER_SHADOW_COLOR = '#3F3124';
 const SHADOW_PADDING = 56;
-const SHADOW_VIEWBOX = `${-SHADOW_PADDING} ${-SHADOW_PADDING} ${
-  FRAME_WIDTH + SHADOW_PADDING * 2
-} ${FRAME_HEIGHT + SHADOW_PADDING * 2}`;
 const SHADOW_INSET_X = `-${(SHADOW_PADDING / FRAME_WIDTH) * 100}%`;
 const SHADOW_INSET_Y = `-${(SHADOW_PADDING / FRAME_HEIGHT) * 100}%`;
 const SHADOW_WIDTH = `${100 + ((SHADOW_PADDING * 2) / FRAME_WIDTH) * 100}%`;
 const SHADOW_HEIGHT = `${100 + ((SHADOW_PADDING * 2) / FRAME_HEIGHT) * 100}%`;
 const DARK_TEXTURE_LUMINANCE_THRESHOLD = 0.35;
+const FRAME_SHADOW_ASSETS: Record<DreamCardFrameType, ImageSourcePropType> = {
+  classic: shadowClassic,
+  ticket: shadowTicket,
+  beveled: shadowBeveled,
+  tag: shadowTag,
+};
 const paperSpecks = [
   [44, 48, 1.1],
   [118, 36, 0.8],
@@ -185,10 +192,8 @@ export function DreamCardFrame({
       : textureOpacity;
   const frameTextureColorWashOpacity =
     isAgedLetterFrame ? (isDarkTextureBase ? 0.18 : 0.3) : 0;
-  const frameShadowColor = shadowColor ? PAPER_SHADOW_COLOR : null;
-  const shadowFilterId = `dream-card-shadow-${frame}`;
-  const ambientShadowOpacity = compact ? 0.09 : 0.12;
-  const contactShadowOpacity = compact ? 0.08 : 0.1;
+  const showShadow = Boolean(shadowColor);
+  const shadowOpacity = compact ? 0.78 : 1;
 
   return (
     <View
@@ -198,69 +203,13 @@ export function DreamCardFrame({
         style,
       ]}
     >
-      {frameShadowColor ? (
+      {showShadow ? (
         <View pointerEvents="none" style={styles.shadowWrap}>
-          <Svg
-            height="100%"
-            preserveAspectRatio="none"
-            viewBox={SHADOW_VIEWBOX}
-            width="100%"
-          >
-            <Defs>
-              <Filter
-                id={shadowFilterId}
-                x="-30%"
-                y="-30%"
-                width="160%"
-                height="160%"
-              >
-                <FeGaussianBlur
-                  in="SourceAlpha"
-                  stdDeviation="16"
-                  result="ambBlur"
-                />
-                <FeFlood
-                  floodColor={frameShadowColor}
-                  floodOpacity={ambientShadowOpacity}
-                  result="ambColor"
-                />
-                <FeComposite
-                  in="ambColor"
-                  in2="ambBlur"
-                  operator="in"
-                  result="ambShadow"
-                />
-
-                <FeGaussianBlur
-                  in="SourceAlpha"
-                  stdDeviation="5"
-                  result="contBlur"
-                />
-                <FeFlood
-                  floodColor={frameShadowColor}
-                  floodOpacity={contactShadowOpacity}
-                  result="contColor"
-                />
-                <FeComposite
-                  in="contColor"
-                  in2="contBlur"
-                  operator="in"
-                  result="contShadow"
-                />
-
-                <FeMerge>
-                  <FeMergeNode in="ambShadow" />
-                  <FeMergeNode in="contShadow" />
-                </FeMerge>
-              </Filter>
-            </Defs>
-            <Path
-              d={shapePath}
-              fill={frameShadowColor}
-              fillRule="evenodd"
-              filter={`url(#${shadowFilterId})`}
-            />
-          </Svg>
+          <Image
+            resizeMode="stretch"
+            source={FRAME_SHADOW_ASSETS[frame]}
+            style={[styles.shadowImage, { opacity: shadowOpacity }]}
+          />
         </View>
       ) : null}
 
@@ -738,6 +687,10 @@ const styles = StyleSheet.create({
     left: SHADOW_INSET_X as never,
     width: SHADOW_WIDTH as never,
     height: SHADOW_HEIGHT as never,
+  },
+  shadowImage: {
+    width: '100%',
+    height: '100%',
   },
   svg: {
     position: 'absolute',
