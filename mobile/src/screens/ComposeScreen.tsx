@@ -181,7 +181,14 @@ export function ComposeScreen({ navigation }: Props) {
   const [selectedDesign, setSelectedDesign] =
     useState<DreamDesign>(initialComposeDesign);
   const openPassModal = usePassModalStore(state => state.open);
-  const { isColorLocked, isFrameLocked, isFontLocked } = useDesignLock();
+  const {
+    isColorLocked,
+    isFrameLocked,
+    isFontLocked,
+    isToneLocked,
+    isStoryLengthLocked,
+    isPrivatePostscriptLocked,
+  } = useDesignLock();
   const [draft, setDraft] = useState<Dream | null>(initialComposeDraft);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -905,7 +912,13 @@ export function ComposeScreen({ navigation }: Props) {
                 <Pressable
                   key={item.value}
                   accessibilityRole="button"
-                  onPress={() => setTone(item.value)}
+                  onPress={() => {
+                    if (isToneLocked(item.value)) {
+                      openPassModal();
+                      return;
+                    }
+                    setTone(item.value);
+                  }}
                   style={({ pressed }) => [
                     styles.toneOption,
                     isSelected && styles.toneOptionActive,
@@ -921,6 +934,11 @@ export function ComposeScreen({ navigation }: Props) {
                     {item.label}
                   </Text>
                   <Text style={styles.toneDescription}>{item.description}</Text>
+                  {isToneLocked(item.value) ? (
+                    <View style={styles.designLockChip}>
+                      <Lock color={colors.primary} size={11} strokeWidth={2.5} />
+                    </View>
+                  ) : null}
                 </Pressable>
               );
             })}
@@ -936,7 +954,13 @@ export function ComposeScreen({ navigation }: Props) {
                   key={item.value}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}
-                  onPress={() => setStoryLength(item.value)}
+                  onPress={() => {
+                    if (isStoryLengthLocked(item.value)) {
+                      openPassModal();
+                      return;
+                    }
+                    setStoryLength(item.value);
+                  }}
                   style={({ pressed }) => [
                     styles.lengthOption,
                     isSelected && styles.lengthOptionActive,
@@ -951,6 +975,11 @@ export function ComposeScreen({ navigation }: Props) {
                   >
                     {item.label}
                   </Text>
+                  {isStoryLengthLocked(item.value) ? (
+                    <View style={styles.lengthLockBadge}>
+                      <Lock color={colors.primary} size={10} strokeWidth={2.5} />
+                    </View>
+                  ) : null}
                 </Pressable>
               );
             })}
@@ -1625,18 +1654,35 @@ export function ComposeScreen({ navigation }: Props) {
                     {privatePostscript.length}/{PRIVATE_POSTSCRIPT_MAX_LENGTH}
                   </Text>
                 </View>
-                <TextInput
-                  autoCorrect={false}
-                  spellCheck={false}
-                  value={privatePostscript}
-                  onChangeText={setPrivatePostscript}
-                  multiline
-                  maxLength={PRIVATE_POSTSCRIPT_MAX_LENGTH}
-                  textAlignVertical="top"
-                  placeholder="받는 사람에게만 남길 짧은 말을 적어보세요."
-                  placeholderTextColor={colors.textMuted}
-                  style={[styles.labelInput, styles.postscriptInput]}
-                />
+                {isPrivatePostscriptLocked() ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={openPassModal}
+                    style={[
+                      styles.labelInput,
+                      styles.postscriptInput,
+                      styles.postscriptLocked,
+                    ]}
+                  >
+                    <Lock color={colors.textMuted} size={16} strokeWidth={2.2} />
+                    <Text style={styles.postscriptLockedText}>
+                      패스로 비밀 추신을 남겨보세요
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <TextInput
+                    autoCorrect={false}
+                    spellCheck={false}
+                    value={privatePostscript}
+                    onChangeText={setPrivatePostscript}
+                    multiline
+                    maxLength={PRIVATE_POSTSCRIPT_MAX_LENGTH}
+                    textAlignVertical="top"
+                    placeholder="받는 사람에게만 남길 짧은 말을 적어보세요."
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.labelInput, styles.postscriptInput]}
+                  />
+                )}
                 <Text style={styles.hintText}>
                   보낸 사람과 받은 사람에게만 보여요. 꿈방에 공유되어도 다른 멤버는 볼 수 없어요.
                 </Text>
@@ -2154,6 +2200,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 253, 247, 0.92)',
     borderWidth: 1,
     borderColor: colors.lavenderTint,
+  },
+  lengthLockBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 6,
+  },
+  postscriptLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  postscriptLockedText: {
+    fontFamily: fontFamily.korean,
+    color: colors.textMuted,
+    fontSize: 14,
   },
   framePreviewCard: {
     width: 58,

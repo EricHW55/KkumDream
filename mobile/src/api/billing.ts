@@ -20,6 +20,9 @@ export interface PassInfo {
   description: string;
   originalPriceLabel: string;
   freeDesign: FreeDesign;
+  freeTones: string[];
+  freeStoryLengths: string[];
+  privatePostscriptRequiresPass: boolean;
 }
 
 export function fetchPassInfo() {

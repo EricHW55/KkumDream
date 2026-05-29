@@ -49,6 +49,13 @@ export function useDesignLock() {
       return !free[kind].includes(value);
     };
 
+    const listLocked = (free: string[] | undefined, value: string): boolean => {
+      if (hasPass || !free) {
+        return false;
+      }
+      return !free.includes(value);
+    };
+
     return {
       hasPass,
       isColorLocked: (value: string) => locked('cardColors', value),
@@ -58,6 +65,11 @@ export function useDesignLock() {
         locked('cardColors', design.cardColor) ||
         locked('cardFrames', design.cardFrame) ||
         locked('fontStyles', design.fontStyle),
+      isToneLocked: (value: string) => listLocked(passInfo?.freeTones, value),
+      isStoryLengthLocked: (value: string) =>
+        listLocked(passInfo?.freeStoryLengths, value),
+      isPrivatePostscriptLocked: () =>
+        !hasPass && (passInfo?.privatePostscriptRequiresPass ?? false),
     };
   }, [passInfo, hasPass]);
 }
