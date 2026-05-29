@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import Select, delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import premium_design
 from app.core.config import settings
 from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.ai_generation import AiGenerationJob, AiGenerationLog
@@ -30,6 +31,7 @@ from app.schemas.dream import (
     ReactionType,
 )
 from app.services.ai_text_service import generate_dream_text
+from app.services.billing_service import has_active_pass
 from app.services.push_service import (
     send_dream_claimed_push,
     send_dream_comment_push,
@@ -123,6 +125,7 @@ async def create_dream_draft(
     giver_id: UUID,
     payload: DreamDraftCreate,
 ) -> Dream:
+    await _assert_premium_design_allowed(session, giver_id, payload.design.model_dump())
     await _lock_text_generation_for_user(session, giver_id)
     await _purge_stale_drafts_for_user(session, giver_id)
     existing = await session.scalar(
@@ -193,6 +196,9 @@ async def update_dream_text(
         raise BadRequestError("Only draft dreams can be edited")
 
     updates = payload.model_dump(exclude_unset=True)
+    design_update = updates.get("design")
+    if isinstance(design_update, dict):
+        await _assert_premium_design_allowed(session, user_id, design_update)
     for key, value in updates.items():
         if key == "design":
             value = _normalize_design(value)
@@ -666,6 +672,16 @@ async def _attach_group_ids_batch(
     for dream in dreams:
         dream.group_ids = bucket.get(dream.id, [])  # type: ignore[attr-defined]
     return dreams
+
+
+async def _assert_premium_design_allowed(
+    session: AsyncSession, user_id: UUID, design: dict
+) -> None:
+    if premium_design.requires_pass(design) and not await has_active_pass(session, user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Premium design requires an active pass",
+        )
 
 
 def _normalize_design(value: DreamDesign | dict | None) -> dict[str, str]:

@@ -34,6 +34,15 @@ class Settings(BaseSettings):
 
     firebase_credentials_json: str | None = Field(default=None)
 
+    # Google Play billing (subscription verification + RTDN).
+    # Prod: set the JSON env var (fly secret). Local: point the file path at secrets/.
+    google_play_service_account_json: str | None = None
+    google_play_service_account_file: str | None = None
+    google_play_product_id: str = "kkumdream_pass_monthly"
+    # Service account email Pub/Sub uses to sign OIDC tokens on RTDN push requests.
+    google_play_rtdn_audience: str | None = None
+    google_play_rtdn_service_account: str | None = None
+
     share_base_url: str = "https://kkumdream.app"
     share_token_default_expire_days: int = 30
     android_package_name: str = "com.kkumdreammobile"
