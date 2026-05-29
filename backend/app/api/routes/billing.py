@@ -11,8 +11,14 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
+from app.core.config import settings
 from app.models.subscription import Subscription
-from app.schemas.billing import EntitlementOut, VerifyPurchaseIn
+from app.schemas.billing import (
+    EntitlementOut,
+    FreeDesignOut,
+    PassInfoOut,
+    VerifyPurchaseIn,
+)
 from app.services import billing_service
 from app.services.billing_service import BillingConfigError, BillingVerificationError
 
@@ -32,6 +38,21 @@ def _entitlement_out(sub: Subscription | None) -> EntitlementOut:
         state=sub.state,
         expires_at=sub.expires_at,
         auto_renewing=sub.auto_renewing,
+    )
+
+
+@router.get("/pass-info", response_model=PassInfoOut)
+async def get_pass_info() -> PassInfoOut:
+    return PassInfoOut(
+        product_id=settings.google_play_product_id,
+        title=settings.pass_title,
+        description=settings.pass_description,
+        original_price_label=settings.pass_original_price_label,
+        free_design=FreeDesignOut(
+            card_colors=settings.free_card_colors,
+            card_frames=settings.free_card_frames,
+            font_styles=settings.free_font_styles,
+        ),
     )
 
 

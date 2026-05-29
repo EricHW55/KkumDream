@@ -43,6 +43,18 @@ class Settings(BaseSettings):
     google_play_rtdn_audience: str | None = None
     google_play_rtdn_service_account: str | None = None
 
+    # Which design values are free; anything else is pass-only. Override via env
+    # (JSON arrays) to change locks without an app release — the client reads these
+    # through GET /billing/pass-info.
+    free_card_colors: list[str] = ["beige", "ivory", "peach"]
+    free_card_frames: list[str] = ["classic", "tag"]
+    free_font_styles: list[str] = ["dahaeng", "daegwangyuri", "rounded", "clean"]
+
+    # Pass marketing copy shown in the purchase modal.
+    pass_title: str = "꿈드림 패스"
+    pass_description: str = "프리미엄 카드 디자인을 모두 잠금 해제하고, 마음을 더 예쁘게 전해보세요."
+    pass_original_price_label: str = "2,900원"
+
     share_base_url: str = "https://kkumdream.app"
     share_token_default_expire_days: int = 30
     android_package_name: str = "com.kkumdreammobile"
