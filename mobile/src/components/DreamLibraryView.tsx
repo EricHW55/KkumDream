@@ -33,7 +33,6 @@ import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
-import { DreamCardLite } from './DreamCardLite';
 import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
 import { HaloShadow } from './HaloShadow';
 
@@ -1109,7 +1108,8 @@ const MiniDreamCard = memo(function MiniDreamCard({
 
   return (
     <View onLayout={handleLayout}>
-      <DreamCardLite
+      <DreamCard
+        variant="lite"
         dream={dream}
         onPress={handlePress}
         width={width}

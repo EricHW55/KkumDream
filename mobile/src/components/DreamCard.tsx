@@ -49,6 +49,7 @@ type Props = {
   showImageActions?: boolean;
   giverName?: string;
   receiverName?: string;
+  variant?: 'full' | 'lite';
 };
 
 export function DreamCard({
@@ -63,9 +64,14 @@ export function DreamCard({
   showImageActions = true,
   giverName: giverNameOverride,
   receiverName: receiverNameOverride,
+  variant = 'full',
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const sessionUserId = useSessionStore(state => state.userId);
+  const isLite = variant === 'lite';
+  const flipDisabled = disableFlip || isLite;
+  const useThumbnail = preferThumbnail || isLite;
+  const allowImageActions = showImageActions && !isLite;
   const [isBackVisible, setIsBackVisible] = useState(false);
   const [isImageActionPending, setIsImageActionPending] = useState(false);
   const frontCardCaptureRef = useRef<View>(null);
@@ -99,12 +105,12 @@ export function DreamCard({
   const imageUrl = dream.imageUrl ?? dream.thumbnailUrl;
   const shouldLoadFullImageProgressively = Boolean(
     loadFullImageProgressively &&
-      !preferThumbnail &&
+      !useThumbnail &&
       dream.thumbnailUrl &&
       dream.imageUrl &&
       dream.thumbnailUrl !== dream.imageUrl,
   );
-  const displayImageUrl = preferThumbnail
+  const displayImageUrl = useThumbnail
     ? dream.thumbnailUrl
     : shouldLoadFullImageProgressively
       ? dream.thumbnailUrl
@@ -196,7 +202,7 @@ export function DreamCard({
   }, [displayImageUrl, fullImageUrl]);
 
   const flip = () => {
-    if (disableFlip) {
+    if (flipDisabled) {
       return;
     }
 
@@ -350,7 +356,7 @@ export function DreamCard({
               ]}
             />
           ) : null}
-          {!preferThumbnail &&
+          {!useThumbnail &&
           (!shouldLoadFullImageProgressively || isFullImageReady) ? (
             <View pointerEvents="none" style={styles.imagePaperWash} />
           ) : null}
@@ -473,7 +479,7 @@ export function DreamCard({
               >
                 <Pressable
                   onPress={cardPressHandler}
-                  onLongPress={disableFlip ? undefined : flip}
+                  onLongPress={flipDisabled ? undefined : flip}
                   style={({ pressed }) => [
                     styles.facePressable,
                     pressed && interactionStyles.pressedSoft,
@@ -509,14 +515,18 @@ export function DreamCard({
                   <View style={styles.imageMount}>
                     {isMovieTicketFrame ? null : (
                       <>
-                        <PaperTape
-                          crease="left"
-                          style={[styles.paperTape, styles.paperTapeLeft]}
-                        />
-                        <PaperTape
-                          crease="right"
-                          style={[styles.paperTape, styles.paperTapeRight]}
-                        />
+                        {isLite ? null : (
+                          <>
+                            <PaperTape
+                              crease="left"
+                              style={[styles.paperTape, styles.paperTapeLeft]}
+                            />
+                            <PaperTape
+                              crease="right"
+                              style={[styles.paperTape, styles.paperTapeRight]}
+                            />
+                          </>
+                        )}
                         <View
                           pointerEvents="none"
                           style={[
@@ -849,7 +859,7 @@ export function DreamCard({
             </View>
           </Animated.View>
 
-          {disableFlip ? null : (
+          {flipDisabled ? null : (
           <Animated.View
             pointerEvents={isBackVisible ? 'auto' : 'none'}
             style={[
@@ -940,7 +950,7 @@ export function DreamCard({
             </DreamCardFrame>
           </Animated.View>
           )}
-          {showImageActions && !isBackVisible ? renderImageActions() : null}
+          {allowImageActions && !isBackVisible ? renderImageActions() : null}
         </View>
       </View>
     </View>

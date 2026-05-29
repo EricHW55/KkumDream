@@ -31,7 +31,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DreamCard } from '../components/DreamCard';
-import { DreamCardLite } from '../components/DreamCardLite';
 import { DREAM_CARD_ASPECT_RATIO } from '../components/DreamCardFrame';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
@@ -1041,10 +1040,12 @@ const DreamMessage = memo(function DreamMessage({
                 width={cardWidth}
               />
             ) : (
-              <DreamCardLite
-                compact
+              <DreamCard
+                variant="lite"
                 dream={dream}
+                giverName={sender.name}
                 onPress={handlePress}
+                receiverName={receiver?.name}
                 width={cardWidth}
               />
             )}
