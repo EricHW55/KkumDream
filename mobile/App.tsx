@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import agedLetterPaperTexture from './src/assets/textures/aged_letter_paper.webp';
 import paperTexture from './src/assets/textures/paper_texture.webp';
 import { DreamCardFrame } from './src/components/DreamCardFrame';
+import { PassModal } from './src/components/PassModal';
 import { prehydrateComposeDraftCache } from './src/data/composeDraftCache';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import {
@@ -37,6 +38,7 @@ function App() {
           <PushNotificationRegistrar />
           <StartupPreloader />
           <RootNavigator />
+          <PassModal />
         </SafeAreaProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
