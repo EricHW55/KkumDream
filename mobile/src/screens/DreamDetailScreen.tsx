@@ -1,21 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Cloud,
-  Heart,
-  MessageCircle,
-  Moon,
-  Sparkles,
-  X as XIcon,
-} from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
+import { MessageCircle, X as XIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CardFlipGuide } from '../components/CardFlipGuide';
 import { DreamCard } from '../components/DreamCard';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
+import { ReactionBar } from '../components/ReactionBar';
 import {
   addDreamComment,
   deleteDreamComment,
@@ -28,6 +22,10 @@ import {
 } from '../api/dreams';
 import { getCurrentUserId, isCurrentUserId } from '../data/currentUser';
 import { getDisplayMember } from '../data/members';
+import {
+  hasSeenCardFlipGuide,
+  markCardFlipGuideSeen,
+} from '../data/onboarding';
 import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
@@ -40,16 +38,6 @@ import type {
   DreamReactionType,
 } from '../types/dream';
 import { DREAM_REACTION_TYPES } from '../types/dream';
-
-const reactionMeta: Record<
-  DreamReactionType,
-  { label: string; Icon: LucideIcon }
-> = {
-  heart: { label: '좋아요', Icon: Heart },
-  sparkle: { label: '반짝', Icon: Sparkles },
-  moon: { label: '꿈같다', Icon: Moon },
-  cloud: { label: '몽글', Icon: Cloud },
-};
 
 const emptyReactionSummary: DreamReactionSummary[] = DREAM_REACTION_TYPES.map(
   reactionType => ({ reactionType, count: 0, reacted: false }),
@@ -98,9 +86,10 @@ export function DreamDetailScreen({ route }: Props) {
   const [commentError, setCommentError] = useState<string | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(initialComments);
-  const [reactionError, setReactionError] = useState<string | null>(null);
-  const [pendingReaction, setPendingReaction] =
-    useState<DreamReactionType | null>(null);
+  const [isPageScrollEnabled, setIsPageScrollEnabled] = useState(true);
+  const [showFlipGuide, setShowFlipGuide] = useState(
+    () => !hasSeenCardFlipGuide(),
+  );
   const commentsQueryKey = ['dreams', dream.id, 'comments', token] as const;
   const reactionsQueryKey = ['dreams', dream.id, 'reactions', token] as const;
   const { data: remoteComments = [] } = useQuery({
@@ -171,6 +160,8 @@ export function DreamDetailScreen({ route }: Props) {
   }, [dream.id, dream.readAt, isReceiver, mergeDreamUpdate, token]);
 
   const onBackOpen = useCallback(async () => {
+    setShowFlipGuide(false);
+
     if (!token || !isReceiver || dream.openedBackAt) {
       return;
     }
@@ -182,6 +173,15 @@ export function DreamDetailScreen({ route }: Props) {
       // Opening the card should not be blocked by analytics state updates.
     }
   }, [dream.id, dream.openedBackAt, isReceiver, mergeDreamUpdate, token]);
+
+  useEffect(() => {
+    if (!showFlipGuide) {
+      return;
+    }
+    markCardFlipGuideSeen();
+    const timer = setTimeout(() => setShowFlipGuide(false), 2500);
+    return () => clearTimeout(timer);
+  }, [showFlipGuide]);
 
   const comments = token ? remoteComments : localComments;
   const visibleComments = comments.filter(
@@ -198,26 +198,17 @@ export function DreamDetailScreen({ route }: Props) {
   const canSubmit =
     !isSender && commentDraft.trim().length > 0 && !isSubmittingComment;
 
-  const onToggleReaction = async (reactionType: DreamReactionType) => {
-    if (!token || pendingReaction) {
-      return;
-    }
-    setReactionError(null);
-    setPendingReaction(reactionType);
-    try {
-      const result = await toggleDreamReaction(dream.id, reactionType, token);
-      queryClient.setQueryData<DreamReactionSummary[]>(
-        reactionsQueryKey,
-        result.summary,
-      );
-    } catch (error) {
-      setReactionError(
-        error instanceof Error ? error.message : '반응을 보낼 수 없어요.',
-      );
-    } finally {
-      setPendingReaction(null);
-    }
-  };
+  const onToggleReaction = useCallback(
+    (reactionType: DreamReactionType) =>
+      toggleDreamReaction(dream.id, reactionType, token).then(result => {
+        queryClient.setQueryData<DreamReactionSummary[]>(
+          ['dreams', dream.id, 'reactions', token],
+          result.summary,
+        );
+        return result;
+      }),
+    [dream.id, queryClient, token],
+  );
 
   const onDeleteComment = async (commentId: string) => {
     if (token) {
@@ -286,74 +277,29 @@ export function DreamDetailScreen({ route }: Props) {
   return (
     <ScrollView
       style={styles.root}
+      scrollEnabled={isPageScrollEnabled}
       contentContainerStyle={[
         styles.content,
         { paddingBottom: Math.max(insets.bottom + 44, 88) },
       ]}
     >
       <PaperTextureOverlay />
-      <DreamCard
-        dream={dream}
-        loadFullImageProgressively
-        onBackOpen={onBackOpen}
-        size="full"
-      />
-
-      <View style={styles.reactionBox}>
-        <View style={styles.reactionRow}>
-          {DREAM_REACTION_TYPES.map(reactionType => {
-            const summary = reactionSummary.find(
-              item => item.reactionType === reactionType,
-            ) ?? { reactionType, count: 0, reacted: false };
-            const meta = reactionMeta[reactionType];
-            const isPending = pendingReaction === reactionType;
-            const disabled = !token || isPending;
-            const Icon = meta.Icon;
-            return (
-              <Pressable
-                key={reactionType}
-                accessibilityRole="button"
-                accessibilityLabel={meta.label}
-                disabled={disabled}
-                onPress={() => onToggleReaction(reactionType)}
-                style={({ pressed }) => [
-                  styles.reactionChip,
-                  summary.reacted && styles.reactionChipActive,
-                  disabled && styles.reactionChipDisabled,
-                  pressed && !disabled && interactionStyles.pressed,
-                ]}
-              >
-                <Icon
-                  size={16}
-                  color={
-                    summary.reacted ? colors.primary : colors.textSecondary
-                  }
-                  fill={summary.reacted ? colors.primary : 'transparent'}
-                />
-                <Text
-                  style={[
-                    styles.reactionLabel,
-                    summary.reacted && styles.reactionLabelActive,
-                  ]}
-                >
-                  {meta.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.reactionCount,
-                    summary.reacted && styles.reactionCountActive,
-                  ]}
-                >
-                  {summary.count}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {reactionError ? (
-          <Text style={styles.errorText}>{reactionError}</Text>
-        ) : null}
+      <View style={styles.cardSlot}>
+        <DreamCard
+          dream={dream}
+          loadFullImageProgressively
+          onBackOpen={onBackOpen}
+          onParentScrollEnabledChange={setIsPageScrollEnabled}
+          size="full"
+        />
+        {showFlipGuide ? <CardFlipGuide /> : null}
       </View>
+
+      <ReactionBar
+        summary={reactionSummary}
+        disabled={!token}
+        onToggle={onToggleReaction}
+      />
 
       <View style={styles.commentBox}>
         <View style={styles.commentHeader}>
@@ -474,56 +420,8 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 18,
   },
-  reactionBox: {
-    padding: 18,
-    borderRadius: 20,
-    backgroundColor: colors.cardBase,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    gap: 12,
-  },
-  reactionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  reactionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    backgroundColor: colors.lavenderMist,
-  },
-  reactionChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.lavenderTint,
-  },
-  reactionChipDisabled: {
-    opacity: 0.6,
-  },
-  reactionLabel: {
-    color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
-    fontSize: 13,
-    includeFontPadding: false,
-  },
-  reactionLabelActive: {
-    color: colors.primaryDark,
-  },
-  reactionCount: {
-    color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
-    fontSize: 13,
-    includeFontPadding: false,
-  },
-  reactionCountActive: {
-    color: colors.primaryDark,
+  cardSlot: {
+    position: 'relative',
   },
   deleteButton: {
     marginLeft: 'auto',

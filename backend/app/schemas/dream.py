@@ -6,8 +6,14 @@ from pydantic import Field, model_validator
 
 from app.schemas.base import ApiModel
 
-ReactionType = Literal["heart", "sparkle", "moon", "cloud"]
-REACTION_TYPES: tuple[ReactionType, ...] = ("heart", "sparkle", "moon", "cloud")
+ReactionType = Literal["heart", "laugh", "tear", "surprise", "dream"]
+REACTION_TYPES: tuple[ReactionType, ...] = (
+    "heart",
+    "laugh",
+    "tear",
+    "surprise",
+    "dream",
+)
 CardColor = Literal["beige", "ivory", "lilac", "peach", "mint", "midnight"]
 CardFrame = Literal["ticket", "beveled", "tag", "classic"]
 FontStyle = Literal[

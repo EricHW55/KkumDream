@@ -432,6 +432,13 @@ async def toggle_dream_reaction(
         )
     )
     if existing is None:
+        # One reaction per card: clear any other reaction this user left first.
+        await session.execute(
+            delete(DreamReaction).where(
+                DreamReaction.dream_id == dream.id,
+                DreamReaction.user_id == user_id,
+            )
+        )
         session.add(
             DreamReaction(
                 dream_id=dream.id,

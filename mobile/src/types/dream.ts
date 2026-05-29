@@ -109,13 +109,19 @@ export interface DreamComment {
   createdAt: string;
 }
 
-export type DreamReactionType = 'heart' | 'sparkle' | 'moon' | 'cloud';
+export type DreamReactionType =
+  | 'heart'
+  | 'laugh'
+  | 'tear'
+  | 'surprise'
+  | 'dream';
 
 export const DREAM_REACTION_TYPES: readonly DreamReactionType[] = [
   'heart',
-  'sparkle',
-  'moon',
-  'cloud',
+  'laugh',
+  'tear',
+  'surprise',
+  'dream',
 ];
 
 export interface DreamReactionSummary {
