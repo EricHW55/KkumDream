@@ -157,9 +157,12 @@ export function PassModal() {
           ) : (
             <>
               <View style={styles.priceRow}>
-                <Text style={styles.originalPrice}>
-                  {passInfo?.originalPriceLabel ?? '2,900원'}
-                </Text>
+                <View style={styles.originalPriceWrap}>
+                  <Text style={styles.originalPrice}>
+                    {passInfo?.originalPriceLabel ?? '₩2,900'}
+                  </Text>
+                  <View style={styles.originalPriceStrike} />
+                </View>
                 <Text style={styles.price}>
                   {priceLabel}
                   <Text style={styles.priceUnit}> / 월</Text>
@@ -226,13 +229,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fontFamily.korean,
     fontSize: 21,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 8,
   },
   description: {
     fontFamily: fontFamily.korean,
     fontSize: 14,
+    fontWeight: '600',
     lineHeight: 21,
     color: colors.textSecondary,
     textAlign: 'center',
@@ -242,18 +246,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  originalPriceWrap: {
+    justifyContent: 'center',
+    marginBottom: 3,
+  },
   originalPrice: {
     fontFamily: fontFamily.korean,
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '700',
-    color: '#C2857C',
-    textDecorationLine: 'line-through',
-    marginBottom: 2,
+    color: 'rgba(194, 133, 124, 0.6)',
+  },
+  originalPriceStrike: {
+    position: 'absolute',
+    left: -2,
+    right: -2,
+    top: '50%',
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#A85A50',
+    transform: [{ translateY: -1 }],
   },
   price: {
     fontFamily: fontFamily.korean,
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '900',
     color: colors.primary,
   },
   priceUnit: {
@@ -283,7 +299,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontFamily: fontFamily.korean,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
   },
   laterText: {
