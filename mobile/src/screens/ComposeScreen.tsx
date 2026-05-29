@@ -27,6 +27,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   Check,
+  Lock,
   Palette,
   PencilLine,
   Search,
@@ -61,6 +62,8 @@ import { LOCAL_MOCK_USER_ID } from '../data/currentUser';
 import { getDisplayMember, getSeedFriends } from '../data/members';
 import { buildMockDraft } from '../mocks/dreams';
 import type { RootStackParamList } from '../navigation/types';
+import { useDesignLock } from '../hooks/usePass';
+import { usePassModalStore } from '../store/passModalStore';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import {
@@ -177,6 +180,8 @@ export function ComposeScreen({ navigation }: Props) {
   );
   const [selectedDesign, setSelectedDesign] =
     useState<DreamDesign>(initialComposeDesign);
+  const openPassModal = usePassModalStore(state => state.open);
+  const { isColorLocked, isFrameLocked, isFontLocked } = useDesignLock();
   const [draft, setDraft] = useState<Dream | null>(initialComposeDraft);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -577,14 +582,26 @@ export function ComposeScreen({ navigation }: Props) {
   };
 
   const updateCardColor = (cardColor: DreamDesign['cardColor']) => {
+    if (isColorLocked(cardColor)) {
+      openPassModal();
+      return;
+    }
     updateSelectedDesign({ ...selectedDesign, cardColor });
   };
 
   const updateCardFrame = (cardFrame: DreamDesign['cardFrame']) => {
+    if (isFrameLocked(cardFrame)) {
+      openPassModal();
+      return;
+    }
     updateSelectedDesign({ ...selectedDesign, cardFrame });
   };
 
   const updateFontStyle = (fontStyle: DreamDesign['fontStyle']) => {
+    if (isFontLocked(fontStyle)) {
+      openPassModal();
+      return;
+    }
     updateSelectedDesign({ ...selectedDesign, fontStyle });
   };
 
@@ -988,6 +1005,15 @@ export function ComposeScreen({ navigation }: Props) {
                             ]}
                           />
                         </DreamCardFrame>
+                        {isFrameLocked(option.value) ? (
+                          <View style={styles.designLockChip}>
+                            <Lock
+                              color={colors.primary}
+                              size={11}
+                              strokeWidth={2.5}
+                            />
+                          </View>
+                        ) : null}
                       </View>
                       <Text
                         style={[
@@ -1042,6 +1068,16 @@ export function ComposeScreen({ navigation }: Props) {
                             size={15}
                             strokeWidth={3}
                           />
+                        ) : isColorLocked(option.value) ? (
+                          <Lock
+                            color={
+                              option.value === 'midnight'
+                                ? '#FFFFFF'
+                                : colors.textMuted
+                            }
+                            size={12}
+                            strokeWidth={2.5}
+                          />
                         ) : null}
                       </View>
                       <Text
@@ -1084,6 +1120,15 @@ export function ComposeScreen({ navigation }: Props) {
                       <Text style={styles.fontOptionDescription}>
                         {option.description}
                       </Text>
+                      {isFontLocked(option.value) ? (
+                        <View style={styles.designLockChip}>
+                          <Lock
+                            color={colors.primary}
+                            size={11}
+                            strokeWidth={2.5}
+                          />
+                        </View>
+                      ) : null}
                     </Pressable>
                   );
                 })}
@@ -1201,6 +1246,15 @@ export function ComposeScreen({ navigation }: Props) {
                           ]}
                         />
                       </DreamCardFrame>
+                      {isFrameLocked(option.value) ? (
+                        <View style={styles.designLockChip}>
+                          <Lock
+                            color={colors.primary}
+                            size={11}
+                            strokeWidth={2.5}
+                          />
+                        </View>
+                      ) : null}
                     </View>
                     <Text
                       style={[
@@ -1255,6 +1309,16 @@ export function ComposeScreen({ navigation }: Props) {
                           size={15}
                           strokeWidth={3}
                         />
+                      ) : isColorLocked(option.value) ? (
+                        <Lock
+                          color={
+                            option.value === 'midnight'
+                              ? '#FFFFFF'
+                              : colors.textMuted
+                          }
+                          size={12}
+                          strokeWidth={2.5}
+                        />
                       ) : null}
                     </View>
                     <Text
@@ -1297,6 +1361,15 @@ export function ComposeScreen({ navigation }: Props) {
                     <Text style={styles.fontOptionDescription}>
                       {option.description}
                     </Text>
+                    {isFontLocked(option.value) ? (
+                      <View style={styles.designLockChip}>
+                        <Lock
+                          color={colors.primary}
+                          size={11}
+                          strokeWidth={2.5}
+                        />
+                      </View>
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -2068,6 +2141,19 @@ const styles = StyleSheet.create({
     height: 92,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  designLockChip: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 253, 247, 0.92)',
+    borderWidth: 1,
+    borderColor: colors.lavenderTint,
   },
   framePreviewCard: {
     width: 58,
