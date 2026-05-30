@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -8,144 +8,16 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
 
+import cloudLeftImage from '../assets/illustrations/dream_loading_cloud_left.png';
+import cloudRightImage from '../assets/illustrations/dream_loading_cloud_right.png';
+import moonImage from '../assets/illustrations/dream_loading_moon.png';
+import starImage from '../assets/illustrations/dream_loading_star.png';
 import { colors } from '../theme/colors';
 import { fontFamily } from '../theme/typography';
 
-const INK = '#3C3530';
-const MOON_LIGHT = '#FFE08A';
-const MOON_SHADOW = '#E8B85A';
-const STAR_FILL = '#FFD66B';
-const CLOUD_FILL = '#FFFCF3';
-const CLOUD_SHADE = '#DCEAFF';
-const CLOUD_SHADE_DEEP = '#BFD1FF';
-const CLOUD_DETAIL = '#8DA0C9';
-const CLOUD_OUTLINE_PATH = `M 11 37
-   C 7 37 5 33 8 30
-   C 4 27 7 21 12 22
-   C 11 14 21 13 23 18
-   C 22 10 33 8 37 14
-   C 39 8 49 10 49 17
-   C 56 16 60 22 56 27
-   C 60 30 58 36 53 36
-   L 11 37 Z`;
-
-function CrescentMoonIcon({ size }: { size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 64 64">
-      <Path
-        d="M 49 13
-           C 38 10 24 14 19 24
-           C 13 35 17 49 29 53
-           C 38 55 47 53 52 47
-           C 43 49 35 45 31 38
-           C 27 31 28 22 34 16
-           C 38 13 44 12 49 13 Z"
-        fill={MOON_SHADOW}
-      />
-      <Path
-        d="M 47 15
-           C 36 13 24 17 21 27
-           C 17 37 23 48 34 50
-           C 41 51 47 49 51 45
-           C 43 45 36 41 33 35
-           C 30 28 31 21 36 17
-           C 39 15 43 14 47 15 Z"
-        fill={MOON_LIGHT}
-      />
-      <Path
-        d="M 47 15
-           C 36 13 24 17 21 27
-           C 17 37 23 48 34 50
-           C 41 51 47 49 51 45
-           C 43 45 36 41 33 35
-           C 30 28 31 21 36 17
-           C 39 15 43 14 47 15 Z"
-        fill="none"
-        stroke={INK}
-        strokeWidth={1.4}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-function CloudIcon({ size }: { size: number }) {
-  return (
-    <Svg
-      width={size}
-      height={size * 0.7}
-      viewBox="0 0 64 44"
-    >
-      <Path
-        d={CLOUD_OUTLINE_PATH}
-        fill={CLOUD_FILL}
-      />
-      <Path
-        d="M 10 31
-           C 14 27 20 29 23 25
-           C 28 18 36 19 40 25
-           C 43 22 50 23 53 29
-           C 48 34 35 35 25 34
-           C 18 34 13 35 10 31 Z"
-        fill={CLOUD_SHADE}
-        opacity={0.42}
-      />
-      <Path
-        d="M 21 35
-           C 25 30 31 31 35 35
-           C 40 31 48 31 52 35
-           C 44 38 30 38 21 35 Z"
-        fill={CLOUD_SHADE_DEEP}
-        opacity={0.28}
-      />
-      <Path
-        d="M 13 28
-           C 16 25 20 26 22 29
-           M 24 22
-           C 27 17 34 17 37 22
-           M 40 22
-           C 44 19 50 21 52 26
-           M 16 34
-           C 26 36 40 35 51 33"
-        fill="none"
-        opacity={0.45}
-        stroke={CLOUD_DETAIL}
-        strokeWidth={0.85}
-        strokeLinecap="round"
-      />
-      <Path
-        d={CLOUD_OUTLINE_PATH}
-        fill="none"
-        stroke={INK}
-        strokeWidth={1.4}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-function StarIcon({ size }: { size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 32 32">
-      <Path
-        d="M 16 3
-           C 16.6 12.5 18 14.5 29 16
-           C 18 17.6 16.6 19.5 16 29
-           C 15.4 19.5 14 17.6 3 16
-           C 14 14.5 15.4 12.5 16 3 Z"
-        fill={STAR_FILL}
-        stroke={INK}
-        strokeWidth={1.1}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
+// Watercolour clouds are drawn wider than they are tall.
+const CLOUD_ASPECT = 0.72;
 
 type Props = {
   title: string;
@@ -193,37 +65,64 @@ export function DreamGenerationAnimation({ title, subtitle, compact }: Props) {
   }));
 
   const leftCloudStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(drift.value, [0, 1], [0.55, 0.9]),
+    opacity: interpolate(drift.value, [0, 1], [0.7, 1]),
     transform: [{ translateX: interpolate(drift.value, [0, 1], [-8, 10]) }],
   }));
 
   const rightCloudStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(drift.value, [0, 1], [0.9, 0.55]),
+    opacity: interpolate(drift.value, [0, 1], [1, 0.7]),
     transform: [{ translateX: interpolate(drift.value, [0, 1], [9, -9]) }],
   }));
 
   const sparkleStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(glow.value, [0, 1], [0.25, 1]),
+    opacity: interpolate(glow.value, [0, 1], [0.3, 1]),
     transform: [
       { scale: interpolate(glow.value, [0, 1], [0.82, 1.12]) },
       { rotate: `${interpolate(glow.value, [0, 1], [-8, 8])}deg` },
     ],
   }));
 
+  const moonSize = compact ? 50 : 64;
+  const starSize = compact ? 22 : 28;
+  const leftCloudWidth = compact ? 46 : 58;
+  const rightCloudWidth = compact ? 52 : 66;
+
   return (
     <View style={[styles.root, compact && styles.compactRoot]}>
       <View style={[styles.sky, compact && styles.compactSky]}>
         <Animated.View style={[styles.cloudLeft, leftCloudStyle]}>
-          <CloudIcon size={compact ? 44 : 56} />
+          <Image
+            source={cloudLeftImage}
+            resizeMode="contain"
+            style={{
+              width: leftCloudWidth,
+              height: leftCloudWidth * CLOUD_ASPECT,
+            }}
+          />
         </Animated.View>
         <Animated.View style={[styles.moon, moonStyle]}>
-          <CrescentMoonIcon size={compact ? 46 : 58} />
+          <Image
+            source={moonImage}
+            resizeMode="contain"
+            style={{ width: moonSize, height: moonSize }}
+          />
         </Animated.View>
         <Animated.View style={[styles.sparkle, sparkleStyle]}>
-          <StarIcon size={compact ? 22 : 28} />
+          <Image
+            source={starImage}
+            resizeMode="contain"
+            style={{ width: starSize, height: starSize }}
+          />
         </Animated.View>
         <Animated.View style={[styles.cloudRight, rightCloudStyle]}>
-          <CloudIcon size={compact ? 48 : 62} />
+          <Image
+            source={cloudRightImage}
+            resizeMode="contain"
+            style={{
+              width: rightCloudWidth,
+              height: rightCloudWidth * CLOUD_ASPECT,
+            }}
+          />
         </Animated.View>
       </View>
       <Text style={[styles.title, compact && styles.compactTitle]}>{title}</Text>
@@ -267,10 +166,8 @@ const styles = StyleSheet.create({
   },
   moon: {
     position: 'absolute',
-    top: 14,
+    top: 12,
     alignSelf: 'center',
-    width: 70,
-    height: 70,
     alignItems: 'center',
     justifyContent: 'center',
   },
