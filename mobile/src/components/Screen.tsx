@@ -13,7 +13,10 @@ export function Screen({ children }: PropsWithChildren) {
         styles.root,
         {
           paddingTop: insets.top + 12,
-          paddingBottom: Math.max(insets.bottom, 12),
+          // No bottom padding: these screens sit directly above the tab bar,
+          // which already provides the bottom safe-area spacing. Any padding
+          // here shows as a white gap above the tab bar's rounded top edge.
+          paddingBottom: 0,
         },
       ]}
     >
