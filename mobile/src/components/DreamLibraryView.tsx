@@ -995,39 +995,18 @@ export function DreamLibraryView({
           onPress={() => setSelectedDream(null)}
         >
           {selectedDream ? (
-            <Pressable
+            <View
               style={styles.previewCard}
-              onPress={event => event.stopPropagation()}
               {...previewPanResponder.panHandlers}
             >
-              <View style={styles.previewHandle} />
-              <Pressable
-                accessibilityLabel="닫기"
-                accessibilityRole="button"
-                onPress={() => setSelectedDream(null)}
-                style={({ pressed }) => [
-                  styles.previewClose,
-                  pressed && interactionStyles.pressed,
-                ]}
-              >
-                <X color={colors.textSecondary} size={18} />
-              </Pressable>
               <DreamCard
+                disableFlip
                 dream={selectedDream}
                 loadFullImageProgressively
+                onPress={() => openDetail(selectedDream)}
                 size="full"
               />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => openDetail(selectedDream)}
-                style={({ pressed }) => [
-                  styles.detailButton,
-                  pressed && interactionStyles.pressed,
-                ]}
-              >
-                <Text style={styles.detailButtonText}>상세보기</Text>
-              </Pressable>
-            </Pressable>
+            </View>
           ) : null}
         </Pressable>
       </Modal>
@@ -1674,56 +1653,12 @@ const styles = StyleSheet.create({
   },
   previewBackdrop: {
     flex: 1,
-    justifyContent: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
     backgroundColor: 'rgba(40, 35, 63, 0.38)',
   },
   previewCard: {
     position: 'relative',
-    maxHeight: '92%',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: 16,
-    paddingTop: 26,
-    gap: 12,
-    backgroundColor: colors.background,
-  },
-  previewHandle: {
-    position: 'absolute',
-    top: 10,
-    alignSelf: 'center',
-    width: 42,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: colors.lavenderTint,
-  },
-  previewClose: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 30,
-    elevation: 12,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,252,255,0.92)',
-  },
-  detailButton: {
-    minHeight: 48,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.lavenderTint,
-    borderWidth: 1,
-    borderColor: '#D8CDBB',
-  },
-  detailButtonText: {
-    color: colors.primary,
-    fontFamily: fontFamily.handwritten,
-    fontSize: 15,
-    fontWeight: '700',
-    includeFontPadding: false,
   },
 });

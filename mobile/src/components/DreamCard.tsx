@@ -899,15 +899,16 @@ export function DreamCard({
                             </View>
                           ))}
                         </View>
-                        <Text
-                          style={[
-                            styles.frontWordmark,
-                            { color: metaColor, fontFamily: serifTitleFamily },
-                          ]}
-                        >
-                          ✦ 꿈드림 ✦
-                        </Text>
                       </View>
+                      <Text
+                        style={[
+                          styles.frontWordmark,
+                          styles.frontWordmarkPinned,
+                          { color: metaColor, fontFamily: serifTitleFamily },
+                        ]}
+                      >
+                        ✦ 꿈드림 ✦
+                      </Text>
                     </View>
                   )}
                 </Pressable>
@@ -1506,6 +1507,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     includeFontPadding: false,
     opacity: 0.78,
+  },
+  frontWordmarkPinned: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: -15,
+    textAlign: 'center',
   },
   backLayout: {
     flex: 1,
