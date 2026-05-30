@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, X as XIcon } from 'lucide-react-native';
 import {
+  Copy,
+  Link2,
+  MessageCircle,
+  Share2,
+  X as XIcon,
+} from 'lucide-react-native';
+import {
+  Clipboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -26,6 +35,7 @@ import {
   fetchDreamReactions,
   markDreamBackOpened,
   markDreamRead,
+  shareDream,
   toggleDreamReaction,
 } from '../api/dreams';
 import { getCurrentUserId, isCurrentUserId } from '../data/currentUser';
@@ -99,6 +109,20 @@ export function DreamDetailScreen({ route }: Props) {
   const [showFlipGuide, setShowFlipGuide] = useState(
     () => !hasSeenCardFlipGuide(),
   );
+  const [isShareSheetVisible, setIsShareSheetVisible] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isPreparingShare, setIsPreparingShare] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  // A dream sent to an external recipient stays unclaimed (no receiverId, just
+  // the typed-in label) until someone opens the share link. While it is in that
+  // state, let the sender re-surface the claim link to copy or resend it. (A
+  // dream may also belong to a room, so group membership is irrelevant here.)
+  const isExternalSharePending =
+    isSender &&
+    dream.status !== 'draft' &&
+    !dream.receiverId &&
+    Boolean(dream.receiverLabel);
   const commentsQueryKey = ['dreams', dream.id, 'comments', token] as const;
   const reactionsQueryKey = ['dreams', dream.id, 'reactions', token] as const;
   const { data: remoteComments = [] } = useQuery({
@@ -291,6 +315,62 @@ export function DreamDetailScreen({ route }: Props) {
     }, 250);
   }, []);
 
+  const ensureShareUrl = useCallback(async (): Promise<string | null> => {
+    if (shareUrl) {
+      return shareUrl;
+    }
+    if (!token) {
+      setShareError('로그인 후에 공유 링크를 만들 수 있어요.');
+      return null;
+    }
+    setIsPreparingShare(true);
+    setShareError(null);
+    try {
+      const result = await shareDream(dream.id, token);
+      setShareUrl(result.shareUrl);
+      return result.shareUrl;
+    } catch (error) {
+      setShareError(
+        error instanceof Error ? error.message : '공유 링크를 만들지 못했어요.',
+      );
+      return null;
+    } finally {
+      setIsPreparingShare(false);
+    }
+  }, [dream.id, shareUrl, token]);
+
+  const openShareSheet = useCallback(() => {
+    setShareLinkCopied(false);
+    setShareError(null);
+    setIsShareSheetVisible(true);
+    ensureShareUrl().catch(() => null);
+  }, [ensureShareUrl]);
+
+  const onCopyShareLink = useCallback(async () => {
+    const url = await ensureShareUrl();
+    if (!url) {
+      return;
+    }
+    Clipboard.setString(url);
+    setShareLinkCopied(true);
+  }, [ensureShareUrl]);
+
+  const onSendShareLink = useCallback(async () => {
+    const url = await ensureShareUrl();
+    if (!url) {
+      return;
+    }
+    try {
+      await Share.share({
+        title: dream.title,
+        url,
+        message: buildShareLinkMessage(dream, url),
+      });
+    } catch {
+      // The native share sheet was dismissed; nothing to recover from.
+    }
+  }, [dream, ensureShareUrl]);
+
   return (
     <KeyboardAvoidingView
       style={styles.root}
@@ -318,6 +398,20 @@ export function DreamDetailScreen({ route }: Props) {
           />
           {showFlipGuide ? <CardFlipGuide /> : null}
         </View>
+
+        {isExternalSharePending ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={openShareSheet}
+            style={({ pressed }) => [
+              styles.shareLinkButton,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            <Link2 color={colors.primary} size={18} />
+            <Text style={styles.shareLinkButtonText}>공유 링크</Text>
+          </Pressable>
+        ) : null}
 
         <ReactionBar
           summary={reactionSummary}
@@ -390,8 +484,95 @@ export function DreamDetailScreen({ route }: Props) {
           ) : null}
         </View>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isShareSheetVisible}
+        onRequestClose={() => setIsShareSheetVisible(false)}
+      >
+        <Pressable
+          style={styles.shareBackdrop}
+          onPress={() => setIsShareSheetVisible(false)}
+        >
+          <Pressable style={styles.shareSheet} onPress={() => undefined}>
+            <View style={styles.shareSheetHeader}>
+              <Link2 color={colors.primary} size={20} />
+              <Text style={styles.shareSheetTitle}>공유 링크</Text>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={() => setIsShareSheetVisible(false)}
+                style={({ pressed }) => [
+                  styles.shareSheetClose,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <XIcon color={colors.textMuted} size={18} />
+              </Pressable>
+            </View>
+            <Text style={styles.shareSheetDescription}>
+              아직 이 꿈카드를 받은 사람이 없어요. 아래 링크를 상대에게 보내면,
+              링크를 연 사람이 꿈드림 앱에서 이 카드를 받을 수 있어요.
+            </Text>
+            {isPreparingShare ? (
+              <Text style={styles.shareUrlText}>링크를 만드는 중…</Text>
+            ) : shareUrl ? (
+              <Text
+                style={styles.shareUrlText}
+                numberOfLines={2}
+                ellipsizeMode="middle"
+              >
+                {shareUrl}
+              </Text>
+            ) : null}
+            {shareError ? (
+              <Text style={styles.errorText}>{shareError}</Text>
+            ) : null}
+            <View style={styles.shareActionRow}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isPreparingShare}
+                onPress={onCopyShareLink}
+                style={({ pressed }) => [
+                  styles.shareAction,
+                  styles.shareActionSecondary,
+                  isPreparingShare && styles.shareActionDisabled,
+                  pressed && !isPreparingShare && interactionStyles.pressed,
+                ]}
+              >
+                <Copy color={colors.primaryDark} size={18} />
+                <Text style={styles.shareActionSecondaryText}>
+                  {shareLinkCopied ? '복사됨' : '링크 복사'}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isPreparingShare}
+                onPress={onSendShareLink}
+                style={({ pressed }) => [
+                  styles.shareAction,
+                  styles.shareActionPrimary,
+                  isPreparingShare && styles.shareActionDisabled,
+                  pressed && !isPreparingShare && interactionStyles.pressed,
+                ]}
+              >
+                <Share2 color="#FFFFFF" size={18} />
+                <Text style={styles.shareActionPrimaryText}>링크 보내기</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
+}
+
+function buildShareLinkMessage(dream: Dream, shareUrl: string) {
+  const recipient = dream.receiverLabel?.trim();
+  const recipientText = recipient ? `${recipient}에게 보낸 꿈카드` : '꿈카드';
+  return `${recipientText}\n"${dream.shortMessage}"\n\n${shareUrl}\n\n링크를 열면 꿈드림 앱에서 바로 카드를 받을 수 있어요.`;
 }
 
 function isImagePending(dream?: Dream) {
@@ -448,6 +629,113 @@ const styles = StyleSheet.create({
   },
   cardSlot: {
     position: 'relative',
+  },
+  shareLinkButton: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  shareLinkButtonText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 14,
+    includeFontPadding: false,
+  },
+  shareBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(40, 35, 63, 0.34)',
+    justifyContent: 'flex-end',
+  },
+  shareSheet: {
+    padding: 22,
+    paddingBottom: 30,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: colors.cardBase,
+    gap: 14,
+  },
+  shareSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  shareSheetTitle: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  shareSheetClose: {
+    marginLeft: 'auto',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lavenderMist,
+  },
+  shareSheetDescription: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  shareUrlText: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 13,
+    lineHeight: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: colors.lavenderMist,
+  },
+  shareActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 2,
+  },
+  shareAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 48,
+    borderRadius: 16,
+  },
+  shareActionSecondary: {
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  shareActionSecondaryText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 14,
+    includeFontPadding: false,
+  },
+  shareActionPrimary: {
+    backgroundColor: colors.primary,
+  },
+  shareActionPrimaryText: {
+    color: '#FFFFFF',
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 14,
+    includeFontPadding: false,
+  },
+  shareActionDisabled: {
+    opacity: 0.5,
   },
   deleteButton: {
     marginLeft: 'auto',
