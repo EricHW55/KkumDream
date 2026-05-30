@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageCircle, X as XIcon } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -71,6 +79,7 @@ const initialComments: DreamComment[] = [
 export function DreamDetailScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const scrollRef = useRef<ScrollView>(null);
   const [displayDream, setDisplayDream] = useState(route.params.dream);
   const dream = displayDream;
   const token = useSessionStore(state => state.token);
@@ -274,97 +283,114 @@ export function DreamDetailScreen({ route }: Props) {
     setCommentInputKey(key => key + 1);
   };
 
+  const onCommentInputFocus = useCallback(() => {
+    // Wait for the soft keyboard to settle (and the window to resize on
+    // Android) before bringing the composer fully into view.
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 250);
+  }, []);
+
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={styles.root}
-      scrollEnabled={isPageScrollEnabled}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: Math.max(insets.bottom + 44, 88) },
-      ]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <PaperTextureOverlay />
-      <View style={styles.cardSlot}>
-        <DreamCard
-          dream={dream}
-          loadFullImageProgressively
-          onBackOpen={onBackOpen}
-          onParentScrollEnabledChange={setIsPageScrollEnabled}
-          size="full"
-        />
-        {showFlipGuide ? <CardFlipGuide /> : null}
-      </View>
-
-      <ReactionBar
-        summary={reactionSummary}
-        disabled={!token}
-        onToggle={onToggleReaction}
-      />
-
-      <View style={styles.commentBox}>
-        <View style={styles.commentHeader}>
-          <MessageCircle color={colors.primary} size={20} />
-          <Text style={styles.commentTitle}>댓글</Text>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.root}
+        scrollEnabled={isPageScrollEnabled}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom + 44, 88) },
+        ]}
+      >
+        <PaperTextureOverlay />
+        <View style={styles.cardSlot}>
+          <DreamCard
+            dream={dream}
+            loadFullImageProgressively
+            onBackOpen={onBackOpen}
+            onParentScrollEnabledChange={setIsPageScrollEnabled}
+            size="full"
+          />
+          {showFlipGuide ? <CardFlipGuide /> : null}
         </View>
 
-        {ownerComment ? (
-          <CommentItem
-            comment={ownerComment}
-            isOwner
-            canDelete={ownerComment.authorId === currentUserId}
-            onDelete={() => onDeleteComment(ownerComment.id)}
-          />
-        ) : null}
+        <ReactionBar
+          summary={reactionSummary}
+          disabled={!token}
+          onToggle={onToggleReaction}
+        />
 
-        {regularComments.map(comment => (
-          <CommentItem
-            key={comment.id}
-            comment={comment}
-            canDelete={comment.authorId === currentUserId}
-            onDelete={() => onDeleteComment(comment.id)}
-          />
-        ))}
-
-        {isSender ? (
-          <View style={styles.commentNotice}>
-            <Text style={styles.commentNoticeText}>
-              꿈을 보낸 사람은 이 카드에 댓글을 남길 수 없어요.
-            </Text>
+        <View style={styles.commentBox}>
+          <View style={styles.commentHeader}>
+            <MessageCircle color={colors.primary} size={20} />
+            <Text style={styles.commentTitle}>댓글</Text>
           </View>
-        ) : (
-          <View style={styles.composer}>
-            <TextInput
-              key={commentInputKey}
-              autoCorrect={false}
-              spellCheck={false}
-              defaultValue={commentDraft}
-              onChangeText={setCommentDraft}
-              multiline
-              placeholder="댓글 쓰기"
-              placeholderTextColor={colors.textMuted}
-              style={styles.commentInput}
+
+          {ownerComment ? (
+            <CommentItem
+              comment={ownerComment}
+              isOwner
+              canDelete={ownerComment.authorId === currentUserId}
+              onDelete={() => onDeleteComment(ownerComment.id)}
             />
-            <Pressable
-              accessibilityRole="button"
-              disabled={!canSubmit}
-              onPress={submitComment}
-              style={({ pressed }) => [
-                styles.commentSubmit,
-                !canSubmit && styles.commentSubmitDisabled,
-                pressed && canSubmit && interactionStyles.pressed,
-              ]}
-            >
-              <Text style={styles.commentSubmitText}>
-                {isSubmittingComment ? '등록 중' : '등록'}
+          ) : null}
+
+          {regularComments.map(comment => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              canDelete={comment.authorId === currentUserId}
+              onDelete={() => onDeleteComment(comment.id)}
+            />
+          ))}
+
+          {isSender ? (
+            <View style={styles.commentNotice}>
+              <Text style={styles.commentNoticeText}>
+                꿈을 보낸 사람은 이 카드에 댓글을 남길 수 없어요.
               </Text>
-            </Pressable>
-          </View>
-        )}
-        {commentError ? (
-          <Text style={styles.errorText}>{commentError}</Text>
-        ) : null}
-      </View>
-    </ScrollView>
+            </View>
+          ) : (
+            <View style={styles.composer}>
+              <TextInput
+                key={commentInputKey}
+                autoCorrect={false}
+                spellCheck={false}
+                defaultValue={commentDraft}
+                onChangeText={setCommentDraft}
+                multiline
+                onFocus={onCommentInputFocus}
+                placeholder="댓글 쓰기"
+                placeholderTextColor={colors.textMuted}
+                style={styles.commentInput}
+              />
+              <Pressable
+                accessibilityRole="button"
+                disabled={!canSubmit}
+                onPress={submitComment}
+                style={({ pressed }) => [
+                  styles.commentSubmit,
+                  !canSubmit && styles.commentSubmitDisabled,
+                  pressed && canSubmit && interactionStyles.pressed,
+                ]}
+              >
+                <Text style={styles.commentSubmitText}>
+                  {isSubmittingComment ? '등록 중' : '등록'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+          {commentError ? (
+            <Text style={styles.errorText}>{commentError}</Text>
+          ) : null}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
