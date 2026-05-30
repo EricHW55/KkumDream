@@ -337,7 +337,7 @@ export function HomeScreen() {
                   <View style={styles.actionTextWrap}>
                     <Text style={styles.actionTitle}>꿈방 만들기</Text>
                     <Text style={styles.actionSubtitle}>
-                      DB에 새 꿈방을 만들고 초대코드를 발급합니다.
+                      새 꿈방을 만들고 초대코드를 발급해요.
                     </Text>
                   </View>
                 </Pressable>
