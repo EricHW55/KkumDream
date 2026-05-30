@@ -183,39 +183,49 @@ Never mention AI, prompts, tools, JSON, policies, or image generation to the use
 Use the create_dream_card tool exactly once.
 """.strip()
 
+# Single unified art style for every card. Lead the final prompt with the medium
+# so flux locks onto "hand-drawn" instead of drifting toward a photo. Moods only
+# tint palette/atmosphere; they must never change the medium or rendering style.
+IMAGE_STYLE_PREFIX = "A hand-drawn pastel storybook illustration"
 IMAGE_STYLE_GUIDE = """
-soft Korean storybook illustration, mood-matched colors, gentle paper texture,
-rounded shapes, subtle cinematic light, dreamlike but calm, emotionally expressive,
-clear focal object, mobile card thumbnail friendly, not photorealistic, not anime
+drawn by hand with soft oil pastels and gouache, visible crayon and brush-stroke
+texture, grainy textured art paper, gentle muted pastel color palette, naive
+children's picture-book art, rounded hand-painted shapes, imperfect hand-made
+linework, flat soft matte lighting, cozy and emotionally warm, clear focal subject,
+mobile card thumbnail friendly, absolutely not a photograph, not photorealistic,
+not a 3D render, not CGI, not anime, no glossy reflections, no camera bokeh,
+no realistic skin or fabric texture
 """.replace("\n", " ").strip()
+# Keep each mood to palette + atmosphere ONLY, so the hand-drawn medium stays
+# identical across moods and just the feeling shifts.
 MOOD_IMAGE_GUIDES = {
     MOOD_DREAMY: (
-        "dreamy mood: hazy glow, floating light, soft lavender-blue atmosphere, "
-        "surreal calm, quiet wonder"
+        "dreamy atmosphere with a hazy glow, floating light and a soft "
+        "lavender-blue palette, quiet wonder"
     ),
     MOOD_FANTASY: (
-        "fantasy mood: enchanted architecture or nature, magical scale, gentle "
-        "sparkles, adventurous wonder"
+        "fantasy atmosphere with gentle sparkles and a magical sense of scale, "
+        "warm storybook palette, adventurous wonder"
     ),
     MOOD_SCARY: (
-        "soft scary mood: moonlit shadows, quiet suspense, eerie but harmless "
-        "atmosphere, no gore, no violence"
+        "softly eerie atmosphere with moonlit shadows and a cool muted palette, "
+        "gentle suspense, no gore, no violence"
     ),
     MOOD_FUNNY: (
-        "comic mood: playful exaggeration, whimsical shapes, cheerful surprise, "
-        "light visual humor"
+        "playful cheerful atmosphere with whimsical shapes and a bright candy "
+        "palette, light visual humor"
     ),
     MOOD_WARM: (
-        "warm mood: cozy light, affectionate atmosphere, soft peach and cream "
-        "colors, comforting composition"
+        "cozy affectionate atmosphere with soft warm light and a peach, cream "
+        "and honey palette, comforting and tender"
     ),
     MOOD_NOSTALGIC: (
-        "nostalgic mood: faded afternoon light, gentle sepia warmth, familiar "
-        "objects, memory-like softness"
+        "nostalgic atmosphere with faded afternoon light and a gentle sepia "
+        "palette, memory-like softness"
     ),
     MOOD_STRANGE: (
-        "strange mood: uncanny but gentle composition, offbeat objects, surreal "
-        "proportions, muted mysterious colors"
+        "gently uncanny atmosphere with offbeat objects and a muted mysterious "
+        "palette, surreal but calm"
     ),
 }
 
@@ -518,7 +528,7 @@ def _build_final_image_prompt(image_scene: str, mood: str) -> str:
     scene = " ".join(image_scene.split()).strip()
     mood_guide = MOOD_IMAGE_GUIDES.get(mood, MOOD_IMAGE_GUIDES[DEFAULT_MOOD])
     return (
-        f"{scene}, {mood_guide}, {IMAGE_STYLE_GUIDE}, "
+        f"{IMAGE_STYLE_PREFIX} of {scene}. {mood_guide}. {IMAGE_STYLE_GUIDE}, "
         "square composition, no text, no logo, no watermark"
     )
 
