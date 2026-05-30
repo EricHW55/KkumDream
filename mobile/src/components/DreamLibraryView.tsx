@@ -1269,7 +1269,7 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     padding: 4,
-    marginBottom: 18,
+    marginBottom: 10,
     flexDirection: 'row',
     backgroundColor: colors.lavenderMist,
   },
@@ -1295,7 +1295,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   archiveGrid: {
-    paddingBottom: 120,
+    paddingTop: 14,
+    paddingBottom: 28,
   },
   emptyArchiveGrid: {
     flexGrow: 1,
@@ -1325,7 +1326,8 @@ const styles = StyleSheet.create({
   },
   loadingState: {
     flex: 1,
-    paddingBottom: 120,
+    paddingTop: 14,
+    paddingBottom: 28,
   },
   loadingText: {
     marginBottom: 14,
@@ -1384,7 +1386,8 @@ const styles = StyleSheet.create({
   },
   calendarList: {
     gap: 16,
-    paddingBottom: 120,
+    paddingTop: 6,
+    paddingBottom: 28,
   },
   calendarMonth: {
     borderRadius: 24,

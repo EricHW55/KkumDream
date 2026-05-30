@@ -105,11 +105,11 @@ function TabBarPaperBackground() {
         borderTopLeftRadius={TAB_BAR_TOP_RADIUS}
         borderTopRightRadius={TAB_BAR_TOP_RADIUS}
         color={colors.primaryDark}
-        inset={24}
-        ambientBlur={14}
-        ambientOpacity={0.14}
+        inset={26}
+        ambientBlur={16}
+        ambientOpacity={0.16}
         contactBlur={5}
-        contactOpacity={0.09}
+        contactOpacity={0.12}
       />
       <View style={styles.tabBarSurface}>
         <PaperTextureOverlay subtle />
