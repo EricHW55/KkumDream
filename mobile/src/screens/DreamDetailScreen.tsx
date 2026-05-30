@@ -11,7 +11,6 @@ import {
 import {
   Clipboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   Share,
@@ -109,7 +108,7 @@ export function DreamDetailScreen({ route }: Props) {
   const [showFlipGuide, setShowFlipGuide] = useState(
     () => !hasSeenCardFlipGuide(),
   );
-  const [isShareSheetVisible, setIsShareSheetVisible] = useState(false);
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isPreparingShare, setIsPreparingShare] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -339,11 +338,17 @@ export function DreamDetailScreen({ route }: Props) {
     }
   }, [dream.id, shareUrl, token]);
 
-  const openShareSheet = useCallback(() => {
-    setShareLinkCopied(false);
-    setShareError(null);
-    setIsShareSheetVisible(true);
-    ensureShareUrl().catch(() => null);
+  const toggleShareMenu = useCallback(() => {
+    setIsShareMenuOpen(open => {
+      const next = !open;
+      if (next) {
+        setShareLinkCopied(false);
+        setShareError(null);
+        // Warm the link up front so copy/share feel instant.
+        ensureShareUrl().catch(() => null);
+      }
+      return next;
+    });
   }, [ensureShareUrl]);
 
   const onCopyShareLink = useCallback(async () => {
@@ -353,6 +358,7 @@ export function DreamDetailScreen({ route }: Props) {
     }
     Clipboard.setString(url);
     setShareLinkCopied(true);
+    setIsShareMenuOpen(false);
   }, [ensureShareUrl]);
 
   const onSendShareLink = useCallback(async () => {
@@ -360,6 +366,7 @@ export function DreamDetailScreen({ route }: Props) {
     if (!url) {
       return;
     }
+    setIsShareMenuOpen(false);
     try {
       await Share.share({
         title: dream.title,
@@ -398,20 +405,6 @@ export function DreamDetailScreen({ route }: Props) {
           />
           {showFlipGuide ? <CardFlipGuide /> : null}
         </View>
-
-        {isExternalSharePending ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={openShareSheet}
-            style={({ pressed }) => [
-              styles.shareLinkButton,
-              pressed && interactionStyles.pressed,
-            ]}
-          >
-            <Link2 color={colors.primary} size={18} />
-            <Text style={styles.shareLinkButtonText}>공유 링크</Text>
-          </Pressable>
-        ) : null}
 
         <ReactionBar
           summary={reactionSummary}
@@ -485,66 +478,34 @@ export function DreamDetailScreen({ route }: Props) {
         </View>
       </ScrollView>
 
-      <Modal
-        animationType="fade"
-        transparent
-        visible={isShareSheetVisible}
-        onRequestClose={() => setIsShareSheetVisible(false)}
-      >
-        <Pressable
-          style={styles.shareBackdrop}
-          onPress={() => setIsShareSheetVisible(false)}
+      {isExternalSharePending ? (
+        <View
+          style={[styles.shareFabArea, { bottom: insets.bottom + 24 }]}
+          pointerEvents="box-none"
         >
-          <Pressable style={styles.shareSheet} onPress={() => undefined}>
-            <View style={styles.shareSheetHeader}>
-              <Link2 color={colors.primary} size={20} />
-              <Text style={styles.shareSheetTitle}>공유 링크</Text>
-              <Pressable
-                accessibilityLabel="닫기"
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={() => setIsShareSheetVisible(false)}
-                style={({ pressed }) => [
-                  styles.shareSheetClose,
-                  pressed && interactionStyles.pressed,
-                ]}
-              >
-                <XIcon color={colors.textMuted} size={18} />
-              </Pressable>
-            </View>
-            <Text style={styles.shareSheetDescription}>
-              아직 이 꿈카드를 받은 사람이 없어요. 아래 링크를 상대에게 보내면,
-              링크를 연 사람이 꿈드림 앱에서 이 카드를 받을 수 있어요.
-            </Text>
-            {isPreparingShare ? (
-              <Text style={styles.shareUrlText}>링크를 만드는 중…</Text>
-            ) : shareUrl ? (
-              <Text
-                style={styles.shareUrlText}
-                numberOfLines={2}
-                ellipsizeMode="middle"
-              >
-                {shareUrl}
-              </Text>
-            ) : null}
-            {shareError ? (
-              <Text style={styles.errorText}>{shareError}</Text>
-            ) : null}
-            <View style={styles.shareActionRow}>
+          {isShareMenuOpen ? (
+            <Pressable
+              accessibilityLabel="공유 메뉴 닫기"
+              style={styles.shareFabBackdrop}
+              onPress={() => setIsShareMenuOpen(false)}
+            />
+          ) : null}
+
+          {isShareMenuOpen ? (
+            <View style={styles.shareMenu}>
               <Pressable
                 accessibilityRole="button"
                 disabled={isPreparingShare}
                 onPress={onCopyShareLink}
                 style={({ pressed }) => [
-                  styles.shareAction,
-                  styles.shareActionSecondary,
+                  styles.shareMenuItem,
                   isPreparingShare && styles.shareActionDisabled,
                   pressed && !isPreparingShare && interactionStyles.pressed,
                 ]}
               >
                 <Copy color={colors.primaryDark} size={18} />
-                <Text style={styles.shareActionSecondaryText}>
-                  {shareLinkCopied ? '복사됨' : '링크 복사'}
+                <Text style={styles.shareMenuItemText}>
+                  {shareLinkCopied ? '복사됨' : '복사'}
                 </Text>
               </Pressable>
               <Pressable
@@ -552,19 +513,37 @@ export function DreamDetailScreen({ route }: Props) {
                 disabled={isPreparingShare}
                 onPress={onSendShareLink}
                 style={({ pressed }) => [
-                  styles.shareAction,
-                  styles.shareActionPrimary,
+                  styles.shareMenuItem,
                   isPreparingShare && styles.shareActionDisabled,
                   pressed && !isPreparingShare && interactionStyles.pressed,
                 ]}
               >
-                <Share2 color="#FFFFFF" size={18} />
-                <Text style={styles.shareActionPrimaryText}>링크 보내기</Text>
+                <Share2 color={colors.primaryDark} size={18} />
+                <Text style={styles.shareMenuItemText}>공유</Text>
               </Pressable>
+              {shareError ? (
+                <Text style={styles.shareMenuError}>{shareError}</Text>
+              ) : null}
             </View>
+          ) : null}
+
+          <Pressable
+            accessibilityLabel="공유 링크"
+            accessibilityRole="button"
+            onPress={toggleShareMenu}
+            style={({ pressed }) => [
+              styles.shareFab,
+              pressed && interactionStyles.pressed,
+            ]}
+          >
+            {isShareMenuOpen ? (
+              <XIcon color="#FFFFFF" size={24} />
+            ) : (
+              <Link2 color="#FFFFFF" size={24} />
+            )}
           </Pressable>
-        </Pressable>
-      </Modal>
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -630,109 +609,69 @@ const styles = StyleSheet.create({
   cardSlot: {
     position: 'relative',
   },
-  shareLinkButton: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: colors.lavenderMist,
-    borderWidth: 1,
-    borderColor: colors.divider,
+  shareFabArea: {
+    position: 'absolute',
+    right: 20,
+    alignItems: 'flex-end',
   },
-  shareLinkButtonText: {
-    color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
-    fontSize: 14,
-    includeFontPadding: false,
+  shareFabBackdrop: {
+    position: 'absolute',
+    top: -2000,
+    bottom: -2000,
+    left: -2000,
+    right: -2000,
   },
-  shareBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(40, 35, 63, 0.34)',
-    justifyContent: 'flex-end',
-  },
-  shareSheet: {
-    padding: 22,
-    paddingBottom: 30,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: colors.cardBase,
-    gap: 14,
-  },
-  shareSheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  shareSheetTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  shareSheetClose: {
-    marginLeft: 'auto',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  shareFab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.lavenderMist,
-  },
-  shareSheetDescription: {
-    color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  shareUrlText: {
-    color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontSize: 13,
-    lineHeight: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: colors.lavenderMist,
-  },
-  shareActionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 2,
-  },
-  shareAction: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    minHeight: 48,
-    borderRadius: 16,
-  },
-  shareActionSecondary: {
-    backgroundColor: colors.lavenderMist,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
-  shareActionSecondaryText: {
-    color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
-    fontSize: 14,
-    includeFontPadding: false,
-  },
-  shareActionPrimary: {
     backgroundColor: colors.primary,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  shareActionPrimaryText: {
-    color: '#FFFFFF',
+  shareMenu: {
+    marginBottom: 12,
+    gap: 8,
+    alignItems: 'stretch',
+  },
+  shareMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minWidth: 116,
+    minHeight: 46,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  shareMenuItemText: {
+    color: colors.primaryDark,
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
     fontSize: 14,
     includeFontPadding: false,
+  },
+  shareMenuError: {
+    maxWidth: 180,
+    textAlign: 'right',
+    color: colors.error,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   shareActionDisabled: {
     opacity: 0.5,
