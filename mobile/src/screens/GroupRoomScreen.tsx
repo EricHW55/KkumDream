@@ -733,7 +733,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
               <View style={styles.emptyBox}>
                 <Text style={styles.emptyTitle}>첫 꿈카드를 기다리는 중</Text>
                 <Text style={styles.emptyText}>
-                  아래 메시지 창에서 짧은 인사를 함께 남길 수 있어요.
+                  초대 코드를 공유해 친구를 초대하고, 첫 꿈카드를 건네보세요.
                 </Text>
               </View>
             )
