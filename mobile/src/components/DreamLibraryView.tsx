@@ -157,7 +157,10 @@ export function DreamLibraryView({
   const calendarMonths = [visibleCalendarMonth];
   const selectedMonthNumber = Number(visibleCalendarMonthKey.slice(5, 7));
   const archiveColumnGap = 10;
-  const archiveCardWidth = Math.floor((width - 40 - archiveColumnGap * 2) / 3);
+  const archiveColumns = 3;
+  const archiveCardWidth = Math.floor(
+    (width - 40 - archiveColumnGap * (archiveColumns - 1)) / archiveColumns,
+  );
   const archiveCardHeight = Math.round(
     archiveCardWidth / DREAM_CARD_ASPECT_RATIO,
   );
@@ -202,7 +205,7 @@ export function DreamLibraryView({
       const index = layout?.index ?? fallbackIndex;
       if (!layout || layout.height <= 0) {
         backgroundScores.push({
-          distance: Math.abs(fallbackIndex - Math.floor(archiveScrollOffsetRef.current / archiveRowHeight) * 3),
+          distance: Math.abs(fallbackIndex - Math.floor(archiveScrollOffsetRef.current / archiveRowHeight) * archiveColumns),
           id: dream.id,
           index,
         });
@@ -246,16 +249,16 @@ export function DreamLibraryView({
       ...visibleScores.map(score => score.id),
       ...backgroundScores.map(score => score.id),
     ]);
-  }, [archiveDreams, archiveRowHeight, mode]);
+  }, [archiveColumns, archiveDreams, archiveRowHeight, mode]);
 
   const handleArchiveItemLayout = useCallback(
     (dreamId: string, index: number, event: LayoutChangeEvent) => {
       const { height } = event.nativeEvent.layout;
-      const y = Math.floor(index / 3) * archiveRowHeight;
+      const y = Math.floor(index / archiveColumns) * archiveRowHeight;
       archiveItemLayoutsRef.current.set(dreamId, { height, index, y });
       updateArchiveUpgradeQueue();
     },
-    [archiveRowHeight, updateArchiveUpgradeQueue],
+    [archiveColumns, archiveRowHeight, updateArchiveUpgradeQueue],
   );
 
   const handleArchiveLayout = useCallback(
@@ -601,13 +604,13 @@ export function DreamLibraryView({
           data={archiveDreams}
           getItemLayout={(_, index) => ({
             length: archiveRowHeight,
-            offset: archiveRowHeight * Math.floor(index / 3),
+            offset: archiveRowHeight * Math.floor(index / archiveColumns),
             index,
           })}
           initialNumToRender={12}
           keyExtractor={item => item.id}
           maxToRenderPerBatch={6}
-          numColumns={3}
+          numColumns={archiveColumns}
           onLayout={handleArchiveLayout}
           onScroll={handleArchiveScroll}
           onScrollBeginDrag={pauseArchiveUpgradeWork}

@@ -139,7 +139,7 @@ function MainTabs() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           height: TAB_BAR_BASE_HEIGHT + insets.bottom,
-          paddingTop: 0,
+          paddingTop: 8,
           paddingBottom: TAB_BAR_BASE_PADDING_BOTTOM + insets.bottom,
           backgroundColor: 'transparent',
           borderTopWidth: 0,
