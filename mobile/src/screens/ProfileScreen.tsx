@@ -5,12 +5,13 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { launchImageLibrary, type Asset } from 'react-native-image-picker';
-import { Plus } from 'lucide-react-native';
+import { Plus, Settings } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -25,13 +26,45 @@ import {
 } from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
 import { useSessionStore } from '../store/sessionStore';
+import {
+  isAnyPushEnabled,
+  useSettingsStore,
+  type ArchiveColumns,
+  type PushNotificationType,
+} from '../store/settingsStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { unregisterPushToken } from '../services/pushNotifications';
+import {
+  registerPushToken,
+  unregisterPushToken,
+} from '../services/pushNotifications';
 import { fontFamily } from '../theme/typography';
 
 const PROFILE_EDITOR_MAX_HEIGHT = 560;
 const PROFILE_EDITOR_COLLAPSED_GAP = -12;
+const SETTINGS_PANEL_MAX_HEIGHT = 620;
+const SETTINGS_PANEL_COLLAPSED_GAP = -12;
+
+const PUSH_NOTIFICATION_ITEMS: {
+  type: PushNotificationType;
+  label: string;
+}[] = [
+  { type: 'dream_given', label: '새 꿈카드가 도착했을 때' },
+  { type: 'dream_ready', label: '내가 보낸 꿈의 이미지가 완성됐을 때' },
+  { type: 'dream_comment', label: '받은 꿈카드에 댓글이 달렸을 때' },
+  { type: 'owner_comment', label: '꿈 주인이 댓글에 답을 남겼을 때' },
+  { type: 'dream_claimed', label: '공유한 꿈카드를 상대가 받았을 때' },
+];
+
+const CARD_SIZE_OPTIONS: {
+  columns: ArchiveColumns;
+  label: string;
+  hint: string;
+}[] = [
+  { columns: 4, label: '작게', hint: '한 번에 더 많이' },
+  { columns: 3, label: '보통', hint: '기본 크기' },
+  { columns: 2, label: '크게', hint: '카드를 큼직하게' },
+];
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -51,6 +84,13 @@ export function ProfileScreen() {
   const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   const [isProfileEditorMounted, setIsProfileEditorMounted] = useState(false);
   const profileEditorProgress = useRef(new Animated.Value(0)).current;
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSettingsMounted, setIsSettingsMounted] = useState(false);
+  const settingsProgress = useRef(new Animated.Value(0)).current;
+  const pushPreferences = useSettingsStore(state => state.pushPreferences);
+  const setPushPreference = useSettingsStore(state => state.setPushPreference);
+  const archiveColumns = useSettingsStore(state => state.archiveColumns);
+  const setArchiveColumns = useSettingsStore(state => state.setArchiveColumns);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [claimToken, setClaimToken] = useState('');
@@ -103,6 +143,52 @@ export function ProfileScreen() {
       setPendingProfileImage(null);
     }
     setIsProfileEditorOpen(isOpen => !isOpen);
+  };
+
+  useEffect(() => {
+    if (isSettingsOpen) {
+      setIsSettingsMounted(true);
+    }
+
+    const animation = Animated.timing(settingsProgress, {
+      toValue: isSettingsOpen ? 1 : 0,
+      duration: isSettingsOpen ? 420 : 320,
+      easing: isSettingsOpen
+        ? Easing.out(Easing.cubic)
+        : Easing.in(Easing.cubic),
+      useNativeDriver: false,
+    });
+
+    animation.start(({ finished }) => {
+      if (finished && !isSettingsOpen) {
+        setIsSettingsMounted(false);
+      }
+    });
+
+    return () => animation.stop();
+  }, [isSettingsOpen, settingsProgress]);
+
+  const toggleSettings = () => {
+    setIsSettingsOpen(isOpen => !isOpen);
+  };
+
+  const handleTogglePush = (type: PushNotificationType, next: boolean) => {
+    const hadAnyEnabled = isAnyPushEnabled(pushPreferences);
+    const willHaveAnyEnabled = isAnyPushEnabled({
+      ...pushPreferences,
+      [type]: next,
+    });
+    setPushPreference(type, next);
+    if (!token) {
+      return;
+    }
+    // Only flip the device token at the on/off boundary; per-type prefs are
+    // remembered locally.
+    if (willHaveAnyEnabled && !hadAnyEnabled) {
+      registerPushToken(token).catch(() => undefined);
+    } else if (!willHaveAnyEnabled && hadAnyEnabled) {
+      unregisterPushToken(token).catch(() => undefined);
+    }
   };
 
   const pickProfileImage = async () => {
@@ -422,6 +508,137 @@ export function ProfileScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.panel}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isSettingsOpen }}
+            onPress={toggleSettings}
+            style={({ pressed }) => [
+              styles.settingsHeader,
+              pressed && interactionStyles.pressedSoft,
+            ]}
+          >
+            <Animated.View
+              style={{
+                transform: [
+                  {
+                    rotate: settingsProgress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '35deg'],
+                    }),
+                  },
+                ],
+              }}
+            >
+              <Settings color={colors.primaryDark} size={24} strokeWidth={2.2} />
+            </Animated.View>
+            <Text style={styles.settingsHeaderTitle}>설정</Text>
+          </Pressable>
+
+          {isSettingsMounted ? (
+            <Animated.View
+              pointerEvents={isSettingsOpen ? 'auto' : 'none'}
+              style={[
+                styles.settingsShell,
+                {
+                  maxHeight: settingsProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, SETTINGS_PANEL_MAX_HEIGHT],
+                  }),
+                  opacity: settingsProgress,
+                  marginTop: settingsProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [SETTINGS_PANEL_COLLAPSED_GAP, 0],
+                  }),
+                },
+              ]}
+            >
+              <Animated.View
+                style={[
+                  styles.settingsBody,
+                  {
+                    transform: [
+                      {
+                        translateY: settingsProgress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-14, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <View style={styles.settingsGroup}>
+                  <Text style={styles.settingsItemTitle}>푸시 알림</Text>
+                  <Text style={styles.settingsItemDescription}>
+                    받고 싶은 알림만 켜 두세요.
+                  </Text>
+                  <View style={styles.pushItemList}>
+                    {PUSH_NOTIFICATION_ITEMS.map(item => (
+                      <View key={item.type} style={styles.pushItemRow}>
+                        <Text style={styles.pushItemLabel}>{item.label}</Text>
+                        <Switch
+                          value={pushPreferences[item.type]}
+                          onValueChange={next => handleTogglePush(item.type, next)}
+                          thumbColor="#FFFFFF"
+                          trackColor={{
+                            false: colors.divider,
+                            true: colors.primary,
+                          }}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.settingsDivider} />
+
+                <View style={styles.settingsGroup}>
+                  <Text style={styles.settingsItemTitle}>카드 크기</Text>
+                  <Text style={styles.settingsItemDescription}>
+                    받은 꿈·보낸 꿈 목록에서 보이는 꿈카드 크기예요.
+                  </Text>
+                  <View style={styles.cardSizeOptions}>
+                    {CARD_SIZE_OPTIONS.map(option => {
+                      const isSelected = option.columns === archiveColumns;
+                      return (
+                        <Pressable
+                          key={option.columns}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: isSelected }}
+                          onPress={() => setArchiveColumns(option.columns)}
+                          style={({ pressed }) => [
+                            styles.cardSizeOption,
+                            isSelected && styles.cardSizeOptionActive,
+                            pressed && interactionStyles.pressedSoft,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.cardSizeLabel,
+                              isSelected && styles.cardSizeLabelActive,
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.cardSizeHint,
+                              isSelected && styles.cardSizeHintActive,
+                            ]}
+                          >
+                            {option.hint}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              </Animated.View>
+            </Animated.View>
+          ) : null}
+        </View>
+
         <Pressable
           accessibilityRole="button"
           onPress={logout}
@@ -608,6 +825,105 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
     includeFontPadding: false,
+  },
+  settingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  settingsHeaderTitle: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 19,
+    includeFontPadding: false,
+  },
+  settingsShell: {
+    overflow: 'hidden',
+  },
+  settingsBody: {
+    gap: 16,
+    paddingTop: 4,
+  },
+  settingsGroup: {
+    gap: 10,
+  },
+  settingsItemTitle: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 15,
+    includeFontPadding: false,
+  },
+  settingsItemDescription: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '600',
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  pushItemList: {
+    gap: 4,
+  },
+  pushItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: 40,
+  },
+  pushItemLabel: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 13.5,
+    lineHeight: 19,
+  },
+  settingsDivider: {
+    height: 1,
+    backgroundColor: colors.divider,
+  },
+  cardSizeOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  cardSizeOption: {
+    flex: 1,
+    minHeight: 64,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  cardSizeOptionActive: {
+    backgroundColor: colors.lavenderMist,
+    borderColor: colors.primary,
+  },
+  cardSizeLabel: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 15,
+    includeFontPadding: false,
+  },
+  cardSizeLabelActive: {
+    color: colors.primaryDark,
+  },
+  cardSizeHint: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '600',
+    fontSize: 11,
+    includeFontPadding: false,
+    textAlign: 'center',
+  },
+  cardSizeHintActive: {
+    color: colors.primaryDark,
   },
   logoutButton: {
     minHeight: 52,

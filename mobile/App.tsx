@@ -13,8 +13,10 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import {
   registerPushToken,
   stopWatchingTokenRefresh,
+  unregisterPushToken,
 } from './src/services/pushNotifications';
 import { useSessionStore } from './src/store/sessionStore';
+import { isAnyPushEnabled, useSettingsStore } from './src/store/settingsStore';
 import { colors } from './src/theme/colors';
 import {
   CARD_COLOR_THEMES,
@@ -47,6 +49,9 @@ function App() {
 
 function PushNotificationRegistrar() {
   const token = useSessionStore(state => state.token);
+  const pushEnabled = useSettingsStore(state =>
+    isAnyPushEnabled(state.pushPreferences),
+  );
 
   useEffect(() => {
     if (!token) {
@@ -54,11 +59,17 @@ function PushNotificationRegistrar() {
       return;
     }
 
-    registerPushToken(token).catch(() => undefined);
+    // Keep the backend device token in sync with the local push preference so
+    // a disabled toggle survives app restarts.
+    if (pushEnabled) {
+      registerPushToken(token).catch(() => undefined);
+    } else {
+      unregisterPushToken(token).catch(() => undefined);
+    }
     return () => {
       stopWatchingTokenRefresh();
     };
-  }, [token]);
+  }, [pushEnabled, token]);
 
   return null;
 }

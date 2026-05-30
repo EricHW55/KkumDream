@@ -34,6 +34,7 @@ import Animated, {
 
 import { readCache, writeCache } from '../data/cache';
 import type { RootStackParamList } from '../navigation/types';
+import { useSettingsStore } from '../store/settingsStore';
 import { colors } from '../theme/colors';
 import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
@@ -205,7 +206,7 @@ export function DreamLibraryView({
   const calendarMonths = [visibleCalendarMonth];
   const selectedMonthNumber = Number(visibleCalendarMonthKey.slice(5, 7));
   const archiveColumnGap = 10;
-  const archiveColumns = 3;
+  const archiveColumns = useSettingsStore(state => state.archiveColumns);
   const archiveCardWidth = Math.floor(
     (width - 40 - archiveColumnGap * (archiveColumns - 1)) / archiveColumns,
   );
@@ -660,6 +661,7 @@ export function DreamLibraryView({
         <DreamLibraryLoadingState cardWidth={archiveCardWidth} />
       ) : mode === 'archive' ? (
         <FlatList
+          key={`archive-grid-${archiveColumns}`}
           data={archiveDreams}
           getItemLayout={(_, index) => ({
             length: archiveRowHeight,
