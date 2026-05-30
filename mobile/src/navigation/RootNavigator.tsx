@@ -145,6 +145,14 @@ function MainTabs() {
           borderTopWidth: 0,
           borderTopLeftRadius: TAB_BAR_TOP_RADIUS,
           borderTopRightRadius: TAB_BAR_TOP_RADIUS,
+          // Kill the navigator's default Material elevation (8): it casts a
+          // hard, straight-edged native shadow along the bar's rectangular
+          // bounds that sits above our rounded surface and reads as a straight
+          // cut. Only the custom rounded HaloShadow should show.
+          elevation: 0,
+          shadowColor: 'transparent',
+          shadowOpacity: 0,
+          shadowRadius: 0,
           overflow: 'visible',
         },
         tabBarLabelStyle: {
