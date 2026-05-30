@@ -13,7 +13,7 @@ import {
 import {
   Copy,
   LogIn,
-  PenLine,
+  PencilLine,
   Plus,
   Share2,
   UsersRound,
@@ -198,37 +198,24 @@ export function HomeScreen() {
         </View>
         <View style={styles.headerActions}>
           <View style={styles.headerIconShell}>
-            <HaloShadow
-              borderRadius={27}
-              color={colors.primaryDark}
-              inset={14}
-              ambientBlur={8}
-              ambientOpacity={0.1}
-              contactBlur={2}
-              contactOpacity={0.07}
-            />
             <Pressable
               accessibilityLabel="꿈 작성"
               accessibilityRole="button"
               onPress={() => navigation.navigate('Compose')}
               style={({ pressed }) => [
                 styles.circleButton,
+                styles.circleShadow,
                 pressed && interactionStyles.pressed,
               ]}
             >
-              <PenLine color={colors.textPrimary} size={26} strokeWidth={2.5} />
+              <PencilLine
+                color={colors.textPrimary}
+                size={26}
+                strokeWidth={2.5}
+              />
             </Pressable>
           </View>
           <View style={styles.headerIconShell}>
-            <HaloShadow
-              borderRadius={28}
-              color={colors.primaryDark}
-              inset={14}
-              ambientBlur={8}
-              ambientOpacity={0.1}
-              contactBlur={2}
-              contactOpacity={0.07}
-            />
             <Pressable
               accessibilityLabel="내 정보"
               accessibilityRole="button"
@@ -236,6 +223,7 @@ export function HomeScreen() {
               onPress={() => navigation.navigate('Profile')}
               style={({ pressed }) => [
                 styles.profileBadge,
+                styles.circleShadow,
                 pressed && interactionStyles.pressed,
               ]}
             >
@@ -672,6 +660,16 @@ const styles = StyleSheet.create({
   headerIconShell: {
     position: 'relative',
     overflow: 'visible',
+  },
+  // Even, soft shadow for the round header buttons. Using the native shadow
+  // (offset 0,0) keeps it radially symmetric — the SVG HaloShadow's blur
+  // approximated a box, so it pooled at the diagonal corners on a circle.
+  circleShadow: {
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   circleButton: {
     width: 54,
