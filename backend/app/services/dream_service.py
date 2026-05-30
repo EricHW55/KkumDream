@@ -4,7 +4,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, delete, func, select, text, update
+from sqlalchemy import Select, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import premium_design
@@ -475,15 +475,40 @@ async def issue_dream_share_token(
     if dream.status == "draft":
         raise BadRequestError("Cannot share a draft dream")
 
+    now = datetime.now(UTC)
+    base = settings.share_base_url.rstrip("/")
+
+    # Reuse an existing, still-valid link instead of minting a new token on each
+    # share. This keeps any copy the recipient already received working and
+    # avoids piling up redundant tokens for the same dream.
+    existing = await session.scalar(
+        select(DreamClaimToken)
+        .where(
+            DreamClaimToken.dream_id == dream.id,
+            DreamClaimToken.claimed_at.is_(None),
+            or_(
+                DreamClaimToken.expires_at.is_(None),
+                DreamClaimToken.expires_at > now,
+            ),
+        )
+        .order_by(DreamClaimToken.created_at.desc())
+        .limit(1)
+    )
+    if existing is not None:
+        return {
+            "token": existing.token,
+            "dream_id": dream.id,
+            "expires_at": existing.expires_at,
+            "share_url": f"{base}/d/{dream.id}?claim={existing.token}",
+        }
+
     expires_at: datetime | None
     if expires_in_hours is None:
-        expires_at = datetime.now(UTC) + timedelta(
-            days=settings.share_token_default_expire_days
-        )
+        expires_at = now + timedelta(days=settings.share_token_default_expire_days)
     elif expires_in_hours <= 0:
         expires_at = None
     else:
-        expires_at = datetime.now(UTC) + timedelta(hours=expires_in_hours)
+        expires_at = now + timedelta(hours=expires_in_hours)
 
     token = secrets.token_urlsafe(32)
     record = DreamClaimToken(
@@ -495,7 +520,6 @@ async def issue_dream_share_token(
     await session.commit()
     await session.refresh(record)
 
-    base = settings.share_base_url.rstrip("/")
     return {
         "token": token,
         "dream_id": dream.id,
