@@ -24,6 +24,13 @@ import {
 } from 'lucide-react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { readCache, writeCache } from '../data/cache';
 import type { RootStackParamList } from '../navigation/types';
@@ -83,11 +90,52 @@ export function DreamLibraryView({
 }: Props) {
   const navigation = useNavigation<Navigation>();
   const isFocused = useIsFocused();
-  const { width } = useWindowDimensions();
+  const { width, height: windowHeight } = useWindowDimensions();
   const [mode, setMode] = useState<LibraryMode>(() =>
     readLibraryMode(viewModeCacheKey),
   );
   const [selectedDream, setSelectedDream] = useState<Dream | null>(null);
+  const previewTranslateY = useSharedValue(0);
+  const previewCardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: previewTranslateY.value }],
+  }));
+
+  const navigateToDetail = useCallback(
+    (dream: Dream) => {
+      setSelectedDream(null);
+      navigation.navigate('DreamDetail', { dream });
+    },
+    [navigation],
+  );
+
+  // Slide the card up off-screen, then hand off to the detail screen.
+  const openDetail = useCallback(
+    (dream: Dream) => {
+      previewTranslateY.value = withTiming(
+        -windowHeight,
+        { duration: 240, easing: Easing.in(Easing.cubic) },
+        finished => {
+          if (finished) {
+            runOnJS(navigateToDetail)(dream);
+          }
+        },
+      );
+    },
+    [navigateToDetail, previewTranslateY, windowHeight],
+  );
+
+  // Slide the card down off-screen, then dismiss the preview.
+  const dismissPreview = useCallback(() => {
+    previewTranslateY.value = withTiming(
+      windowHeight,
+      { duration: 220, easing: Easing.in(Easing.cubic) },
+      finished => {
+        if (finished) {
+          runOnJS(setSelectedDream)(null);
+        }
+      },
+    );
+  }, [previewTranslateY, windowHeight]);
   const [selectedDateKeys, setSelectedDateKeys] = useState<string[]>([]);
   const [selectedCalendarMonthKey, setSelectedCalendarMonthKey] = useState<
     string | null
@@ -121,11 +169,11 @@ export function DreamLibraryView({
           gesture.dy > 10 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
         onPanResponderRelease: (_, gesture) => {
           if (gesture.dy > 80) {
-            setSelectedDream(null);
+            dismissPreview();
           }
         },
       }),
-    [],
+    [dismissPreview],
   );
   const calendarDreams = mode === 'calendar' ? dreams : EMPTY_DREAMS;
   const archiveDreams = useMemo(
@@ -298,14 +346,25 @@ export function DreamLibraryView({
     }, 80);
   }, [clearArchiveUpgradeResumeTimer, updateArchiveUpgradeQueue]);
 
-  const openDetail = (dream: Dream) => {
-    setSelectedDream(null);
-    navigation.navigate('DreamDetail', { dream });
-  };
+  // Single entry point so the card always starts off-screen below before
+  // sliding up into view, regardless of where the preview was opened from.
+  const handleSelectDream = useCallback(
+    (dream: Dream) => {
+      previewTranslateY.value = windowHeight;
+      setSelectedDream(dream);
+    },
+    [previewTranslateY, windowHeight],
+  );
 
-  const handleSelectDream = useCallback((dream: Dream) => {
-    setSelectedDream(dream);
-  }, []);
+  useEffect(() => {
+    if (!selectedDream) {
+      return;
+    }
+    previewTranslateY.value = withTiming(0, {
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [previewTranslateY, selectedDream]);
 
   const openMonthPicker = () => {
     setMonthPickerYear(Number(visibleCalendarMonthKey.slice(0, 4)));
@@ -536,7 +595,7 @@ export function DreamLibraryView({
     );
 
     if (group.items.length === 1) {
-      setSelectedDream(group.items[0]);
+      handleSelectDream(group.items[0]);
       return;
     }
 
@@ -934,7 +993,7 @@ export function DreamLibraryView({
                       accessibilityRole="button"
                       onPress={() => {
                         setMultiDreamDateGroup(null);
-                        setSelectedDream(dream);
+                        handleSelectDream(dream);
                       }}
                       style={({ pressed }) => [
                         styles.pickerThumbButton,
@@ -985,18 +1044,15 @@ export function DreamLibraryView({
       </Modal>
 
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent
         visible={selectedDream !== null}
-        onRequestClose={() => setSelectedDream(null)}
+        onRequestClose={dismissPreview}
       >
-        <Pressable
-          style={styles.previewBackdrop}
-          onPress={() => setSelectedDream(null)}
-        >
+        <Pressable style={styles.previewBackdrop} onPress={dismissPreview}>
           {selectedDream ? (
-            <View
-              style={styles.previewCard}
+            <Animated.View
+              style={[styles.previewCard, previewCardStyle]}
               {...previewPanResponder.panHandlers}
             >
               <DreamCard
@@ -1006,7 +1062,7 @@ export function DreamLibraryView({
                 onPress={() => openDetail(selectedDream)}
                 size="full"
               />
-            </View>
+            </Animated.View>
           ) : null}
         </Pressable>
       </Modal>
