@@ -20,25 +20,50 @@ from app.core.database import Base
 # Normalized subscription states derived from Google Play subscriptionsv2.
 # Entitlement is granted while state is in ENTITLED_STATES and expires_at is in the future.
 ENTITLED_STATES = ("active", "in_grace", "canceled")
+STORE_GOOGLE_PLAY = "google_play"
+STORE_APP_STORE = "app_store"
+BILLING_STORES = (STORE_GOOGLE_PLAY, STORE_APP_STORE)
 
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
     __table_args__ = (
         UniqueConstraint("user_id", name="subscriptions_user_id_key"),
-        UniqueConstraint("purchase_token", name="subscriptions_purchase_token_key"),
-        Index("ix_subscriptions_purchase_token", "purchase_token"),
+        UniqueConstraint(
+            "store",
+            "purchase_token",
+            name="subscriptions_store_purchase_token_key",
+        ),
+        UniqueConstraint(
+            "store",
+            "original_transaction_id",
+            name="subscriptions_store_original_transaction_id_key",
+        ),
+        Index("ix_subscriptions_store_purchase_token", "store", "purchase_token"),
+        Index(
+            "ix_subscriptions_store_original_transaction_id",
+            "store",
+            "original_transaction_id",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    store: Mapped[str] = mapped_column(String(20), nullable=False, default=STORE_GOOGLE_PLAY)
     product_id: Mapped[str] = mapped_column(String(100), nullable=False)
-    purchase_token: Mapped[str] = mapped_column(Text, nullable=False)
+    purchase_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    original_transaction_id: Mapped[str | None] = mapped_column(
+        String(191), nullable=True
+    )
+    app_account_token: Mapped[str | None] = mapped_column(String(191), nullable=True)
 
     state: Mapped[str] = mapped_column(String(20), nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     auto_renewing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     latest_notification_type: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    latest_notification_subtype: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
     raw: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -53,6 +78,7 @@ class RtdnEvent(Base):
     __tablename__ = "rtdn_events"
 
     message_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    store: Mapped[str] = mapped_column(String(20), nullable=False, default=STORE_GOOGLE_PLAY)
     package_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     purchase_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     notification_type: Mapped[int | None] = mapped_column(Integer, nullable=True)

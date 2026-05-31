@@ -15,7 +15,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.subscription import ENTITLED_STATES, RtdnEvent, Subscription
+from app.models.subscription import (
+    ENTITLED_STATES,
+    RtdnEvent,
+    STORE_GOOGLE_PLAY,
+    Subscription,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +50,14 @@ class BillingVerificationError(RuntimeError):
 
 @dataclass
 class SubscriptionStatus:
+    store: str
     product_id: str | None
     state: str
     expires_at: datetime | None
     auto_renewing: bool
     obfuscated_external_account_id: str | None
+    original_transaction_id: str | None
+    app_account_token: str | None
     raw: dict
 
 
@@ -110,11 +118,14 @@ def _normalize(data: dict) -> SubscriptionStatus:
     identifiers = data.get("externalAccountIdentifiers") or {}
 
     return SubscriptionStatus(
+        store=STORE_GOOGLE_PLAY,
         product_id=product_id,
         state=state,
         expires_at=expires_at,
         auto_renewing=auto_renewing,
         obfuscated_external_account_id=identifiers.get("obfuscatedExternalAccountId"),
+        original_transaction_id=None,
+        app_account_token=None,
         raw=data,
     )
 
@@ -183,10 +194,30 @@ async def get_subscription(session: AsyncSession, user_id: UUID) -> Subscription
 
 
 async def get_subscription_by_token(
-    session: AsyncSession, purchase_token: str
+    session: AsyncSession,
+    purchase_token: str,
+    *,
+    store: str = STORE_GOOGLE_PLAY,
 ) -> Subscription | None:
     return await session.scalar(
-        select(Subscription).where(Subscription.purchase_token == purchase_token)
+        select(Subscription).where(
+            Subscription.store == store,
+            Subscription.purchase_token == purchase_token,
+        )
+    )
+
+
+async def get_subscription_by_original_transaction_id(
+    session: AsyncSession,
+    original_transaction_id: str,
+    *,
+    store: str,
+) -> Subscription | None:
+    return await session.scalar(
+        select(Subscription).where(
+            Subscription.store == store,
+            Subscription.original_transaction_id == original_transaction_id,
+        )
     )
 
 
@@ -211,6 +242,7 @@ async def record_rtdn_event(
     session.add(
         RtdnEvent(
             message_id=message_id,
+            store=STORE_GOOGLE_PLAY,
             package_name=package_name,
             purchase_token=purchase_token,
             notification_type=notification_type,
@@ -225,16 +257,20 @@ async def record_rtdn_event(
 
 def _write_status(
     sub: Subscription,
-    purchase_token: str,
+    purchase_token: str | None,
     status: SubscriptionStatus,
     notification_type: int | None,
 ) -> None:
+    sub.store = status.store
     sub.product_id = status.product_id or settings.google_play_product_id
     sub.purchase_token = purchase_token
+    sub.original_transaction_id = status.original_transaction_id
+    sub.app_account_token = status.app_account_token
     sub.state = status.state
     sub.expires_at = status.expires_at
     sub.auto_renewing = status.auto_renewing
     sub.latest_notification_type = notification_type
+    sub.latest_notification_subtype = None
     sub.raw = status.raw
     # RTDN notificationType=12 means subscription access is revoked.
     if notification_type == 12:
@@ -246,7 +282,7 @@ def _write_status(
 async def apply_verified_status(
     session: AsyncSession,
     user_id: UUID,
-    purchase_token: str,
+    purchase_token: str | None,
     status: SubscriptionStatus,
     notification_type: int | None = None,
 ) -> Subscription:
@@ -272,7 +308,11 @@ async def refresh_subscription_by_token(
     Returns None when the token maps to no known user — RTDN carries only the
     token, so a purchase we have never seen via /verify cannot be attributed.
     """
-    sub = await get_subscription_by_token(session, purchase_token)
+    sub = await get_subscription_by_token(
+        session,
+        purchase_token,
+        store=STORE_GOOGLE_PLAY,
+    )
     if sub is None:
         return None
     status = await verify_purchase_token(purchase_token)
@@ -296,7 +336,11 @@ async def revoke_subscription_by_token(
     refund_type: int | None = None,
 ) -> Subscription | None:
     """Immediately revoke entitlement for a voided purchase token."""
-    sub = await get_subscription_by_token(session, purchase_token)
+    sub = await get_subscription_by_token(
+        session,
+        purchase_token,
+        store=STORE_GOOGLE_PLAY,
+    )
     if sub is None:
         return None
     _revoke_subscription(
@@ -333,6 +377,7 @@ async def reconcile_active_subscriptions(session: AsyncSession) -> int:
     now = datetime.now(UTC)
     result = await session.scalars(
         select(Subscription).where(
+            Subscription.store == STORE_GOOGLE_PLAY,
             Subscription.state.in_(ENTITLED_STATES),
             Subscription.expires_at.is_not(None),
             Subscription.expires_at > now,

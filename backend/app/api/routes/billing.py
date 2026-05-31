@@ -21,6 +21,7 @@ from app.schemas.billing import (
 )
 from app.services import billing_service
 from app.services.billing_service import BillingConfigError, BillingVerificationError
+from app.models.subscription import STORE_GOOGLE_PLAY
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -72,18 +73,23 @@ async def verify_purchase(
     user_id: CurrentUserId,
     session: DbSession,
 ) -> EntitlementOut:
-    # A purchase token belongs to exactly one user; block re-binding someone
-    # else's purchase to this account.
-    existing = await billing_service.get_subscription_by_token(session, payload.purchase_token)
-    if existing is not None and existing.user_id != user_id:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Purchase already claimed")
     if payload.platform != "android":
-        # iOS server-side verification (App Store Server API + ASN v2) is not
-        # wired yet; fail closed so entitlement is never granted from client data.
+        # iOS verification is added in P2. Until then, fail closed before any
+        # token lookup so Apple identifiers cannot be misinterpreted as Play tokens.
         raise HTTPException(
             status.HTTP_501_NOT_IMPLEMENTED,
             detail="iOS purchase verification is not available yet",
         )
+
+    # A purchase token belongs to exactly one user; block re-binding someone
+    # else's purchase to this account.
+    existing = await billing_service.get_subscription_by_token(
+        session,
+        payload.purchase_token,
+        store=STORE_GOOGLE_PLAY,
+    )
+    if existing is not None and existing.user_id != user_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="Purchase already claimed")
 
     try:
         verified = await billing_service.verify_purchase_token(payload.purchase_token)
