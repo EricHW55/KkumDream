@@ -93,6 +93,7 @@ export function DreamGenerationAnimation({ title, subtitle, compact }: Props) {
         <Animated.View style={[styles.cloudLeft, leftCloudStyle]}>
           <Image
             source={cloudLeftImage}
+            fadeDuration={0}
             resizeMode="contain"
             style={{
               width: leftCloudWidth,
@@ -103,6 +104,7 @@ export function DreamGenerationAnimation({ title, subtitle, compact }: Props) {
         <Animated.View style={[styles.moon, moonStyle]}>
           <Image
             source={moonImage}
+            fadeDuration={0}
             resizeMode="contain"
             style={{ width: moonSize, height: moonSize }}
           />
@@ -110,6 +112,7 @@ export function DreamGenerationAnimation({ title, subtitle, compact }: Props) {
         <Animated.View style={[styles.sparkle, sparkleStyle]}>
           <Image
             source={starImage}
+            fadeDuration={0}
             resizeMode="contain"
             style={{ width: starSize, height: starSize }}
           />
@@ -117,6 +120,7 @@ export function DreamGenerationAnimation({ title, subtitle, compact }: Props) {
         <Animated.View style={[styles.cloudRight, rightCloudStyle]}>
           <Image
             source={cloudRightImage}
+            fadeDuration={0}
             resizeMode="contain"
             style={{
               width: rightCloudWidth,
