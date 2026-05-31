@@ -129,6 +129,13 @@ async def receive_rtdn(
         notification_type = sub_notification.get("notificationType")
     elif voided:
         purchase_token = voided.get("purchaseToken")
+        if not purchase_token:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        refund_type = voided.get("refundType")
+        await billing_service.revoke_subscription_by_token(
+            session, purchase_token, refund_type=refund_type
+        )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     if not purchase_token:
         # Test notifications and unrelated events: ack and move on.

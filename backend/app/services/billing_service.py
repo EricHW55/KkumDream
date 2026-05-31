@@ -29,6 +29,7 @@ _STATE_MAP = {
     "SUBSCRIPTION_STATE_EXPIRED": "expired",
     "SUBSCRIPTION_STATE_PENDING": "pending",
     "SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED": "canceled",
+    "SUBSCRIPTION_STATE_REVOKED": "revoked",
 }
 
 
@@ -182,6 +183,11 @@ def _write_status(
     sub.auto_renewing = status.auto_renewing
     sub.latest_notification_type = notification_type
     sub.raw = status.raw
+    # RTDN notificationType=12 means subscription access is revoked.
+    if notification_type == 12:
+        sub.state = "revoked"
+        sub.expires_at = datetime.now(UTC)
+        sub.auto_renewing = False
 
 
 async def apply_verified_status(
@@ -217,6 +223,32 @@ async def refresh_subscription_by_token(
         return None
     status = await verify_purchase_token(purchase_token)
     _write_status(sub, purchase_token, status, notification_type)
+    await session.commit()
+    await session.refresh(sub)
+    return sub
+
+
+async def revoke_subscription_by_token(
+    session: AsyncSession,
+    purchase_token: str,
+    *,
+    refund_type: int | None = None,
+) -> Subscription | None:
+    """Immediately revoke entitlement for a voided purchase token."""
+    sub = await get_subscription_by_token(session, purchase_token)
+    if sub is None:
+        return None
+    now = datetime.now(UTC)
+    sub.state = "revoked"
+    sub.expires_at = now
+    sub.auto_renewing = False
+    sub.raw = {
+        **(sub.raw or {}),
+        "voided": {
+            "refundType": refund_type,
+            "revokedAt": now.isoformat(),
+        },
+    }
     await session.commit()
     await session.refresh(sub)
     return sub
