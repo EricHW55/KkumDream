@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
 from app.core.config import settings
-from app.models.subscription import Subscription
+from app.models.subscription import STORE_APP_STORE, STORE_GOOGLE_PLAY, Subscription
 from app.schemas.billing import (
     EntitlementOut,
     FreeDesignOut,
@@ -21,7 +21,6 @@ from app.schemas.billing import (
 )
 from app.services import billing_service
 from app.services.billing_service import BillingConfigError, BillingVerificationError
-from app.models.subscription import STORE_GOOGLE_PLAY
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -73,26 +72,38 @@ async def verify_purchase(
     user_id: CurrentUserId,
     session: DbSession,
 ) -> EntitlementOut:
-    if payload.platform != "android":
-        # iOS verification is added in P2. Until then, fail closed before any
-        # token lookup so Apple identifiers cannot be misinterpreted as Play tokens.
-        raise HTTPException(
-            status.HTTP_501_NOT_IMPLEMENTED,
-            detail="iOS purchase verification is not available yet",
-        )
-
-    # A purchase token belongs to exactly one user; block re-binding someone
-    # else's purchase to this account.
-    existing = await billing_service.get_subscription_by_token(
-        session,
-        payload.purchase_token,
-        store=STORE_GOOGLE_PLAY,
-    )
-    if existing is not None and existing.user_id != user_id:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="Purchase already claimed")
-
     try:
-        verified = await billing_service.verify_purchase_token(payload.purchase_token)
+        if payload.platform == "ios":
+            verified = await billing_service.verify_apple_purchase_token(payload.purchase_token)
+            if (
+                payload.app_account_token
+                and verified.app_account_token != payload.app_account_token
+            ):
+                raise BillingVerificationError("App account token mismatch")
+            existing = None
+            if verified.original_transaction_id:
+                existing = await billing_service.get_subscription_by_original_transaction_id(
+                    session,
+                    verified.original_transaction_id,
+                    store=STORE_APP_STORE,
+                )
+            if existing is None:
+                existing = await billing_service.get_subscription_by_token(
+                    session,
+                    payload.purchase_token,
+                    store=STORE_APP_STORE,
+                )
+        else:
+            existing = await billing_service.get_subscription_by_token(
+                session,
+                payload.purchase_token,
+                store=STORE_GOOGLE_PLAY,
+            )
+            verified = await billing_service.verify_purchase_token(payload.purchase_token)
+
+        if existing is not None and existing.user_id != user_id:
+            raise HTTPException(status.HTTP_409_CONFLICT, detail="Purchase already claimed")
+
         sub = await billing_service.apply_verified_status(
             session, user_id, payload.purchase_token, verified
         )

@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     google_play_product_ids: list[str] = []
     ios_product_id: str = "kkumdream_pass_monthly_ios"
     ios_product_ids: list[str] = []
+    apple_iap_issuer_id: str | None = None
+    apple_iap_key_id: str | None = None
+    apple_iap_private_key: str | None = None
+    ios_bundle_id: str = "com.kkumdreammobile"
     # Service account email Pub/Sub uses to sign OIDC tokens on RTDN push requests.
     google_play_rtdn_audience: str | None = None
     google_play_rtdn_service_account: str | None = None
