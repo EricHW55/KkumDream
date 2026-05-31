@@ -20,6 +20,7 @@ import {
   stopWatchingTokenRefresh,
   unregisterPushToken,
 } from './src/services/pushNotifications';
+import { checkForImmediateAndroidUpdate } from './src/services/inAppUpdates';
 import { useSessionStore } from './src/store/sessionStore';
 import { isAnyPushEnabled, useSettingsStore } from './src/store/settingsStore';
 import { colors } from './src/theme/colors';
@@ -43,6 +44,7 @@ function App() {
             backgroundColor={colors.background}
           />
           <PushNotificationRegistrar />
+          <AndroidInAppUpdateGate />
           <PassPurchaseRecovery />
           <StartupPreloader />
           <RootNavigator />
@@ -51,6 +53,14 @@ function App() {
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
+}
+
+function AndroidInAppUpdateGate() {
+  useEffect(() => {
+    checkForImmediateAndroidUpdate().catch(() => undefined);
+  }, []);
+
+  return null;
 }
 
 function PassPurchaseRecovery() {
