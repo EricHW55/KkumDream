@@ -23,6 +23,9 @@ export async function getGoogleIdToken() {
   if (!GOOGLE_WEB_CLIENT_ID) {
     throw new Error('GOOGLE_WEB_CLIENT_ID is not configured');
   }
+  if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) {
+    throw new Error('GOOGLE_IOS_CLIENT_ID is not configured');
+  }
 
   configureGoogleSignIn();
   if (Platform.OS === 'android') {

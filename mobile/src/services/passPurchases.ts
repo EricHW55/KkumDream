@@ -5,22 +5,31 @@ import {
   initBilling,
   type Purchase,
 } from './iap';
+import { getAppAccountToken } from './billingAccount';
 
 type ProcessPassPurchaseParams = {
   productId: string;
   token: string;
+  userId: string;
 };
 
 export async function processPassPurchase(
   purchase: Purchase,
-  { productId, token }: ProcessPassPurchaseParams,
+  { productId, token, userId }: ProcessPassPurchaseParams,
 ): Promise<boolean> {
   const purchaseToken = purchase.purchaseToken;
   if (!purchaseToken || !isPassPurchase(purchase, productId)) {
     return false;
   }
 
-  await verifyPurchase(purchaseToken, productId, token);
+  await verifyPurchase(
+    purchaseToken,
+    productId,
+    purchase.platform === 'ios' ? 'ios' : 'android',
+    (purchase as { appAccountToken?: string | null }).appAccountToken ??
+      getAppAccountToken(userId),
+    token,
+  );
   await finishTransaction({ purchase, isConsumable: false });
   return true;
 }

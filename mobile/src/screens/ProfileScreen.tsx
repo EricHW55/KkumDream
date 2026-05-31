@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { updateProfile, uploadProfileImage } from '../api/auth';
+import { getPlatformPassProductId } from '../api/billing';
 import { claimDream } from '../api/dreams';
 import { signOutGoogle } from '../auth/googleSignIn';
 import {
@@ -288,7 +289,7 @@ export function ProfileScreen() {
   };
 
   const openSubscriptionManagement = async () => {
-    const productId = passInfo?.productId;
+    const productId = getPlatformPassProductId(passInfo);
     const url =
       Platform.OS === 'android' && productId
         ? `https://play.google.com/store/account/subscriptions?sku=${encodeURIComponent(

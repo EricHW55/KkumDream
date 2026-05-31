@@ -10,8 +10,9 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { Moon } from 'lucide-react-native';
 
+import { getPlatformPassProductId } from '../api/billing';
 import { usePassInfo } from '../hooks/usePass';
-import { getObfuscatedAccountId } from '../services/billingAccount';
+import { getAppAccountToken, getObfuscatedAccountId } from '../services/billingAccount';
 import { processPassPurchase } from '../services/passPurchases';
 import { usePassModalStore } from '../store/passModalStore';
 import { useSessionStore } from '../store/sessionStore';
@@ -48,7 +49,7 @@ export function PassModal() {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const productId = passInfo?.productId;
+  const productId = getPlatformPassProductId(passInfo);
 
   useEffect(() => {
     let mounted = true;
@@ -56,14 +57,14 @@ export function PassModal() {
 
     const updateSub = purchaseUpdatedListener(async (purchase: Purchase) => {
       const purchaseToken = purchase.purchaseToken;
-      if (!purchaseToken || !productId || !token) {
+      if (!purchaseToken || !productId || !token || !userId) {
         return;
       }
       try {
         if (mounted) {
           setStatus('verifying');
         }
-        const processed = await processPassPurchase(purchase, { productId, token });
+        const processed = await processPassPurchase(purchase, { productId, token, userId });
         if (!processed) {
           return;
         }
@@ -95,7 +96,7 @@ export function PassModal() {
       errorSub.remove();
       endBilling().catch(() => undefined);
     };
-  }, [productId, token, queryClient]);
+  }, [productId, token, queryClient, userId]);
 
   useEffect(() => {
     if (!isOpen || !productId) {
@@ -119,7 +120,10 @@ export function PassModal() {
     setError(null);
     setStatus('purchasing');
     try {
-      await requestPassPurchase(productId, product, getObfuscatedAccountId(userId));
+      await requestPassPurchase(productId, product, {
+        obfuscatedAccountId: getObfuscatedAccountId(userId),
+        appAccountToken: getAppAccountToken(userId),
+      });
     } catch (e) {
       setStatus('idle');
       setError(e instanceof Error ? e.message : '결제를 시작할 수 없어요.');

@@ -1,4 +1,5 @@
 import { requestJson } from './httpClient';
+import { Platform } from 'react-native';
 
 export interface Entitlement {
   active: boolean;
@@ -16,6 +17,8 @@ export interface FreeDesign {
 
 export interface PassInfo {
   productId: string;
+  androidProductId: string;
+  iosProductId: string;
   title: string;
   description: string;
   originalPriceLabel: string;
@@ -36,11 +39,23 @@ export function fetchEntitlement(token?: string | null) {
 export function verifyPurchase(
   purchaseToken: string,
   productId: string,
+  platform: 'android' | 'ios',
+  appAccountToken?: string,
   token?: string | null,
 ) {
   return requestJson<Entitlement>('/billing/verify', {
     method: 'POST',
     token,
-    body: JSON.stringify({ purchaseToken, productId }),
+    body: JSON.stringify({ purchaseToken, productId, platform, appAccountToken }),
   });
+}
+
+export function getPlatformPassProductId(passInfo: PassInfo | undefined): string | null {
+  if (!passInfo) {
+    return null;
+  }
+  if (Platform.OS === 'ios') {
+    return passInfo.iosProductId || passInfo.productId || null;
+  }
+  return passInfo.androidProductId || passInfo.productId || null;
 }

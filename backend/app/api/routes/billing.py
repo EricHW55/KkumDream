@@ -45,6 +45,8 @@ def _entitlement_out(sub: Subscription | None) -> EntitlementOut:
 async def get_pass_info() -> PassInfoOut:
     return PassInfoOut(
         product_id=settings.google_play_product_id,
+        android_product_id=settings.google_play_product_id,
+        ios_product_id=settings.ios_product_id,
         title=settings.pass_title,
         description=settings.pass_description,
         original_price_label=settings.pass_original_price_label,
@@ -75,6 +77,13 @@ async def verify_purchase(
     existing = await billing_service.get_subscription_by_token(session, payload.purchase_token)
     if existing is not None and existing.user_id != user_id:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Purchase already claimed")
+    if payload.platform != "android":
+        # iOS server-side verification (App Store Server API + ASN v2) is not
+        # wired yet; fail closed so entitlement is never granted from client data.
+        raise HTTPException(
+            status.HTTP_501_NOT_IMPLEMENTED,
+            detail="iOS purchase verification is not available yet",
+        )
 
     try:
         verified = await billing_service.verify_purchase_token(payload.purchase_token)

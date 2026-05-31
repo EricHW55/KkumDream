@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -7,7 +7,7 @@ import { loginWithGoogleIdToken } from '../api/auth';
 import { getGoogleIdToken } from '../auth/googleSignIn';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
-import { GOOGLE_WEB_CLIENT_ID } from '../config/env';
+import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '../config/env';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
@@ -18,7 +18,9 @@ export function LoginScreen() {
   const setSession = useSessionStore(state => state.setSession);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isGoogleConfigured = GOOGLE_WEB_CLIENT_ID.length > 0;
+  const isGoogleConfigured =
+    GOOGLE_WEB_CLIENT_ID.length > 0 &&
+    (Platform.OS === 'android' || GOOGLE_IOS_CLIENT_ID.length > 0);
 
   const login = async () => {
     setError(null);
@@ -83,7 +85,9 @@ export function LoginScreen() {
 
         {!isGoogleConfigured ? (
           <Text style={styles.setupText}>
-            GOOGLE_WEB_CLIENT_ID를 설정하면 Google 로그인이 활성화됩니다.
+            {Platform.OS === 'ios'
+              ? 'GOOGLE_WEB_CLIENT_ID와 GOOGLE_IOS_CLIENT_ID를 설정하면 Google 로그인이 활성화됩니다.'
+              : 'GOOGLE_WEB_CLIENT_ID를 설정하면 Google 로그인이 활성화됩니다.'}
           </Text>
         ) : null}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}

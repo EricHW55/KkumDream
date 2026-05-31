@@ -10,6 +10,7 @@ import {
   type Purchase,
   type PurchaseError,
 } from 'react-native-iap';
+import { Platform } from 'react-native';
 
 export type { Purchase, PurchaseError };
 export { finishTransaction, purchaseErrorListener, purchaseUpdatedListener };
@@ -59,15 +60,27 @@ export function getDisplayPrice(product: PassProduct | null): string | null {
 export async function requestPassPurchase(
   productId: string,
   product: PassProduct | null,
-  obfuscatedAccountId: string,
+  account: { obfuscatedAccountId: string; appAccountToken: string },
 ): Promise<void> {
   const offerToken = getOfferToken(product);
+  if (Platform.OS === 'ios') {
+    await requestPurchase({
+      type: 'subs',
+      request: {
+        ios: {
+          sku: productId,
+          appAccountToken: account.appAccountToken,
+        },
+      },
+    });
+    return;
+  }
   await requestPurchase({
     type: 'subs',
     request: {
       google: {
         skus: [productId],
-        obfuscatedAccountId,
+        obfuscatedAccountId: account.obfuscatedAccountId,
         subscriptionOffers: offerToken ? [{ sku: productId, offerToken }] : [],
       },
     },

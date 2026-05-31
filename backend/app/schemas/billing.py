@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import Field
 
@@ -8,6 +9,8 @@ from app.schemas.base import ApiModel
 class VerifyPurchaseIn(ApiModel):
     purchase_token: str = Field(min_length=1)
     product_id: str | None = None
+    platform: Literal["android", "ios"] = "android"
+    app_account_token: str | None = None
 
 
 class EntitlementOut(ApiModel):
@@ -26,6 +29,8 @@ class FreeDesignOut(ApiModel):
 
 class PassInfoOut(ApiModel):
     product_id: str
+    android_product_id: str
+    ios_product_id: str
     title: str
     description: str
     original_price_label: str
