@@ -9,7 +9,7 @@ from app.models.dream import (
 )
 from app.models.friendship import Friendship
 from app.models.group import Group, GroupMember
-from app.models.subscription import Subscription
+from app.models.subscription import RtdnEvent, Subscription
 from app.models.user import DeviceToken, User
 
 __all__ = [
@@ -25,6 +25,7 @@ __all__ = [
     "Friendship",
     "Group",
     "GroupMember",
+    "RtdnEvent",
     "Subscription",
     "User",
 ]

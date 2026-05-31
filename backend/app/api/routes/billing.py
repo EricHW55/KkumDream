@@ -7,7 +7,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
@@ -78,21 +78,21 @@ async def verify_purchase(
 
     try:
         verified = await billing_service.verify_purchase_token(payload.purchase_token)
+        sub = await billing_service.apply_verified_status(
+            session, user_id, payload.purchase_token, verified
+        )
     except BillingConfigError:
         logger.exception("Billing not configured")
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail="Billing unavailable")
     except BillingVerificationError:
         logger.warning("Purchase verification failed", exc_info=True)
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Could not verify purchase")
-
-    sub = await billing_service.apply_verified_status(
-        session, user_id, payload.purchase_token, verified
-    )
     return _entitlement_out(sub)
 
 
 class _PubSubMessage(BaseModel):
     data: str | None = None
+    message_id: str | None = Field(default=None, alias="messageId")
 
 
 class _PubSubEnvelope(BaseModel):
@@ -120,6 +120,15 @@ async def receive_rtdn(
     if notification is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+    package_name = notification.get("packageName")
+    if package_name != settings.android_package_name:
+        logger.warning("RTDN package mismatch: %s", package_name)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    message_id = envelope.message.message_id
+    if message_id and await billing_service.has_rtdn_event(session, message_id):
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
     sub_notification = notification.get("subscriptionNotification")
     voided = notification.get("voidedPurchaseNotification")
     purchase_token = None
@@ -135,10 +144,28 @@ async def receive_rtdn(
         await billing_service.revoke_subscription_by_token(
             session, purchase_token, refund_type=refund_type
         )
+        if message_id:
+            await billing_service.record_rtdn_event(
+                session,
+                message_id=message_id,
+                package_name=package_name,
+                purchase_token=purchase_token,
+                notification_type=None,
+                raw=notification,
+            )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     if not purchase_token:
         # Test notifications and unrelated events: ack and move on.
+        if message_id:
+            await billing_service.record_rtdn_event(
+                session,
+                message_id=message_id,
+                package_name=package_name,
+                purchase_token=None,
+                notification_type=notification_type,
+                raw=notification,
+            )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     try:
@@ -152,6 +179,15 @@ async def receive_rtdn(
 
     if updated is None:
         logger.info("RTDN for unknown purchase token; acked")
+    if message_id:
+        await billing_service.record_rtdn_event(
+            session,
+            message_id=message_id,
+            package_name=package_name,
+            purchase_token=purchase_token,
+            notification_type=notification_type,
+            raw=notification,
+        )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

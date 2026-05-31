@@ -10,20 +10,32 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.api.router import api_router
 from app.core.config import settings
-from app.core.scheduler import run_midnight_cleanup_loop
+from app.core.scheduler import run_billing_reconciliation_loop, run_midnight_cleanup_loop
 
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    settings.validate_production_settings()
     cleanup_task = asyncio.create_task(run_midnight_cleanup_loop())
+    billing_configured = (
+        settings.google_play_service_account_json or settings.google_play_service_account_file
+    )
+    billing_task = (
+        asyncio.create_task(run_billing_reconciliation_loop())
+        if billing_configured
+        else None
+    )
     try:
         yield
     finally:
-        cleanup_task.cancel()
-        try:
-            await cleanup_task
-        except asyncio.CancelledError:
-            pass
+        tasks = [task for task in (cleanup_task, billing_task) if task is not None]
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
 
 def create_app() -> FastAPI:

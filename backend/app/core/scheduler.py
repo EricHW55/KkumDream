@@ -3,7 +3,9 @@ import logging
 from datetime import UTC, datetime, time as datetime_time, timedelta
 from zoneinfo import ZoneInfo
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.services.billing_service import reconcile_active_subscriptions
 from app.services.dream_service import purge_all_stale_drafts
 
 logger = logging.getLogger(__name__)
@@ -37,4 +39,24 @@ async def run_midnight_cleanup_loop() -> None:
             raise
         except Exception:  # noqa: BLE001
             logger.exception("Dream draft cleanup loop failed; retrying in 60s")
+            await asyncio.sleep(60)
+
+
+async def _run_billing_reconciliation_once() -> None:
+    async with AsyncSessionLocal() as session:
+        refreshed = await reconcile_active_subscriptions(session)
+        if refreshed:
+            logger.info("Reconciled %d active subscriptions", refreshed)
+
+
+async def run_billing_reconciliation_loop() -> None:
+    await asyncio.sleep(max(settings.billing_reconciliation_initial_delay_seconds, 0))
+    while True:
+        try:
+            await _run_billing_reconciliation_once()
+            await asyncio.sleep(max(settings.billing_reconciliation_interval_seconds, 60))
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001
+            logger.exception("Billing reconciliation loop failed; retrying in 60s")
             await asyncio.sleep(60)

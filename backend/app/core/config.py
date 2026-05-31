@@ -39,9 +39,12 @@ class Settings(BaseSettings):
     google_play_service_account_json: str | None = None
     google_play_service_account_file: str | None = None
     google_play_product_id: str = "kkumdream_pass_monthly"
+    google_play_product_ids: list[str] = []
     # Service account email Pub/Sub uses to sign OIDC tokens on RTDN push requests.
     google_play_rtdn_audience: str | None = None
     google_play_rtdn_service_account: str | None = None
+    billing_reconciliation_interval_seconds: int = 60 * 60 * 6
+    billing_reconciliation_initial_delay_seconds: int = 60
 
     # Which values are free; anything else is pass-only. Override via env
     # (JSON arrays) to change locks without an app release — the client reads these
@@ -79,6 +82,22 @@ class Settings(BaseSettings):
         if not self.r2_account_id:
             return None
         return f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
+
+    def validate_production_settings(self) -> None:
+        if self.environment != "production":
+            return
+
+        missing: list[str] = []
+        if not self.app_jwt_secret or self.app_jwt_secret == "change-me-in-production":
+            missing.append("APP_JWT_SECRET")
+        if not (self.google_play_service_account_json or self.google_play_service_account_file):
+            missing.append("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
+        if not self.google_play_rtdn_audience:
+            missing.append("GOOGLE_PLAY_RTDN_AUDIENCE")
+
+        if missing:
+            joined = ", ".join(missing)
+            raise RuntimeError(f"Production settings are incomplete: {joined}")
 
 
 @lru_cache

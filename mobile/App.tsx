@@ -4,11 +4,16 @@ import { Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import cloudLeftImage from './src/assets/illustrations/dream_loading_cloud_left.png';
+import cloudRightImage from './src/assets/illustrations/dream_loading_cloud_right.png';
+import moonImage from './src/assets/illustrations/dream_loading_moon.png';
+import starImage from './src/assets/illustrations/dream_loading_star.png';
 import agedLetterPaperTexture from './src/assets/textures/aged_letter_paper.webp';
 import paperTexture from './src/assets/textures/paper_texture.webp';
 import { DreamCardFrame } from './src/components/DreamCardFrame';
 import { PassModal } from './src/components/PassModal';
 import { prehydrateComposeDraftCache } from './src/data/composeDraftCache';
+import { usePassPurchaseRecovery } from './src/hooks/usePassPurchaseRecovery';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import {
   registerPushToken,
@@ -38,6 +43,7 @@ function App() {
             backgroundColor={colors.background}
           />
           <PushNotificationRegistrar />
+          <PassPurchaseRecovery />
           <StartupPreloader />
           <RootNavigator />
           <PassModal />
@@ -45,6 +51,11 @@ function App() {
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
+}
+
+function PassPurchaseRecovery() {
+  usePassPurchaseRecovery();
+  return null;
 }
 
 function PushNotificationRegistrar() {
@@ -82,7 +93,14 @@ function StartupPreloader() {
   }, [userId]);
 
   useEffect(() => {
-    [paperTexture, agedLetterPaperTexture].forEach(source => {
+    [
+      paperTexture,
+      agedLetterPaperTexture,
+      moonImage,
+      starImage,
+      cloudLeftImage,
+      cloudRightImage,
+    ].forEach(source => {
       const uri = Image.resolveAssetSource(source)?.uri;
       if (uri) {
         Image.prefetch(uri).catch(() => undefined);
@@ -111,6 +129,16 @@ function StartupPreloader() {
           <View />
         </DreamCardFrame>
       ))}
+      {/* Decode the generation-loader artwork once so the modal shows it
+          instantly the first time it opens. */}
+      {[moonImage, starImage, cloudLeftImage, cloudRightImage].map(source => (
+        <Image
+          key={Image.resolveAssetSource(source)?.uri ?? String(source)}
+          source={source}
+          fadeDuration={0}
+          style={styles.preloadImage}
+        />
+      ))}
     </View>
   );
 }
@@ -129,6 +157,10 @@ const styles = StyleSheet.create({
   preloadText: {
     fontSize: 1,
     lineHeight: 1,
+  },
+  preloadImage: {
+    width: 64,
+    height: 64,
   },
 });
 

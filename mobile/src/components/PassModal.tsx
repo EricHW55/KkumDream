@@ -10,8 +10,9 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { Moon } from 'lucide-react-native';
 
-import { verifyPurchase } from '../api/billing';
 import { usePassInfo } from '../hooks/usePass';
+import { getObfuscatedAccountId } from '../services/billingAccount';
+import { processPassPurchase } from '../services/passPurchases';
 import { usePassModalStore } from '../store/passModalStore';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
@@ -19,7 +20,6 @@ import { fontFamily } from '../theme/typography';
 import {
   endBilling,
   fetchPassProduct,
-  finishTransaction,
   getDisplayPrice,
   initBilling,
   purchaseErrorListener,
@@ -40,6 +40,7 @@ export function PassModal() {
   const isOpen = usePassModalStore(state => state.isOpen);
   const close = usePassModalStore(state => state.close);
   const token = useSessionStore(state => state.token);
+  const userId = useSessionStore(state => state.userId);
   const { data: passInfo } = usePassInfo();
   const queryClient = useQueryClient();
 
@@ -55,15 +56,17 @@ export function PassModal() {
 
     const updateSub = purchaseUpdatedListener(async (purchase: Purchase) => {
       const purchaseToken = purchase.purchaseToken;
-      if (!purchaseToken || !productId) {
+      if (!purchaseToken || !productId || !token) {
         return;
       }
       try {
         if (mounted) {
           setStatus('verifying');
         }
-        await verifyPurchase(purchaseToken, productId, token);
-        await finishTransaction({ purchase, isConsumable: false });
+        const processed = await processPassPurchase(purchase, { productId, token });
+        if (!processed) {
+          return;
+        }
         await queryClient.invalidateQueries({ queryKey: ['entitlement'] });
         if (mounted) {
           setStatus('success');
@@ -109,10 +112,14 @@ export function PassModal() {
     if (!productId) {
       return;
     }
+    if (!userId) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
     setError(null);
     setStatus('purchasing');
     try {
-      await requestPassPurchase(productId, product);
+      await requestPassPurchase(productId, product, getObfuscatedAccountId(userId));
     } catch (e) {
       setStatus('idle');
       setError(e instanceof Error ? e.message : '결제를 시작할 수 없어요.');

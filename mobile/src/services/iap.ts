@@ -2,6 +2,7 @@ import {
   endConnection,
   fetchProducts,
   finishTransaction,
+  getAvailablePurchases,
   initConnection,
   purchaseErrorListener,
   purchaseUpdatedListener,
@@ -58,6 +59,7 @@ export function getDisplayPrice(product: PassProduct | null): string | null {
 export async function requestPassPurchase(
   productId: string,
   product: PassProduct | null,
+  obfuscatedAccountId: string,
 ): Promise<void> {
   const offerToken = getOfferToken(product);
   await requestPurchase({
@@ -65,8 +67,20 @@ export async function requestPassPurchase(
     request: {
       google: {
         skus: [productId],
+        obfuscatedAccountId,
         subscriptionOffers: offerToken ? [{ sku: productId, offerToken }] : [],
       },
     },
+  });
+}
+
+export async function getAvailablePassPurchases(productId: string): Promise<Purchase[]> {
+  const purchases = await getAvailablePurchases({
+    onlyIncludeActiveItemsIOS: true,
+    includeSuspendedAndroid: false,
+  });
+  return purchases.filter(purchase => {
+    const ids = (purchase as { ids?: string[] | null }).ids;
+    return purchase.productId === productId || ids?.includes(productId);
   });
 }

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary, type Asset } from 'react-native-image-picker';
-import { Plus, Settings } from 'lucide-react-native';
+import { ExternalLink, Plus, RefreshCw, Settings } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -25,6 +27,9 @@ import {
   normalizeProfileAvatarValue,
 } from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
+import { ANDROID_PACKAGE_NAME } from '../config/env';
+import { useEntitlement, usePassInfo } from '../hooks/usePass';
+import { usePassPurchaseRecovery } from '../hooks/usePassPurchaseRecovery';
 import { useSessionStore } from '../store/sessionStore';
 import {
   isAnyPushEnabled,
@@ -96,6 +101,11 @@ export function ProfileScreen() {
   const [claimToken, setClaimToken] = useState('');
   const [claimStatus, setClaimStatus] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
+  const { data: passInfo } = usePassInfo();
+  const { data: entitlement } = useEntitlement();
+  const recoverPassPurchases = usePassPurchaseRecovery();
+  const [passStatus, setPassStatus] = useState<string | null>(null);
+  const [isRestoringPass, setIsRestoringPass] = useState(false);
   const avatarOptions = useMemo(() => {
     const isPreset = PROFILE_AVATAR_PRESETS.some(
       option => option.value === profileAvatarValue,
@@ -256,6 +266,36 @@ export function ProfileScreen() {
     }
     await signOutGoogle();
     clearSession();
+  };
+
+  const restorePass = async () => {
+    setPassStatus(null);
+    setIsRestoringPass(true);
+    try {
+      const restored = await recoverPassPurchases();
+      setPassStatus(
+        restored > 0
+          ? '패스 구매 내역을 복원했어요.'
+          : '복원할 활성 패스 구매 내역이 없어요.',
+      );
+    } catch (error) {
+      setPassStatus(
+        error instanceof Error ? error.message : '패스 구매 내역을 복원하지 못했어요.',
+      );
+    } finally {
+      setIsRestoringPass(false);
+    }
+  };
+
+  const openSubscriptionManagement = async () => {
+    const productId = passInfo?.productId;
+    const url =
+      Platform.OS === 'android' && productId
+        ? `https://play.google.com/store/account/subscriptions?sku=${encodeURIComponent(
+            productId,
+          )}&package=${encodeURIComponent(ANDROID_PACKAGE_NAME)}`
+        : 'https://apps.apple.com/account/subscriptions';
+    await Linking.openURL(url);
   };
 
   const saveProfile = async () => {
@@ -506,6 +546,48 @@ export function ProfileScreen() {
               {isClaiming ? '받는 중...' : '카드 받기'}
             </Text>
           </Pressable>
+        </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.sectionHeading}>꿈드림 패스</Text>
+          <Text style={styles.sectionDescription}>
+            {entitlement?.active
+              ? '패스가 활성화되어 있어요. 구독 취소 후에도 남은 기간까지 사용할 수 있어요.'
+              : '구매했는데 패스가 보이지 않으면 구매 내역을 복원하세요.'}
+          </Text>
+          {passStatus ? <Text style={styles.statusText}>{passStatus}</Text> : null}
+          <View style={styles.passActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isRestoringPass}
+              onPress={restorePass}
+              style={({ pressed }) => [
+                styles.passActionButton,
+                isRestoringPass && styles.disabledButton,
+                pressed && !isRestoringPass && interactionStyles.pressedSoft,
+              ]}
+            >
+              <RefreshCw color={colors.primaryDark} size={18} strokeWidth={2.3} />
+              <Text style={styles.passActionText}>
+                {isRestoringPass ? '복원 중...' : '구매 복원'}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={openSubscriptionManagement}
+              style={({ pressed }) => [
+                styles.passActionButton,
+                pressed && interactionStyles.pressedSoft,
+              ]}
+            >
+              <ExternalLink color={colors.primaryDark} size={18} strokeWidth={2.3} />
+              <Text style={styles.passActionText}>구독 관리</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.sectionDescription}>
+            환불이나 취소는 스토어 구독 관리 화면에서 처리됩니다. 환불이 승인되면
+            서버가 알림을 받아 패스 권한을 회수합니다.
+          </Text>
         </View>
 
         <View style={styles.panel}>
@@ -824,6 +906,29 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
     fontSize: 15,
+    includeFontPadding: false,
+  },
+  passActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  passActionButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  passActionText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 13,
     includeFontPadding: false,
   },
   settingsHeader: {
