@@ -10,6 +10,8 @@ import {
 } from 'lucide-react-native';
 import {
   Clipboard,
+  Keyboard,
+  type LayoutChangeEvent,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -89,6 +91,7 @@ export function DreamDetailScreen({ route }: Props) {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
+  const composerOffsetYRef = useRef(0);
   const [displayDream, setDisplayDream] = useState(route.params.dream);
   const dream = displayDream;
   const token = useSessionStore(state => state.token);
@@ -109,6 +112,7 @@ export function DreamDetailScreen({ route }: Props) {
     () => !hasSeenCardFlipGuide(),
   );
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isPreparingShare, setIsPreparingShare] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -310,8 +314,40 @@ export function DreamDetailScreen({ route }: Props) {
     // Wait for the soft keyboard to settle (and the window to resize on
     // Android) before bringing the composer fully into view.
     setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, composerOffsetYRef.current - 24),
+        animated: true,
+      });
     }, 250);
+  }, []);
+
+  const onComposerLayout = useCallback((event: LayoutChangeEvent) => {
+    composerOffsetYRef.current = event.nativeEvent.layout.y;
+  }, []);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, event => {
+      setKeyboardHeight(event.endCoordinates.height);
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, composerOffsetYRef.current - 24),
+          animated: true,
+        });
+      }, 60);
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
   }, []);
 
   const ensureShareUrl = useCallback(async (): Promise<string | null> => {
@@ -391,7 +427,12 @@ export function DreamDetailScreen({ route }: Props) {
         keyboardDismissMode="interactive"
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: Math.max(insets.bottom + 44, 88) },
+          {
+            paddingBottom: Math.max(
+              insets.bottom + 44 + (Platform.OS === 'android' ? keyboardHeight : 0),
+              88,
+            ),
+          },
         ]}
       >
         <PaperTextureOverlay />
@@ -443,7 +484,7 @@ export function DreamDetailScreen({ route }: Props) {
               </Text>
             </View>
           ) : (
-            <View style={styles.composer}>
+            <View style={styles.composer} onLayout={onComposerLayout}>
               <TextInput
                 key={commentInputKey}
                 autoCorrect={false}
