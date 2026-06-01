@@ -73,6 +73,15 @@ def create_app() -> FastAPI:
             )
         )
 
+    @app.get("/child-safety", response_class=HTMLResponse, include_in_schema=False)
+    async def child_safety_page() -> HTMLResponse:
+        return HTMLResponse(
+            _build_child_safety_html(
+                app_name=settings.app_name,
+                support_email=settings.app_support_email,
+            )
+        )
+
     @app.get("/.well-known/assetlinks.json", include_in_schema=False)
     async def android_asset_links() -> JSONResponse:
         if not settings.android_app_link_sha256_fingerprints:
@@ -173,6 +182,111 @@ def _build_share_landing_html(
       }}
     }}, 1400);
     </script>
+</body>
+</html>"""
+
+
+def _build_child_safety_html(app_name: str, support_email: str) -> str:
+    escaped_app_name = escape(app_name)
+    escaped_email = escape(support_email, quote=True)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{escaped_app_name} Child Safety Standards</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --ink: #27252b;
+      --muted: #5e5a66;
+      --line: #e8e0f6;
+      --paper: #fcf9ff;
+      --accent: #6f5ad7;
+      --accent-soft: rgba(111, 90, 215, 0.08);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #fcfaff 0%, #f6f3ff 100%);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }}
+    main {{
+      width: min(860px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 48px 0 64px;
+    }}
+    article {{
+      padding: 36px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 20px 48px rgba(73, 57, 120, 0.12);
+    }}
+    h1 {{
+      margin: 0 0 12px;
+      font-size: clamp(30px, 5vw, 46px);
+      line-height: 1.15;
+    }}
+    h2 {{
+      margin: 28px 0 10px;
+      font-size: 20px;
+    }}
+    p, li {{ color: var(--muted); }}
+    ul {{ padding-left: 22px; }}
+    a {{
+      color: var(--accent);
+      font-weight: 700;
+    }}
+    .notice {{
+      margin-top: 24px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--accent-soft);
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>{escaped_app_name} Child Safety Standards</h1>
+      <p>
+        {escaped_app_name} is committed to protecting children and preventing child sexual abuse and exploitation (CSAE).
+        We do not allow content, behavior, or interactions that exploit, sexualize, or endanger minors.
+      </p>
+
+      <h2>Our standards</h2>
+      <ul>
+        <li>Any CSAE content is strictly prohibited.</li>
+        <li>Users may not use the service to groom, exploit, threaten, or sexualize minors.</li>
+        <li>Users may not upload or share abusive images, videos, messages, or links involving minors.</li>
+        <li>We may remove violating content, restrict accounts, and preserve records as required for safety and legal compliance.</li>
+      </ul>
+
+      <h2>Reporting concerns</h2>
+      <p>
+        Users can report safety concerns, abusive content, or harmful behavior by contacting
+        <a href="mailto:{escaped_email}?subject={escaped_app_name}%20Child%20Safety%20Report">{escaped_email}</a>.
+        Reports related to child safety are reviewed with priority.
+      </p>
+
+      <h2>Enforcement</h2>
+      <p>
+        When we identify content or behavior that may involve child exploitation or abuse, we may remove the content,
+        suspend or terminate involved accounts, and report relevant information to appropriate authorities or organizations
+        when legally required.
+      </p>
+
+      <div class="notice">
+        For urgent child safety concerns involving immediate risk, contact local law enforcement first and then notify us at
+        <a href="mailto:{escaped_email}">{escaped_email}</a>.
+      </div>
+    </article>
+  </main>
 </body>
 </html>"""
 
