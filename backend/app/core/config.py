@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     environment: str = "local"
     api_v1_prefix: str = "/api/v1"
     cors_origins: list[str] = ["*"]
+    app_support_email: str = "yueric55@gmail.com"
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/kkumdream"
     auth_mock_user_id: str | None = None

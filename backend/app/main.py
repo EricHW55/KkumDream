@@ -64,6 +64,15 @@ def create_app() -> FastAPI:
         )
         return HTMLResponse(html)
 
+    @app.get("/account-deletion", response_class=HTMLResponse, include_in_schema=False)
+    async def account_deletion_page() -> HTMLResponse:
+        return HTMLResponse(
+            _build_account_deletion_html(
+                app_name="꿈드림",
+                support_email=settings.app_support_email,
+            )
+        )
+
     @app.get("/.well-known/assetlinks.json", include_in_schema=False)
     async def android_asset_links() -> JSONResponse:
         if not settings.android_app_link_sha256_fingerprints:
@@ -163,6 +172,112 @@ def _build_share_landing_html(
         window.location.href = fallbackUrl;
       }}
     }}, 1400);
-  </script>
+    </script>
+</body>
+</html>"""
+
+
+def _build_account_deletion_html(app_name: str, support_email: str) -> str:
+    escaped_app_name = escape(app_name)
+    escaped_email = escape(support_email, quote=True)
+    return f"""<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{escaped_app_name} 계정 삭제 안내</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      --ink: #2f2a24;
+      --muted: #70675d;
+      --line: #e4d6c5;
+      --paper: #fffaf1;
+      --accent: #6f5ad7;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fffaf1 0%, #edf7f7 100%);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      line-height: 1.65;
+    }}
+    main {{
+      width: min(760px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 56px 0;
+    }}
+    article {{
+      padding: 34px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: 0 18px 45px rgba(77, 60, 35, 0.1);
+    }}
+    h1 {{
+      margin: 0 0 12px;
+      font-size: clamp(28px, 5vw, 42px);
+      line-height: 1.2;
+    }}
+    h2 {{
+      margin: 30px 0 10px;
+      font-size: 20px;
+    }}
+    p, li {{ color: var(--muted); }}
+    ul, ol {{ padding-left: 22px; }}
+    a {{
+      color: var(--accent);
+      font-weight: 700;
+    }}
+    .notice {{
+      margin-top: 24px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>{escaped_app_name} 계정 및 데이터 삭제 안내</h1>
+      <p>
+        {escaped_app_name} 계정 삭제를 원하시면 아래 절차에 따라 요청해 주세요.
+        요청을 확인한 뒤 서비스 데이터 삭제를 진행합니다.
+      </p>
+
+      <h2>삭제 요청 방법</h2>
+      <ol>
+        <li>앱에서 사용한 Google 계정 이메일 주소를 확인합니다.</li>
+        <li>
+          <a href="mailto:{escaped_email}?subject={escaped_app_name}%20계정%20삭제%20요청">
+            {escaped_email}
+          </a>
+          로 계정 삭제 요청 메일을 보냅니다.
+        </li>
+        <li>메일 제목에 "{escaped_app_name} 계정 삭제 요청"을 적고, 본문에 가입 이메일 주소를 함께 적어 주세요.</li>
+      </ol>
+
+      <h2>삭제되는 데이터</h2>
+      <ul>
+        <li>계정 식별 정보와 프로필 정보</li>
+        <li>꿈 기록, 꿈 카드, 댓글, 반응 등 사용자가 생성한 콘텐츠</li>
+        <li>앱 이용을 위해 서버에 저장된 기기 및 알림 관련 정보</li>
+      </ul>
+
+      <h2>일부 보관될 수 있는 데이터</h2>
+      <p>
+        결제, 환불, 보안, 부정 이용 방지, 법적 의무 이행을 위해 필요한 기록은 관련 법령,
+        앱 마켓 정책, 내부 보안 정책에 따라 제한된 기간 보관될 수 있습니다.
+      </p>
+
+      <div class="notice">
+        계정 삭제가 완료되면 같은 계정으로 다시 로그인하더라도 이전 데이터는 복구되지 않을 수 있습니다.
+      </div>
+    </article>
+  </main>
 </body>
 </html>"""
