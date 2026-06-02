@@ -520,14 +520,16 @@ function FloatingDecoration({
       item.delay,
       withRepeat(
         withTiming(1, {
-          duration: item.duration,
-          easing: Easing.inOut(Easing.ease),
+          // Stars run a one-way 0->1 loop (fade in → hold → fade out) on a
+          // linear timeline; clouds ease back and forth, so they reverse.
+          duration: item.twinkle ? item.duration * 2 : item.duration,
+          easing: item.twinkle ? Easing.linear : Easing.inOut(Easing.ease),
         }),
         -1,
-        true,
+        !item.twinkle,
       ),
     );
-  }, [item.delay, item.duration, progress]);
+  }, [item.delay, item.duration, item.twinkle, progress]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const transform: (
@@ -541,6 +543,35 @@ function FloatingDecoration({
     if (item.flip) {
       transform.push({ scaleX: -1 });
     }
+
+    if (item.twinkle) {
+      // One-way 0->1 loop shaped as: fade in (0–0.35), hold bright (0.35–0.6),
+      // fade out (0.6–1). Endpoints match so each repeat is seamless.
+      const stops = [0, 0.35, 0.6, 1];
+      if (item.rotate) {
+        transform.push({
+          rotate: `${interpolate(
+            progress.value,
+            [0, 0.5, 1],
+            [-item.rotate, item.rotate, -item.rotate],
+          )}deg`,
+        });
+      }
+      transform.push({
+        scale: interpolate(progress.value, stops, [0.8, 1.12, 1.12, 0.8]),
+      });
+      return {
+        opacity: interpolate(progress.value, stops, [
+          item.opacity * 0.2,
+          item.opacity,
+          item.opacity,
+          item.opacity * 0.2,
+        ]),
+        transform,
+      };
+    }
+
+    // Clouds: gentle back-and-forth drift (reversing loop).
     if (item.driftX) {
       transform.push({
         translateX: interpolate(progress.value, [0, 1], [-item.driftX, item.driftX]),
@@ -556,18 +587,8 @@ function FloatingDecoration({
         rotate: `${interpolate(progress.value, [0, 1], [-item.rotate, item.rotate])}deg`,
       });
     }
-    if (item.twinkle) {
-      transform.push({
-        scale: interpolate(progress.value, [0, 1], [0.78, 1.15]),
-      });
-    }
 
-    return {
-      opacity: item.twinkle
-        ? interpolate(progress.value, [0, 1], [item.opacity * 0.35, item.opacity])
-        : item.opacity,
-      transform,
-    };
+    return { opacity: item.opacity, transform };
   });
 
   const width = screenWidth * item.widthRatio;
