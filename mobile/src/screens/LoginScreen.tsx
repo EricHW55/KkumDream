@@ -54,29 +54,44 @@ export function LoginScreen() {
       <PaperTextureOverlay />
       <LoginSky />
       <View style={styles.brand}>
-        <MoonAvatar size={74} color={colors.primary} />
+        <MoonAvatar size={76} color={colors.primary} />
         <Text style={styles.title}>꿈드림</Text>
+        <Text style={styles.title2}>당신의 꿈을 전달하세요</Text>
       </View>
 
       <View style={styles.footer}>
-        <Pressable
-          accessibilityRole="button"
-          disabled={!isGoogleConfigured || isSubmitting}
-          onPress={login}
-          style={({ pressed }) => [
-            styles.googleButton,
-            (!isGoogleConfigured || isSubmitting) && styles.disabledButton,
-            pressed &&
-              isGoogleConfigured &&
-              !isSubmitting &&
-              interactionStyles.pressed,
-          ]}
-        >
-          <GoogleLogoMark />
-          <Text style={styles.googleButtonText}>
-            {isSubmitting ? '로그인 중...' : 'Google로 계속하기'}
-          </Text>
-        </Pressable>
+        <View style={styles.action}>
+          {error ? (
+            <View pointerEvents="none" style={styles.errorBanner}>
+              <Text
+                style={styles.errorText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                {error}
+              </Text>
+            </View>
+          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            disabled={!isGoogleConfigured || isSubmitting}
+            onPress={login}
+            style={({ pressed }) => [
+              styles.googleButton,
+              (!isGoogleConfigured || isSubmitting) && styles.disabledButton,
+              pressed &&
+                isGoogleConfigured &&
+                !isSubmitting &&
+                interactionStyles.pressed,
+            ]}
+          >
+            <GoogleLogoMark />
+            <Text style={styles.googleButtonText}>
+              {isSubmitting ? '로그인 중...' : 'Google로 계속하기'}
+            </Text>
+          </Pressable>
+        </View>
 
         <Text style={styles.subtitle}>함께 꿈을 주고받는 방</Text>
         <Text style={styles.tagline}>
@@ -90,7 +105,6 @@ export function LoginScreen() {
               : 'GOOGLE_WEB_CLIENT_ID를 설정하면 Google 로그인이 활성화됩니다.'}
           </Text>
         ) : null}
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
     </View>
   );
@@ -130,7 +144,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   brand: {
-    gap: 12,
+    gap: 5,
     marginTop: 48,
     alignItems: 'center',
     zIndex: 1,
@@ -140,6 +154,15 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
     fontSize: 42,
+    includeFontPadding: false,
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  title2: {
+    color: colors.textGoogleLogin,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 20,
     includeFontPadding: false,
     textAlign: 'center',
   },
@@ -165,8 +188,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1,
   },
-  googleButton: {
+  action: {
     width: '73%',
+    alignSelf: 'center',
+  },
+  errorBanner: {
+    position: 'absolute',
+    bottom: '100%',
+    // Break out wider than the 73% button so the message fits on one line; the
+    // text stretches to this width and auto-shrinks to stay single-line.
+    left: -60,
+    right: -60,
+    paddingBottom: 10,
+  },
+  googleButton: {
+    width: '100%',
     minHeight: 53,
     borderRadius: 18,
     borderWidth: 1,
@@ -199,5 +235,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
+    textAlign: 'center',
   },
 });
