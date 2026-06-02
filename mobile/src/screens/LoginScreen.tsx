@@ -5,6 +5,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { loginWithGoogleIdToken } from '../api/auth';
 import { getGoogleIdToken } from '../auth/googleSignIn';
+import { LoginSky } from '../components/LoginSky';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '../config/env';
@@ -51,19 +52,14 @@ export function LoginScreen() {
       ]}
     >
       <PaperTextureOverlay />
+      <LoginSky />
       <View style={styles.brand}>
         <MoonAvatar size={74} color={colors.primary} />
         <Text style={styles.title}>꿈드림</Text>
         <Text style={styles.subtitle}>함께 꿈을 주고받는 방</Text>
       </View>
 
-      <View style={styles.panel}>
-        <Text style={styles.panelTitle}>로그인</Text>
-        <Text style={styles.panelText}>
-          Google 계정으로 로그인하면 이 기기에 세션이 저장되어 다음 실행부터
-          바로 들어올 수 있어요.
-        </Text>
-
+      <View style={styles.footer}>
         <Pressable
           accessibilityRole="button"
           disabled={!isGoogleConfigured || isSubmitting}
@@ -127,10 +123,13 @@ const styles = StyleSheet.create({
     paddingTop: 96,
     paddingBottom: 36,
     backgroundColor: colors.background,
+    overflow: 'hidden',
   },
   brand: {
     gap: 12,
-    marginTop: 34,
+    marginTop: 48,
+    alignItems: 'center',
+    zIndex: 1,
   },
   title: {
     color: colors.textPrimary,
@@ -138,35 +137,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 42,
     includeFontPadding: false,
+    textAlign: 'center',
   },
   subtitle: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
     fontSize: 16,
     fontWeight: '700',
+    textAlign: 'center',
   },
-  panel: {
-    borderRadius: 28,
-    padding: 22,
+  footer: {
     gap: 14,
-    backgroundColor: colors.cardBase,
-    borderWidth: 1,
-    borderColor: colors.divider,
     marginBottom: 72,
-  },
-  panelTitle: {
-    color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
-    fontSize: 24,
-    includeFontPadding: false,
-  },
-  panelText: {
-    color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 21,
+    zIndex: 1,
   },
   googleButton: {
     minHeight: 56,
