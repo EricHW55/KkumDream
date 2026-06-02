@@ -1553,7 +1553,7 @@ export function ComposeScreen({ navigation }: Props) {
                       </View>
                     )}
                     <View style={styles.friendPickerText}>
-                      <Text style={styles.friendName}>
+                      <Text style={styles.friendPickerName}>
                         {selectedReceiver?.name ?? '꿈방 멤버 검색'}
                       </Text>
                       <Text style={styles.friendPickerHint}>
@@ -2646,6 +2646,16 @@ const styles = StyleSheet.create({
   },
   friendName: {
     flex: 1,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 16,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  // Same as friendName but without flex:1 — used inside the picker button's
+  // text column, where flex would stretch the line vertically and split it
+  // from the hint below.
+  friendPickerName: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
     fontSize: 16,
