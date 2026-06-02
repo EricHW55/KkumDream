@@ -56,7 +56,6 @@ export function LoginScreen() {
       <View style={styles.brand}>
         <MoonAvatar size={74} color={colors.primary} />
         <Text style={styles.title}>꿈드림</Text>
-        <Text style={styles.subtitle}>함께 꿈을 주고받는 방</Text>
       </View>
 
       <View style={styles.footer}>
@@ -78,6 +77,11 @@ export function LoginScreen() {
             {isSubmitting ? '로그인 중...' : 'Google로 계속하기'}
           </Text>
         </Pressable>
+
+        <Text style={styles.subtitle}>함께 꿈을 주고받는 방</Text>
+        <Text style={styles.tagline}>
+          하루에 하나, 내가 꾼 꿈을 친구에게 선물해보세요.
+        </Text>
 
         {!isGoogleConfigured ? (
           <Text style={styles.setupText}>
@@ -145,14 +149,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
+    marginTop: 12,
+  },
+  tagline: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    opacity: 0.8,
   },
   footer: {
-    gap: 14,
-    marginBottom: 72,
+    gap: 7,
+    marginBottom: 160,
+    alignItems: 'center',
     zIndex: 1,
   },
   googleButton: {
-    minHeight: 56,
+    width: '73%',
+    minHeight: 53,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.divider,
@@ -166,7 +181,7 @@ const styles = StyleSheet.create({
     opacity: 0.48,
   },
   googleButtonText: {
-    color: colors.textPrimary,
+    color: colors.textGoogleLogin,
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
     fontSize: 16,

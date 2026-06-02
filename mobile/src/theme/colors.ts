@@ -14,6 +14,7 @@ export const palette = {
   cardPaperAlt: '#FDF5E6',
 
   // Inks
+  DarkBrown: '#857263',
   inkDeep: '#1F1E1B',
   inkMuted: '#5F5A52',
   inkDivider: '#D8CDBB',
@@ -57,6 +58,7 @@ export const colors = {
   textSecondary: palette.inkMuted,
   textMuted: '#8B7F6F',
   divider: palette.inkDivider,
+  textGoogleLogin: palette.DarkBrown,
 
   // Accents (legacy names kept; canonical names live alongside)
   accent: palette.oceanBlue,

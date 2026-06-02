@@ -18,20 +18,19 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import cloud1 from '../assets/illustrations/cloud_1_transparent.png';
-import cloud2 from '../assets/illustrations/cloud_2_transparent.png';
-import cloud3 from '../assets/illustrations/cloud_3_transparent.png';
-import cloudLeftImage from '../assets/illustrations/dream_loading_cloud_left.png';
-import cloudRightImage from '../assets/illustrations/dream_loading_cloud_right.png';
+import cloud2Blur from '../assets/illustrations/cloud_2_transparent_blur.png';
+import cloud3Blur from '../assets/illustrations/cloud_3_transparent_blur.png';
+import cloudLeftBlur from '../assets/illustrations/dream_loading_cloud_left_blur.png';
 import moonImage from '../assets/illustrations/dream_loading_moon.png';
 import starImage from '../assets/illustrations/dream_loading_star.png';
+import starVioletImage from '../assets/illustrations/star_violet.png';
 
-// Source artwork is shipped with transparent padding; these ratios keep the
-// rendered image from stretching.
-const CLOUD_ASPECT = 1; // 1254 x 1254
+// Every cloud / star illustration ships square (1254 x 1254) with transparent
+// padding, so a single aspect of 1 keeps them all from stretching.
+const CLOUD_ASPECT = 1;
 const MOON_ASPECT = 779 / 663;
 const STAR_ASPECT = 605 / 571;
-const CLOUD_LEFT_ASPECT = 804 / 1235;
-const CLOUD_RIGHT_ASPECT = 772 / 1154;
+const VIOLET_STAR_ASPECT = 1; // 500 x 500
 
 type Position = {
   top?: DimensionValue;
@@ -68,106 +67,84 @@ type Decoration = {
 // lockstep. Mirrors the floaty feel of the dream-loading animation.
 const DECORATIONS: Decoration[] = [
   // --- Clouds (slow horizontal drift) ---
-  // cloud_3 hugs the right wall up high.
+  // Top-right: cloud_3 (blurred), large — reaches in behind the logo.
   {
-    key: 'cloud-right',
-    source: cloud3,
-    widthRatio: 0.6,
+    key: 'cloud-top-right',
+    source: cloud3Blur,
+    widthRatio: 0.96,
     aspect: CLOUD_ASPECT,
-    position: { top: '4%', right: '-20%' },
+    position: { top: '-4%', right: '-12%' },
     opacity: 0.95,
     duration: 7000,
     delay: 0,
     driftX: 12,
     floatY: 6,
   },
-  // cloud_2 hugs the left wall around the middle.
-  {
-    key: 'cloud-left',
-    source: cloud2,
-    widthRatio: 0.54,
-    aspect: CLOUD_ASPECT,
-    position: { top: '22%', left: '-14%' },
-    opacity: 0.9,
-    duration: 8200,
-    delay: 600,
-    driftX: 14,
-    floatY: 8,
-  },
-  // cloud_1, mirrored, anchors the bottom-left (bigger near the ground).
+  // Bottom-left: cloud_2 (blurred), large and well onto the screen.
   {
     key: 'cloud-bottom-left',
-    source: cloud1,
-    widthRatio: 0.78,
+    source: cloud3Blur,
+    widthRatio: 0.86,
     aspect: CLOUD_ASPECT,
-    position: { bottom: '4%', left: '-16%' },
-    opacity: 0.9,
+    position: { bottom: '-12%', left: '-10%' },
+    opacity: 0.92,
     duration: 6600,
     delay: 300,
     driftX: 13,
     floatY: 6,
     flip: true,
   },
-  // cloud_1 anchors the bottom-right where the moon rests — the biggest cloud.
+  // Bottom-right: cloud_1 (sharp), large. Flat right/bottom edges run off-screen.
   {
     key: 'cloud-bottom-right',
     source: cloud1,
-    widthRatio: 0.98,
+    widthRatio: 0.92,
     aspect: CLOUD_ASPECT,
-    position: { bottom: '2%', right: '-18%' },
-    opacity: 0.92,
+    position: { bottom: '3%', right: '-15%' },
+    opacity: 0.95,
     duration: 9000,
     delay: 900,
     driftX: 10,
     floatY: 7,
   },
-  // Soft loading-style clouds drifting through the empty middle of the screen.
+  // Centre-left, upper: cloud_3 (blurred), mirrored — pulled closer onto screen.
   {
-    key: 'cloud-mid-left',
-    source: cloudLeftImage,
-    widthRatio: 0.4,
-    aspect: CLOUD_LEFT_ASPECT,
-    position: { top: '44%', left: '-4%' },
-    opacity: 0.7,
+    key: 'cloud-mid-left-top',
+    source: cloud3Blur,
+    widthRatio: 0.55,
+    aspect: CLOUD_ASPECT,
+    position: { top: '26%', left: '-4%' },
+    opacity: 0.9,
+    duration: 8200,
+    delay: 600,
+    driftX: 14,
+    floatY: 8,
+    flip: true,
+  },
+  // Centre-left, lower: the soft loading cloud (blurred), small and fully
+  // on-screen so its whole shape reads — nestled close under the upper cloud.
+  {
+    key: 'cloud-mid-left-bottom',
+    source: cloudLeftBlur,
+    widthRatio: 0.42,
+    aspect: CLOUD_ASPECT,
+    position: { top: '32%', left: '4%' },
+    opacity: 0.85,
     duration: 8600,
     delay: 450,
     driftX: 16,
     floatY: 6,
   },
-  // --- Moon (gentle bob + sway) — sits on top of the bottom-right clouds. ---
-  {
-    key: 'moon',
-    source: moonImage,
-    widthRatio: 0.34,
-    aspect: MOON_ASPECT,
-    position: { bottom: '16%', right: '14%' },
-    opacity: 1,
-    duration: 3200,
-    delay: 0,
-    floatY: 7,
-    rotate: 5,
-  },
-  // Soft cloud drifting in front of the moon, hugging its upper edge.
-  {
-    key: 'cloud-mid-right',
-    source: cloudRightImage,
-    widthRatio: 0.42,
-    aspect: CLOUD_RIGHT_ASPECT,
-    position: { bottom: '28%', right: '6%' },
-    opacity: 0.72,
-    duration: 7400,
-    delay: 1100,
-    driftX: 18,
-    floatY: 5,
-  },
-  // --- Stars (twinkle in place) ---
+  // (The moon lives in its own MoonCluster — see below — so it stays nestled
+  // among its surrounding clouds and drifts as one piece.)
+  // --- Yellow stars (twinkle in place) ---
   {
     key: 'star-1',
     source: starImage,
-    widthRatio: 0.075,
+    widthRatio: 0.05,
     aspect: STAR_ASPECT,
-    position: { top: '13%', left: '14%' },
-    opacity: 1,
+    position: { top: '12%', left: '13%' },
+    opacity: 0.95,
     duration: 1400,
     delay: 0,
     rotate: 12,
@@ -176,11 +153,11 @@ const DECORATIONS: Decoration[] = [
   {
     key: 'star-2',
     source: starImage,
-    widthRatio: 0.05,
+    widthRatio: 0.078,
     aspect: STAR_ASPECT,
-    position: { top: '7%', right: '32%' },
-    opacity: 0.9,
-    duration: 1100,
+    position: { top: '30%', left: '15%' },
+    opacity: 1,
+    duration: 1500,
     delay: 300,
     rotate: 10,
     twinkle: true,
@@ -188,21 +165,22 @@ const DECORATIONS: Decoration[] = [
   {
     key: 'star-3',
     source: starImage,
-    widthRatio: 0.055,
+    widthRatio: 0.058,
     aspect: STAR_ASPECT,
-    position: { top: '32%', left: '9%' },
+    position: { top: '47%', left: '7%' },
     opacity: 0.95,
     duration: 1600,
     delay: 600,
     rotate: 12,
     twinkle: true,
   },
+  // The big star tucked in by the crescent's tip (next to the moon cluster).
   {
     key: 'star-4',
     source: starImage,
-    widthRatio: 0.062,
+    widthRatio: 0.090,
     aspect: STAR_ASPECT,
-    position: { top: '36%', right: '4%' },
+    position: { top: '43%', left: '56%' },
     opacity: 1,
     duration: 1250,
     delay: 200,
@@ -214,7 +192,7 @@ const DECORATIONS: Decoration[] = [
     source: starImage,
     widthRatio: 0.045,
     aspect: STAR_ASPECT,
-    position: { top: '28%', left: '47%' },
+    position: { top: '40%', right: '20%' },
     opacity: 0.85,
     duration: 1000,
     delay: 450,
@@ -226,7 +204,7 @@ const DECORATIONS: Decoration[] = [
     source: starImage,
     widthRatio: 0.05,
     aspect: STAR_ASPECT,
-    position: { top: '52%', left: '23%' },
+    position: { top: '61%', left: '30%' },
     opacity: 0.9,
     duration: 1500,
     delay: 150,
@@ -236,14 +214,206 @@ const DECORATIONS: Decoration[] = [
   {
     key: 'star-7',
     source: starImage,
-    widthRatio: 0.042,
+    widthRatio: 0.055,
     aspect: STAR_ASPECT,
-    position: { top: '47%', right: '26%' },
-    opacity: 0.8,
+    position: { top: '70%', left: '13%' },
+    opacity: 0.9,
     duration: 1300,
     delay: 700,
     rotate: 12,
     twinkle: true,
+  },
+  {
+    key: 'star-8',
+    source: starImage,
+    widthRatio: 0.04,
+    aspect: STAR_ASPECT,
+    position: { top: '21%', right: '11%' },
+    opacity: 0.8,
+    duration: 1150,
+    delay: 350,
+    rotate: 12,
+    twinkle: true,
+  },
+  // --- Violet stars sprinkled in between (smaller than the yellow ones) ---
+  {
+    key: 'violet-1',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '9%', left: '30%' },
+    opacity: 0.9,
+    duration: 1700,
+    delay: 250,
+    rotate: 10,
+    twinkle: true,
+  },
+  {
+    key: 'violet-2',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '19%', left: '22%' },
+    opacity: 1,
+    duration: 1450,
+    delay: 550,
+    rotate: 12,
+    twinkle: true,
+  },
+  {
+    key: 'violet-3',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '33%', right: '27%' },
+    opacity: 0.85,
+    duration: 1200,
+    delay: 100,
+    rotate: 14,
+    twinkle: true,
+  },
+  {
+    key: 'violet-4',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '44%', left: '40%' },
+    opacity: 0.85,
+    duration: 1350,
+    delay: 500,
+    rotate: 11,
+    twinkle: true,
+  },
+  {
+    key: 'violet-5',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '56%', left: '14%' },
+    opacity: 0.9,
+    duration: 1550,
+    delay: 400,
+    rotate: 11,
+    twinkle: true,
+  },
+  {
+    key: 'violet-6',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '64%', right: '24%' },
+    opacity: 0.8,
+    duration: 1250,
+    delay: 650,
+    rotate: 12,
+    twinkle: true,
+  },
+  {
+    key: 'violet-7',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '72%', left: '23%' },
+    opacity: 0.85,
+    duration: 1500,
+    delay: 200,
+    rotate: 13,
+    twinkle: true,
+  },
+  {
+    key: 'violet-8',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '14%', right: '24%' },
+    opacity: 0.9,
+    duration: 1380,
+    delay: 320,
+    rotate: 12,
+    twinkle: true,
+  },
+  {
+    key: 'violet-9',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '37%', left: '10%' },
+    opacity: 0.8,
+    duration: 1180,
+    delay: 480,
+    rotate: 13,
+    twinkle: true,
+  },
+  {
+    key: 'violet-10',
+    source: starVioletImage,
+    widthRatio: 0.1,
+    aspect: VIOLET_STAR_ASPECT,
+    position: { top: '52%', right: '12%' },
+    opacity: 0.85,
+    duration: 1600,
+    delay: 150,
+    rotate: 11,
+    twinkle: true,
+  },
+];
+
+// The moon nestled among clouds, built from three layered images: a cloud
+// behind the moon, the moon, then a cloud in front so it looks half-buried.
+// Positions and sizes are relative to the (square) cluster box so the whole
+// thing scales as one piece.
+//
+// Which animation layer a piece belongs to. Both clouds share one drift so they
+// move as a single body; the moon bobs on its own, independent of the clouds.
+type ClusterLayer = 'back-cloud' | 'moon' | 'front-cloud';
+
+type ClusterPiece = {
+  key: string;
+  source: ImageSourcePropType;
+  /** Width as a fraction of the cluster box width. */
+  widthFrac: number;
+  aspect: number;
+  position: Position;
+  opacity: number;
+  flip?: boolean;
+  layer: ClusterLayer;
+};
+
+const CLUSTER_PIECES: ClusterPiece[] = [
+  // Bottom layer: cloud_2 (blurred), mirrored — a big cloud bedded behind the
+  // moon, slightly larger and lifted so the moon is less buried.
+  {
+    key: 'back-cloud',
+    source: cloud2Blur,
+    widthFrac: 1.05,
+    aspect: CLOUD_ASPECT,
+    position: { bottom: '18%', left: '0%' },
+    opacity: 0.95,
+    flip: true,
+    layer: 'back-cloud',
+  },
+  // Middle layer: the crescent, mirrored — sitting a little lower.
+  {
+    key: 'moon',
+    source: moonImage,
+    widthFrac: 0.44,
+    aspect: MOON_ASPECT,
+    position: { top: '19%', right: '18%' },
+    opacity: 1,
+    flip: true,
+    layer: 'moon',
+  },
+  // Top layer: the soft loading cloud (blurred), mirrored — lifted up so it
+  // just clips the moon's lower-right corner.
+  {
+    key: 'front-cloud',
+    source: cloudLeftBlur,
+    widthFrac: 0.52,
+    aspect: CLOUD_ASPECT,
+    position: { bottom: '18%', right: '5%' },
+    opacity: 0.97,
+    flip: true,
+    layer: 'front-cloud',
   },
 ];
 
@@ -255,6 +425,83 @@ export function LoginSky() {
       {DECORATIONS.map(item => (
         <FloatingDecoration key={item.key} item={item} screenWidth={width} />
       ))}
+      <MoonCluster screenWidth={width} />
+    </View>
+  );
+}
+
+function MoonCluster({ screenWidth }: { screenWidth: number }) {
+  const clusterWidth = screenWidth * 0.76;
+  const cloudFloat = useSharedValue(0);
+  const moonFloat = useSharedValue(0);
+
+  useEffect(() => {
+    cloudFloat.value = withRepeat(
+      withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+    moonFloat.value = withRepeat(
+      withTiming(1, { duration: 3400, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [cloudFloat, moonFloat]);
+
+  // Clouds drift together as one body (both layers share this style)...
+  const cloudStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(cloudFloat.value, [0, 1], [-5, 6]) },
+      { translateY: interpolate(cloudFloat.value, [0, 1], [4, -6]) },
+    ],
+  }));
+  // ...while the moon bobs on its own, tilted slightly clockwise, independent
+  // of the clouds.
+  const moonStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(moonFloat.value, [0, 1], [5, -8]) },
+      { rotate: `${interpolate(moonFloat.value, [0, 1], [9, 15])}deg` },
+    ],
+  }));
+
+  const layerStyle = {
+    'back-cloud': cloudStyle,
+    moon: moonStyle,
+    'front-cloud': cloudStyle,
+  } as const;
+
+  // Pieces are painted bottom-to-top (back cloud → moon → front cloud) so the
+  // moon stays nestled between the clouds. Both cloud layers share cloudStyle,
+  // so they drift identically — one body — while the moon bobs on its own.
+  return (
+    <View
+      style={[
+        styles.cluster,
+        { width: clusterWidth, height: clusterWidth * 1.2 },
+      ]}
+    >
+      {CLUSTER_PIECES.map(piece => {
+        const pieceWidth = clusterWidth * piece.widthFrac;
+        return (
+          <Animated.View
+            key={piece.key}
+            style={[styles.clusterPiece, piece.position, layerStyle[piece.layer]]}
+          >
+            <View style={piece.flip ? styles.flipped : undefined}>
+              <Image
+                source={piece.source}
+                fadeDuration={0}
+                resizeMode="contain"
+                style={{
+                  width: pieceWidth,
+                  height: pieceWidth * piece.aspect,
+                  opacity: piece.opacity,
+                }}
+              />
+            </View>
+          </Animated.View>
+        );
+      })}
     </View>
   );
 }
@@ -340,5 +587,16 @@ function FloatingDecoration({
 const styles = StyleSheet.create({
   decoration: {
     position: 'absolute',
+  },
+  cluster: {
+    position: 'absolute',
+    top: '30%',
+    right: '-6%',
+  },
+  clusterPiece: {
+    position: 'absolute',
+  },
+  flipped: {
+    transform: [{ scaleX: -1 }],
   },
 });
