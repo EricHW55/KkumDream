@@ -237,7 +237,12 @@ function RootStack() {
           <Stack.Screen
             name="DreamDetail"
             component={DreamDetailScreen}
-            options={{ title: '꿈 카드' }}
+            options={{
+              title: '꿈 카드',
+              // The card content sits on a subtly different tone, so keep the
+              // header shadow here to mark the boundary clearly.
+              headerShadowVisible: true,
+            }}
           />
         </>
       ) : (
