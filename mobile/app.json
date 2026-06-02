@@ -4,14 +4,14 @@
   "expo": {
     "name": "꿈드림 - 꿈을 선물해요",
     "slug": "kkumdream-mobile",
-    "version": "1.0.0",
+    "version": "1.2.2",
     "ios": {
       "bundleIdentifier": "com.kkumdreammobile",
       "buildNumber": "1"
     },
     "android": {
       "package": "com.kkumdreammobile",
-      "versionCode": 5
+      "versionCode": 6
     }
   }
 }
