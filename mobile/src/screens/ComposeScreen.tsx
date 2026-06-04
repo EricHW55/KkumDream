@@ -193,6 +193,9 @@ export function ComposeScreen({ navigation }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(initialComposeDraft?.title ?? '');
+  const [editShortMessage, setEditShortMessage] = useState(
+    initialComposeDraft?.shortMessage ?? '',
+  );
   const [editStory, setEditStory] = useState(initialComposeDraft?.story ?? '');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isRecipientModalVisible, setIsRecipientModalVisible] = useState(false);
@@ -269,6 +272,7 @@ export function ComposeScreen({ navigation }: Props) {
       setSelectedDesign(nextDesign);
       setDraft(nextDraft);
       setEditTitle(nextDraft?.title ?? '');
+      setEditShortMessage(nextDraft?.shortMessage ?? '');
       setEditStory(nextDraft?.story ?? '');
       if (nextDraft && options?.markDesignSynced) {
         lastSyncedDraftDesignRef.current = getDraftDesignSyncKey(
@@ -654,6 +658,7 @@ export function ComposeScreen({ navigation }: Props) {
     setSelectedDesign(normalizedDraft.design);
     setDraft(normalizedDraft);
     setEditTitle(nextDraft.title);
+    setEditShortMessage(nextDraft.shortMessage);
     setEditStory(nextDraft.story);
     setIsEditOpen(false);
     setTimeout(() => {
@@ -666,6 +671,7 @@ export function ComposeScreen({ navigation }: Props) {
       return;
     }
     setEditTitle(draft.title);
+    setEditShortMessage(draft.shortMessage);
     setEditStory(draft.story);
     setIsEditOpen(true);
   };
@@ -676,13 +682,15 @@ export function ComposeScreen({ navigation }: Props) {
     }
 
     const title = editTitle.trim() || draft.title;
+    const shortMessage = editShortMessage.trim() || draft.shortMessage;
     const story = editStory.trim() || draft.story;
-    const summary = story.slice(0, 48) || draft.summary;
+    const summary = shortMessage;
     const requestDesign = normalizeDreamDesign(selectedDesign);
     setSelectedDesign(requestDesign);
     const nextDraft = {
       ...draft,
       title,
+      shortMessage,
       story,
       summary,
       design: requestDesign,
@@ -699,7 +707,7 @@ export function ComposeScreen({ navigation }: Props) {
     try {
       const updatedDream = await updateDream(
         draft.id,
-        { title, story, summary, design: requestDesign },
+        { title, shortMessage, story, summary, design: requestDesign },
         token,
       );
       lastSyncedDraftDesignRef.current = getDraftDesignSyncKey(
@@ -1206,6 +1214,17 @@ export function ComposeScreen({ navigation }: Props) {
                 value={editTitle}
                 onChangeText={setEditTitle}
                 placeholder="카드 제목"
+                placeholderTextColor={colors.textMuted}
+                style={styles.editInput}
+              />
+              <Text style={styles.editLabel}>앞면 문구</Text>
+              <TextInput
+                autoCorrect={false}
+                spellCheck={false}
+                value={editShortMessage}
+                onChangeText={setEditShortMessage}
+                maxLength={120}
+                placeholder="카드 앞면에 들어갈 짧은 문구"
                 placeholderTextColor={colors.textMuted}
                 style={styles.editInput}
               />

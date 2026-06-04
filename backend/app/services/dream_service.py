@@ -156,7 +156,7 @@ async def create_dream_draft(
         title=result.title,
         title_visible=True,
         short_message=result.short_message,
-        summary=result.summary,
+        summary=result.short_message,
         story=result.story,
         image_prompt=result.image_prompt,
         main_mood=result.main_mood,
@@ -196,6 +196,11 @@ async def update_dream_text(
         raise BadRequestError("Only draft dreams can be edited")
 
     updates = payload.model_dump(exclude_unset=True)
+    if "short_message" in updates:
+        updates["summary"] = updates["short_message"]
+    elif "summary" in updates:
+        updates["summary"] = dream.short_message
+
     design_update = updates.get("design")
     if isinstance(design_update, dict):
         await _assert_premium_design_allowed(session, user_id, design_update)

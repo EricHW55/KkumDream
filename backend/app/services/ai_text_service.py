@@ -44,32 +44,32 @@ VALID_STORY_LENGTHS = (LENGTH_SHORT, LENGTH_STANDARD, LENGTH_LONG)
 DEFAULT_STORY_LENGTH = LENGTH_STANDARD
 TONE_GUIDES = {
     TONE_WARM: {
-        "label": "warm letter style",
+        "label": "warm scene style",
         "instruction": (
-            "Use soft, friendly Korean that feels like a personal note. "
-            "Prefer natural 존댓말 with gentle warmth."
+            "Use soft, natural Korean with gentle warmth in word choice. "
+            "Keep the story scene-focused and avoid letter-like reflection."
         ),
     },
     TONE_POLITE: {
-        "label": "polite style",
+        "label": "polite scene style",
         "instruction": (
             "Use calm, respectful 존댓말. Keep sentences clear, composed, "
-            "and not overly intimate."
+            "and focused on what happened in the scene."
         ),
     },
     TONE_CASUAL: {
-        "label": "casual friend style",
+        "label": "casual scene style",
         "instruction": (
             "Use natural, everyday Korean 반말 as if talking to a close friend. "
-            "Keep it warm, relaxed, direct, and easy to read."
+            "Keep it relaxed and direct while describing the scene itself."
         ),
     },
     TONE_MZ_COMIC: {
-        "label": "MZ comic slang style",
+        "label": "MZ comic scene style",
         "instruction": (
             "Use playful Korean with modern slang and abbreviations where natural, "
             "such as ㅋㅋ, ㄹㅇ, 찐, 텐션, 레전드, and 폼 미쳤다. Keep it funny, "
-            "affectionate, and readable; avoid insults, obscenity, or harsh sarcasm."
+            "scene-based, and readable; avoid insults, obscenity, or harsh sarcasm."
         ),
     },
     TONE_STORY: {
@@ -82,8 +82,8 @@ TONE_GUIDES = {
     TONE_POETIC: {
         "label": "poetic style",
         "instruction": (
-            "Use compact, lyrical Korean with vivid images and lingering rhythm. "
-            "Avoid becoming obscure or overly ornate."
+            "Use compact, lyrical Korean with vivid sensory images. Avoid "
+            "obscure wording, ornate emotion, and sentimental closing lines."
         ),
     },
 }
@@ -92,7 +92,7 @@ STORY_LENGTH_GUIDES = {
         "label": "concise",
         "instruction": (
             "story: 160-300 Korean characters. Keep only the clearest dream "
-            "scene and emotion."
+            "scene, action, and concrete sensory detail."
         ),
         "max_chars": 340,
         "max_tokens": 950,
@@ -110,7 +110,7 @@ STORY_LENGTH_GUIDES = {
         "label": "rich",
         "instruction": (
             "story: 600-900 Korean characters. Let the scene breathe with "
-            "more sensory detail while keeping the user's original scenes visible."
+            "more sensory detail while keeping the user's original sequence visible."
         ),
         "max_chars": 940,
         "max_tokens": 1650,
@@ -131,7 +131,6 @@ CREATE_DREAM_CARD_TOOL = {
         "required": [
             "title",
             "shortMessage",
-            "summary",
             "story",
             "tags",
             "imageScene",
@@ -148,13 +147,12 @@ CREATE_DREAM_CARD_TOOL = {
                     "dream-specific and friendly."
                 ),
             },
-            "summary": {
-                "type": "string",
-                "description": "One Korean sentence, 45-90 Korean characters.",
-            },
             "story": {
                 "type": "string",
-                "description": "Korean polished dream story following requested length.",
+                "description": (
+                    "Korean scene-focused first-person dream narrative following "
+                    "requested length."
+                ),
             },
             "tags": {
                 "type": "array",
@@ -174,10 +172,14 @@ CREATE_DREAM_CARD_TOOL = {
 }
 
 SYSTEM_PROMPT = """
-You write warm Korean dream cards for KkumDream.
+You write Korean dream-card scenes for KkumDream.
 Preserve the user's core dream scenes and symbols.
 Make the result suitable to send to a close friend.
 Do not interpret the dream or explain its meaning.
+Write the story as scene-focused first-person narrative, like a diary entry or
+quiet fiction.
+Do not add after-the-fact feelings, lessons, encouragement, reader questions,
+comfort, or reflective closing sentences.
 Add only gentle connective details when needed.
 Never mention AI, prompts, tools, JSON, policies, or image generation to the user.
 Use the create_dream_card tool exactly once.
@@ -265,13 +267,14 @@ def _mock_dream_text(
     selected_tone = _select_tone(tone)
     selected_story_length = _select_story_length(story_length)
     clipped = raw_input.strip()[:70] or "\uc774\ub984 \uc5c6\ub294 \uc7a5\uba74"
+    short_message = (
+        "\uc624\ub298 \ub5a0\uc624\ub978 \uafc8\uc744 \uc870\uc6a9\ud788 "
+        "\uac74\ub124\uace0 \uc2f6\uc5b4."
+    )
     return DreamTextResult(
         title=f"{selected_mood}\ud55c \uafc8 \uc870\uac01",
-        short_message="\uc624\ub298 \ub5a0\uc624\ub978 \uafc8\uc744 \uc870\uc6a9\ud788 "
-        "\uac74\ub124\uace0 \uc2f6\uc5b4.",
-        summary=f"{clipped}\uc5d0\uc11c \uc2dc\uc791\ub41c {selected_mood}\ud55c "
-        "\uafc8\uc758 \uc7a5\uba74\uc744 \ubd80\ub4dc\ub7fd\uac8c "
-        "\uc5ee\uc5c8\uc5b4\uc694.",
+        short_message=short_message,
+        summary=short_message,
         story=_apply_mock_length(
             _apply_mock_tone(_build_mock_story(clipped), selected_tone),
             selected_story_length,
@@ -345,13 +348,20 @@ Writing tone — {tone_guide["label"]}: {tone_guide["instruction"]}
 Story length — {length_guide["label"]}: {length_guide["instruction"]}
 
 Write the dream card:
-- Apply the writing tone to shortMessage, summary, and story.
+- Apply the writing tone to shortMessage and story.
 - shortMessage: a sender-facing line that feels like a small gift, specific to this dream.
+- story: rewrite only the user's dream scenes as a first-person narrative. Keep
+  the user's events, objects, setting, and sequence visible.
+- End story on a concrete scene, action, object, or sensation from the dream.
+- Do not end with post-dream feelings, interpretation, comfort, lessons, reader
+  questions, or sentimental reflection.
 - imageScene: English visual scene only. Describe the main objects, place,
   atmosphere, and visual action. No style words, no "no text" phrases.
 
 Avoid: dream interpretation, fortune-telling, therapy or moral lessons; new
 characters, violence, gore, sexual content, and real brand names.
+Avoid closing lines like "마음이 남아있었어", "따뜻함이 남았어",
+"너는 무엇을 느꼈을까", "깨어나니 그리웠어", or similar reflective endings.
 """.strip()
 
 
@@ -383,17 +393,12 @@ def _normalize_result(
         "\uc2f6\uc5b4.",
         120,
     )
-    summary = _text(
-        data.get("summary"),
-        "\ud750\ub9bf\ud55c \uafc8\uc758 \uc7a5\uba74\uc744 \ub530\ub73b\ud55c "
-        "\uce74\ub4dc\ub85c \uc5ee\uc5c8\uc5b4\uc694.",
-        220,
-    )
     story = _text(
         data.get("story"),
-        summary,
+        short_message,
         int(STORY_LENGTH_GUIDES[selected_story_length]["max_chars"]),
     )
+    summary = short_message
     main_mood = selected_mood
     tags = _normalize_tags(data.get("tags"), main_mood)
     image_scene = _text(
@@ -440,17 +445,11 @@ def _select_story_length(story_length: str | None) -> str:
 
 def _build_mock_story(scene: str) -> str:
     return (
-        f"{scene}\ub77c\ub294 \uc7a5\uba74\uc740 \uafc8\uc18d\uc5d0\uc11c "
-        "\uc624\ub798 \ub0a8\ub294 \uc791\uc740 \ubb38\ucc98\ub7fc "
-        "\uc5f4\ub838\uc5b4\uc694. \ud750\ub9bf\ud588\ub358 "
-        "\uc21c\uac04\ub4e4\uc740 \ucc9c\ucc9c\ud788 \uc774\uc5b4\uc9c0\uace0, "
-        "\uadf8 \uc548\uc5d0 \uc788\ub358 \uac10\uc815\uc740 \uc870\uc6a9\ud55c "
-        "\ube5b\ucc98\ub7fc \uc120\uba85\ud574\uc84c\uc2b5\ub2c8\ub2e4. "
-        "\ub9d0\ub85c \ub2e4 \uc124\uba85\ud560 \uc218 \uc5c6\ub294 "
-        "\uc7a5\uba74\uc774\uc9c0\ub9cc, \ub204\uad70\uac00\uc5d0\uac8c "
-        "\uac74\ub124\uba74 \uc624\ub298\uc758 \ub9c8\uc74c\uc744 "
-        "\uc870\uae08 \ub354 \ub2e4\uc815\ud558\uac8c \uc804\ud574 \uc904 "
-        "\uc218 \uc788\ub294 \uafc8\uc774 \ub418\uc5c8\uc5b4\uc694."
+        f"꿈속에서 {scene} 장면이 이어졌어요. 주변은 조용했고, "
+        "눈앞의 물건과 사람들은 천천히 움직였어요. 나는 그 흐름을 "
+        "따라가며 방금 본 것들을 하나씩 바라봤어요. 어느 순간 장면이 "
+        "조금 흔들리더니, 마지막으로 남은 소리와 빛이 화면처럼 멈춰 "
+        "있었어요."
     )
 
 
@@ -460,10 +459,9 @@ def _apply_mock_length(story: str, story_length: str) -> str:
     if story_length == LENGTH_LONG:
         return (
             f"{story} "
-            "\uadf8 \uc7a5\uba74\uc758 \ub05d\uc5d0\uc11c \ub0a8\uc740 "
-            "\ube5b\uc740 \uc624\ub798 \uc0ac\ub77c\uc9c0\uc9c0 \uc54a\uace0, "
-            "\uc544\uce68\uc774 \ub418\uc5b4\ub3c4 \ub9c8\uc74c \ud55c\ucabd\uc5d0 "
-            "\uc791\uc740 \uae38\ucc98\ub7fc \uc774\uc5b4\uc84c\uc5b4\uc694."
+            "그 다음에는 배경이 조금 넓어졌고, 가까이 있던 사물의 "
+            "윤곽이 더 또렷하게 보였어요. 나는 그 사이를 지나며 "
+            "발밑의 감각과 멀리서 들리는 소리를 차례로 확인했어요."
         )[:1000]
     return story[:760]
 
@@ -481,8 +479,8 @@ def _apply_mock_tone(story: str, tone: str) -> str:
                 "\uc5c8\uc5b4.",
                 2,
             )
-            + " \uc774\uac74 \u3139\u3147 \uafc8 \ud150\uc158 "
-            "\ub808\uc804\ub4dc\uc600\uc5b4. \uae30\uc5b5 \uc800\uc7a5 \uac01."
+            + " 장면 전환이 꽤 빠르고 이상해서, 눈앞에서 벌어지는 걸 "
+            "따라가기도 바빴어."
         )
     if tone == TONE_STORY:
         return story.replace(
@@ -493,7 +491,7 @@ def _apply_mock_tone(story: str, tone: str) -> str:
     if tone == TONE_POETIC:
         return (
             f"{story} "
-            "\uadf8 \ubc24\uc758 \ube5b\uc740 \uc624\ub798 \ub0a8\uc558\uc5b4\uc694."
+            "빛은 얇게 번지고, 장면의 가장자리는 천천히 흐려졌어요."
         )
     return story
 
