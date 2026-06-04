@@ -79,6 +79,8 @@ class DreamOut(ApiModel):
     giver_id: UUID
     receiver_id: UUID | None = None
     receiver_label: str | None = None
+    giver_display_name: str | None = None
+    receiver_display_name: str | None = None
     private_postscript: str | None = None
     group_ids: list[UUID] = Field(default_factory=list)
     raw_input: str

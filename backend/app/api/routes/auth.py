@@ -1,7 +1,7 @@
 from uuid import UUID
 
 import httpx
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.security import create_app_access_token
 from app.schemas.user import AuthSessionOut, GoogleLoginRequest, UserOut, UserUpdate
 from app.services.user_service import (
+    delete_user_account,
     get_or_create_google_user,
     get_or_create_mock_user,
     get_user,
@@ -59,6 +60,15 @@ async def me(
     if user is None:
         user = await get_or_create_mock_user(session, user_id)
     return UserOut.model_validate(user)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_me(
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> Response:
+    await delete_user_account(session, user_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch("/me", response_model=UserOut)

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Copy,
   Link2,
   MessageCircle,
+  MoreVertical,
   Share2,
   X as XIcon,
 } from 'lucide-react-native';
@@ -25,6 +26,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CardFlipGuide } from '../components/CardFlipGuide';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import { DreamCard } from '../components/DreamCard';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ReactionBar } from '../components/ReactionBar';
@@ -39,6 +41,7 @@ import {
   shareDream,
   toggleDreamReaction,
 } from '../api/dreams';
+import { blockUser, reportContent } from '../api/safety';
 import { getCurrentUserId, isCurrentUserId } from '../data/currentUser';
 import { getDisplayMember } from '../data/members';
 import {
@@ -87,8 +90,9 @@ const initialComments: DreamComment[] = [
   },
 ];
 
-export function DreamDetailScreen({ route }: Props) {
+export function DreamDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { confirm, dialog } = useConfirmDialog();
   const queryClient = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
   const composerOffsetYRef = useRef(0);
@@ -105,6 +109,8 @@ export function DreamDetailScreen({ route }: Props) {
   const [commentDraft, setCommentDraft] = useState('');
   const [commentInputKey, setCommentInputKey] = useState(0);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [safetyStatus, setSafetyStatus] = useState<string | null>(null);
+  const [isSafetyMenuOpen, setIsSafetyMenuOpen] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(initialComments);
   const [isPageScrollEnabled, setIsPageScrollEnabled] = useState(true);
@@ -126,6 +132,14 @@ export function DreamDetailScreen({ route }: Props) {
     dream.status !== 'draft' &&
     !dream.receiverId &&
     Boolean(dream.receiverLabel);
+  const counterpartUserId = isSender ? dream.receiverId : dream.giverId;
+  const canBlockCounterpart = Boolean(
+    token && counterpartUserId && counterpartUserId !== currentUserId,
+  );
+  // The card's text/image is authored by the giver, so the sender has nothing to
+  // report on their own card. The receiver or a room member viewing it still can.
+  const canReport = Boolean(token) && !isSender;
+  const showSafetyMenu = canReport || canBlockCounterpart;
   const commentsQueryKey = ['dreams', dream.id, 'comments', token] as const;
   const reactionsQueryKey = ['dreams', dream.id, 'reactions', token] as const;
   const { data: remoteComments = [] } = useQuery({
@@ -265,6 +279,199 @@ export function DreamDetailScreen({ route }: Props) {
     setLocalComments(currentComments =>
       currentComments.filter(comment => comment.id !== commentId),
     );
+  };
+
+  const reportDreamContent = async () => {
+    if (!token) {
+      setSafetyStatus('로그인이 필요합니다.');
+      return;
+    }
+    setSafetyStatus(null);
+    try {
+      await reportContent(
+        {
+          targetType: 'dream',
+          targetId: dream.id,
+          reportedUserId:
+            counterpartUserId && counterpartUserId !== currentUserId
+              ? counterpartUserId
+              : null,
+          reason: 'inappropriate',
+        },
+        token,
+      );
+      setSafetyStatus('신고가 접수됐어요.');
+    } catch (error) {
+      setSafetyStatus(
+        error instanceof Error ? error.message : '신고를 접수하지 못했어요.',
+      );
+    }
+  };
+
+  const blockCounterpartUser = async () => {
+    if (!token || !counterpartUserId || counterpartUserId === currentUserId) {
+      setSafetyStatus('차단할 사용자를 찾지 못했어요.');
+      return;
+    }
+    setSafetyStatus(null);
+    try {
+      await blockUser(counterpartUserId, token);
+      await queryClient.invalidateQueries({ queryKey: ['dreams'] });
+      await queryClient.invalidateQueries({ queryKey: commentsQueryKey });
+      setSafetyStatus('차단했어요. 서로의 카드와 댓글이 숨겨져요.');
+    } catch (error) {
+      setSafetyStatus(
+        error instanceof Error ? error.message : '사용자를 차단하지 못했어요.',
+      );
+    }
+  };
+
+  const confirmBlockCounterpart = async () => {
+    if (!canBlockCounterpart) {
+      setSafetyStatus('차단할 사용자를 찾지 못했어요.');
+      return;
+    }
+    const ok = await confirm({
+      title: '사용자를 차단할까요?',
+      message:
+        '차단하면 서로의 꿈카드와 댓글이 보이지 않고, 새 꿈카드를 주고받을 수 없어요.',
+      confirmText: '차단',
+      tone: 'danger',
+    });
+    if (ok) {
+      await blockCounterpartUser();
+    }
+  };
+
+  const confirmReportDream = async () => {
+    if (!token) {
+      setSafetyStatus('로그인이 필요합니다.');
+      return;
+    }
+    const ok = await confirm({
+      title: '이 꿈카드를 신고할까요?',
+      message:
+        '부적절한 내용으로 신고하면 운영팀이 검토해요. 같은 사용자를 더는 보고 싶지 않다면 차단도 할 수 있어요.',
+      confirmText: '신고',
+      tone: 'danger',
+    });
+    if (ok) {
+      await reportDreamContent();
+    }
+  };
+
+  const onSelectReport = () => {
+    setIsSafetyMenuOpen(false);
+    confirmReportDream().catch(() => undefined);
+  };
+
+  const onSelectBlock = () => {
+    setIsSafetyMenuOpen(false);
+    confirmBlockCounterpart().catch(() => undefined);
+  };
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: showSafetyMenu
+        ? () => (
+            <Pressable
+              accessibilityLabel="신고 및 차단 메뉴"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => {
+                setSafetyStatus(null);
+                setIsSafetyMenuOpen(open => !open);
+              }}
+              style={({ pressed }) => [
+                styles.headerMenuButton,
+                pressed && interactionStyles.pressedSoft,
+              ]}
+            >
+              <MoreVertical color={colors.textPrimary} size={22} />
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [navigation, showSafetyMenu]);
+
+  const reportCommentContent = async (comment: DreamComment) => {
+    if (!token) {
+      setSafetyStatus('로그인이 필요합니다.');
+      return;
+    }
+    setSafetyStatus(null);
+    try {
+      await reportContent(
+        {
+          targetType: 'comment',
+          targetId: comment.id,
+          reportedUserId:
+            comment.authorId !== currentUserId ? comment.authorId : null,
+          reason: 'inappropriate',
+        },
+        token,
+      );
+      setSafetyStatus('댓글 신고가 접수됐어요.');
+    } catch (error) {
+      setSafetyStatus(
+        error instanceof Error ? error.message : '댓글 신고를 접수하지 못했어요.',
+      );
+    }
+  };
+
+  const blockCommentAuthor = async (comment: DreamComment) => {
+    if (!token || comment.authorId === currentUserId) {
+      setSafetyStatus('차단할 사용자를 찾지 못했어요.');
+      return;
+    }
+    setSafetyStatus(null);
+    try {
+      await blockUser(comment.authorId, token);
+      queryClient.setQueryData<DreamComment[]>(commentsQueryKey, current =>
+        (current ?? []).filter(item => item.authorId !== comment.authorId),
+      );
+      setLocalComments(current =>
+        current.filter(item => item.authorId !== comment.authorId),
+      );
+      await queryClient.invalidateQueries({ queryKey: ['dreams'] });
+      setSafetyStatus('차단했어요. 해당 사용자의 댓글이 숨겨져요.');
+    } catch (error) {
+      setSafetyStatus(
+        error instanceof Error ? error.message : '사용자를 차단하지 못했어요.',
+      );
+    }
+  };
+
+  const confirmReportComment = async (comment: DreamComment) => {
+    if (!token) {
+      setSafetyStatus('로그인이 필요합니다.');
+      return;
+    }
+    const ok = await confirm({
+      title: '이 댓글을 신고할까요?',
+      message: '부적절한 내용으로 신고하면 운영팀이 검토해요.',
+      confirmText: '신고',
+      tone: 'danger',
+    });
+    if (ok) {
+      await reportCommentContent(comment);
+    }
+  };
+
+  const confirmBlockCommentAuthor = async (comment: DreamComment) => {
+    if (comment.authorId === currentUserId) {
+      return;
+    }
+    const ok = await confirm({
+      title: '댓글 작성자를 차단할까요?',
+      message:
+        '차단하면 서로의 꿈카드와 댓글이 보이지 않고, 새 꿈카드를 주고받을 수 없어요.',
+      confirmText: '차단',
+      tone: 'danger',
+    });
+    if (ok) {
+      await blockCommentAuthor(comment);
+    }
   };
 
   const submitComment = async () => {
@@ -453,6 +660,10 @@ export function DreamDetailScreen({ route }: Props) {
           onToggle={onToggleReaction}
         />
 
+        {safetyStatus ? (
+          <Text style={styles.safetyStatusText}>{safetyStatus}</Text>
+        ) : null}
+
         <View style={styles.commentBox}>
           <View style={styles.commentHeader}>
             <MessageCircle color={colors.primary} size={20} />
@@ -464,7 +675,11 @@ export function DreamDetailScreen({ route }: Props) {
               comment={ownerComment}
               isOwner
               canDelete={ownerComment.authorId === currentUserId}
+              canReport={ownerComment.authorId !== currentUserId}
+              canBlock={ownerComment.authorId !== currentUserId}
               onDelete={() => onDeleteComment(ownerComment.id)}
+              onReport={() => confirmReportComment(ownerComment)}
+              onBlock={() => confirmBlockCommentAuthor(ownerComment)}
             />
           ) : null}
 
@@ -473,7 +688,11 @@ export function DreamDetailScreen({ route }: Props) {
               key={comment.id}
               comment={comment}
               canDelete={comment.authorId === currentUserId}
+              canReport={comment.authorId !== currentUserId}
+              canBlock={comment.authorId !== currentUserId}
               onDelete={() => onDeleteComment(comment.id)}
+              onReport={() => confirmReportComment(comment)}
+              onBlock={() => confirmBlockCommentAuthor(comment)}
             />
           ))}
 
@@ -518,6 +737,47 @@ export function DreamDetailScreen({ route }: Props) {
           ) : null}
         </View>
       </ScrollView>
+
+      {isSafetyMenuOpen ? (
+        <>
+          <Pressable
+            accessibilityLabel="메뉴 닫기"
+            style={styles.safetyMenuBackdrop}
+            onPress={() => setIsSafetyMenuOpen(false)}
+          />
+          <View style={styles.safetyMenu}>
+            {canReport ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onSelectReport}
+                style={({ pressed }) => [
+                  styles.safetyMenuItem,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Text style={styles.safetyMenuItemText}>신고</Text>
+              </Pressable>
+            ) : null}
+            {canReport && canBlockCounterpart ? (
+              <View style={styles.safetyMenuDivider} />
+            ) : null}
+            {canBlockCounterpart ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onSelectBlock}
+                style={({ pressed }) => [
+                  styles.safetyMenuItem,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Text style={styles.safetyMenuDangerText}>차단</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </>
+      ) : null}
+
+      {dialog}
 
       {isExternalSharePending ? (
         <View
@@ -603,14 +863,23 @@ function CommentItem({
   comment,
   isOwner = false,
   canDelete = false,
+  canReport = false,
+  canBlock = false,
   onDelete,
+  onReport,
+  onBlock,
 }: {
   comment: DreamComment;
   isOwner?: boolean;
   canDelete?: boolean;
+  canReport?: boolean;
+  canBlock?: boolean;
   onDelete?: () => void;
+  onReport?: () => void;
+  onBlock?: () => void;
 }) {
   const author = getDisplayMember(comment.authorId);
+  const hasActions = canReport || canBlock || canDelete;
 
   return (
     <View style={[styles.commentItem, isOwner && styles.ownerCommentItem]}>
@@ -619,18 +888,46 @@ function CommentItem({
           {comment.authorNickname || author.name}
         </Text>
         {isOwner ? <Text style={styles.ownerBadge}>꿈주인</Text> : null}
-        {canDelete && onDelete ? (
-          <Pressable
-            accessibilityLabel="댓글 삭제"
-            accessibilityRole="button"
-            onPress={onDelete}
-            style={({ pressed }) => [
-              styles.deleteButton,
-              pressed && interactionStyles.pressed,
-            ]}
-          >
-            <XIcon color={colors.textMuted} size={14} />
-          </Pressable>
+        {hasActions ? (
+          <View style={styles.commentAuthorActions}>
+            {canReport && onReport ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onReport}
+                style={({ pressed }) => [
+                  styles.commentActionButton,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Text style={styles.commentActionText}>신고</Text>
+              </Pressable>
+            ) : null}
+            {canBlock && onBlock ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onBlock}
+                style={({ pressed }) => [
+                  styles.commentActionButton,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Text style={styles.commentDangerActionText}>차단</Text>
+              </Pressable>
+            ) : null}
+            {canDelete && onDelete ? (
+              <Pressable
+                accessibilityLabel="댓글 삭제"
+                accessibilityRole="button"
+                onPress={onDelete}
+                style={({ pressed }) => [
+                  styles.deleteButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <XIcon color={colors.textMuted} size={14} />
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
       </View>
       <Text style={styles.commentText}>{comment.content}</Text>
@@ -649,6 +946,71 @@ const styles = StyleSheet.create({
   },
   cardSlot: {
     position: 'relative',
+  },
+  headerMenuButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -4,
+  },
+  safetyMenuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  safetyMenu: {
+    position: 'absolute',
+    top: 6,
+    right: 12,
+    minWidth: 128,
+    borderRadius: 14,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    paddingVertical: 4,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  safetyMenuItem: {
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  safetyMenuDivider: {
+    height: 1,
+    marginHorizontal: 12,
+    backgroundColor: colors.divider,
+  },
+  safetyMenuItemText: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 15,
+    includeFontPadding: false,
+  },
+  safetyMenuDangerText: {
+    color: colors.error,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 15,
+    includeFontPadding: false,
+  },
+  safetyStatusText: {
+    marginTop: -6,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
   },
   shareFabArea: {
     position: 'absolute',
@@ -718,7 +1080,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   deleteButton: {
-    marginLeft: 'auto',
     width: 26,
     height: 26,
     borderRadius: 13,
@@ -763,10 +1124,41 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   commentAuthor: {
+    flexShrink: 1,
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
     fontSize: 14,
+  },
+  commentAuthorActions: {
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  commentActionButton: {
+    minHeight: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  commentActionText: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 11,
+    includeFontPadding: false,
+  },
+  commentDangerActionText: {
+    color: colors.error,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 11,
+    includeFontPadding: false,
   },
   ownerBadge: {
     borderRadius: 999,

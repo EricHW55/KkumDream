@@ -1,4 +1,4 @@
-import { requestJson } from './httpClient';
+import { requestJson, requestVoid } from './httpClient';
 
 export type AuthUser = {
   id: string;
@@ -24,6 +24,10 @@ export function loginWithGoogleIdToken(idToken: string) {
 
 export function fetchMe(token: string) {
   return requestJson<AuthUser>('/auth/me', { token });
+}
+
+export function deleteAccount(token: string) {
+  return requestVoid('/auth/me', { method: 'DELETE', token });
 }
 
 export function updateProfile(

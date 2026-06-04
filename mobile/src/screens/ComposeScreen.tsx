@@ -21,12 +21,14 @@ import {
   TextInput,
   View,
   type ViewStyle,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   Check,
+  Eye,
   Lock,
   Palette,
   PencilLine,
@@ -151,6 +153,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
 export function ComposeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const composeScrollRef = useRef<ScrollView>(null);
   const queryClient = useQueryClient();
   const token = useSessionStore(state => state.token);
@@ -202,6 +205,10 @@ export function ComposeScreen({ navigation }: Props) {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isRecipientModalVisible, setIsRecipientModalVisible] = useState(false);
   const [isFriendPickerVisible, setIsFriendPickerVisible] = useState(false);
+  const [isCardPreviewModalVisible, setIsCardPreviewModalVisible] =
+    useState(false);
+  const [showFloatingPreviewButton, setShowFloatingPreviewButton] =
+    useState(false);
   const [friendSearch, setFriendSearch] = useState('');
   const [recipientMode, setRecipientMode] = useState<RecipientMode>(() =>
     initialComposeSnapshot?.recipientMode === 'external'
@@ -554,6 +561,10 @@ export function ComposeScreen({ navigation }: Props) {
       : trimmedLabel.length > 0;
   const isExternalRecipientReady =
     recipientMode === 'external' && recipientReady;
+  const modalPreviewCardWidth = Math.max(
+    Math.min(windowWidth - 56, 340),
+    260,
+  );
   const selectedReceiver = selectedReceiverId
     ? friends.find(friend => friend.id === selectedReceiverId) ??
       {
@@ -625,6 +636,17 @@ export function ComposeScreen({ navigation }: Props) {
 
   const updateImageTexture = (imageTexture: DreamDesign['imageTexture']) => {
     updateSelectedDesign({ ...selectedDesign, imageTexture });
+  };
+
+  const handleComposeScroll = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    const shouldShow = Boolean(
+      draft && event.nativeEvent.contentOffset.y > 360,
+    );
+    setShowFloatingPreviewButton(current =>
+      current === shouldShow ? current : shouldShow,
+    );
   };
 
   const createPreview = async () => {
@@ -874,16 +896,19 @@ export function ComposeScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView
-      ref={composeScrollRef}
-      style={styles.root}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: Math.max(insets.bottom + 40, 84) },
-      ]}
-    >
-      <PaperTextureOverlay />
+    <View style={styles.screenRoot}>
+      <ScrollView
+        ref={composeScrollRef}
+        style={styles.root}
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={handleComposeScroll}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom + 40, 84) },
+        ]}
+      >
+        <PaperTextureOverlay />
       {!draft ? (
         <>
           <Text style={styles.label}>오늘 꾼 꿈</Text>
@@ -1543,6 +1568,23 @@ export function ComposeScreen({ navigation }: Props) {
         </View>
       ) : null}
 
+      </ScrollView>
+
+      {previewDream && showFloatingPreviewButton && !isCardPreviewModalVisible ? (
+        <Pressable
+          accessibilityLabel="카드 미리보기 열기"
+          accessibilityRole="button"
+          onPress={() => setIsCardPreviewModalVisible(true)}
+          style={({ pressed }) => [
+            styles.floatingPreviewButton,
+            { bottom: Math.max(insets.bottom + 20, 36) },
+            pressed && interactionStyles.pressed,
+          ]}
+        >
+          <Eye color={colors.primaryDark} size={24} strokeWidth={2.4} />
+        </Pressable>
+      ) : null}
+
       <Modal animationType="fade" transparent visible={isGenerating}>
         <View style={styles.loadingBackdrop}>
           <View style={styles.loadingPanel}>
@@ -1806,6 +1848,53 @@ export function ComposeScreen({ navigation }: Props) {
       <Modal
         animationType="fade"
         transparent
+        visible={Boolean(previewDream) && isCardPreviewModalVisible}
+        onRequestClose={() => setIsCardPreviewModalVisible(false)}
+      >
+        <Pressable
+          style={styles.cardPreviewBackdrop}
+          onPress={() => setIsCardPreviewModalVisible(false)}
+        >
+          <Pressable
+            style={styles.cardPreviewSheet}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.sheetHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.sheetTitle}>카드 미리보기</Text>
+                <Text style={styles.sheetSubtitle}>
+                  {selectedFrameOption.label} · {selectedColorOption.label} ·{' '}
+                  {selectedFontOption.label} · {selectedTextureLabel}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                onPress={() => setIsCardPreviewModalVisible(false)}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <X color={colors.textSecondary} size={20} />
+              </Pressable>
+            </View>
+            <View style={styles.cardPreviewWrap}>
+              {previewDream ? (
+                <DreamCard
+                  dream={previewDream}
+                  showImageActions={false}
+                  width={modalPreviewCardWidth}
+                />
+              ) : null}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
         visible={isFriendPickerVisible}
         onRequestClose={() => setIsFriendPickerVisible(false)}
       >
@@ -1888,7 +1977,7 @@ export function ComposeScreen({ navigation }: Props) {
           </Pressable>
         </Pressable>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -2078,6 +2167,10 @@ function FadingHorizontalScroll({
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  screenRoot: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
   root: {
     flex: 1,
@@ -2579,6 +2672,43 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 252, 255, 0.92)',
     borderWidth: 1,
     borderColor: colors.divider,
+  },
+  floatingPreviewButton: {
+    position: 'absolute',
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    shadowColor: '#4D3F2B',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 8,
+  },
+  cardPreviewBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(40, 35, 63, 0.36)',
+  },
+  cardPreviewSheet: {
+    width: '100%',
+    maxWidth: 390,
+    borderRadius: 28,
+    padding: 16,
+    gap: 14,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  cardPreviewWrap: {
+    alignItems: 'center',
   },
   modalBackdrop: {
     flex: 1,

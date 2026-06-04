@@ -13,14 +13,22 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary, type Asset } from 'react-native-image-picker';
-import { ExternalLink, Plus, RefreshCw, Settings } from 'lucide-react-native';
+import {
+  ExternalLink,
+  Plus,
+  RefreshCw,
+  Settings,
+  UserX,
+} from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { updateProfile, uploadProfileImage } from '../api/auth';
+import { deleteAccount, updateProfile, uploadProfileImage } from '../api/auth';
 import { getPlatformPassProductId } from '../api/billing';
 import { claimDream } from '../api/dreams';
+import { fetchBlockedUsers, unblockUser } from '../api/safety';
 import { signOutGoogle } from '../auth/googleSignIn';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 import {
   DEFAULT_PROFILE_AVATAR,
   PROFILE_AVATAR_PRESETS,
@@ -50,6 +58,8 @@ const PROFILE_EDITOR_MAX_HEIGHT = 560;
 const PROFILE_EDITOR_COLLAPSED_GAP = -12;
 const SETTINGS_PANEL_MAX_HEIGHT = 620;
 const SETTINGS_PANEL_COLLAPSED_GAP = -12;
+const BLOCK_PANEL_MAX_HEIGHT = 520;
+const BLOCK_PANEL_COLLAPSED_GAP = -12;
 
 const PUSH_NOTIFICATION_ITEMS: {
   type: PushNotificationType;
@@ -75,6 +85,7 @@ const CARD_SIZE_OPTIONS: {
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { confirm, dialog } = useConfirmDialog();
   const user = useSessionStore(state => state.user);
   const userId = useSessionStore(state => state.userId);
   const token = useSessionStore(state => state.token);
@@ -93,6 +104,11 @@ export function ProfileScreen() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSettingsMounted, setIsSettingsMounted] = useState(false);
   const settingsProgress = useRef(new Animated.Value(0)).current;
+  const [isBlockListOpen, setIsBlockListOpen] = useState(false);
+  const [isBlockListMounted, setIsBlockListMounted] = useState(false);
+  const blockListProgress = useRef(new Animated.Value(0)).current;
+  const [blockSearch, setBlockSearch] = useState('');
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const pushPreferences = useSettingsStore(state => state.pushPreferences);
   const setPushPreference = useSettingsStore(state => state.setPushPreference);
   const archiveColumns = useSettingsStore(state => state.archiveColumns);
@@ -107,6 +123,7 @@ export function ProfileScreen() {
   const recoverPassPurchases = usePassPurchaseRecovery();
   const [passStatus, setPassStatus] = useState<string | null>(null);
   const [isRestoringPass, setIsRestoringPass] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const avatarOptions = useMemo(() => {
     const isPreset = PROFILE_AVATAR_PRESETS.some(
       option => option.value === profileAvatarValue,
@@ -122,6 +139,22 @@ export function ProfileScreen() {
     }
     return PROFILE_AVATAR_PRESETS;
   }, [profileAvatarValue]);
+
+  const { data: blockedUsers = [] } = useQuery({
+    queryKey: ['safety', 'blocks', token],
+    queryFn: () => fetchBlockedUsers(token ?? ''),
+    enabled: Boolean(token),
+    staleTime: 30 * 1000,
+  });
+  const filteredBlockedUsers = useMemo(() => {
+    const keyword = blockSearch.trim().toLowerCase();
+    if (!keyword) {
+      return blockedUsers;
+    }
+    return blockedUsers.filter(item =>
+      (item.blockedUserNickname ?? '').toLowerCase().includes(keyword),
+    );
+  }, [blockedUsers, blockSearch]);
 
   useEffect(() => {
     if (isProfileEditorOpen) {
@@ -181,6 +214,60 @@ export function ProfileScreen() {
 
   const toggleSettings = () => {
     setIsSettingsOpen(isOpen => !isOpen);
+  };
+
+  useEffect(() => {
+    if (isBlockListOpen) {
+      setIsBlockListMounted(true);
+    }
+
+    const animation = Animated.timing(blockListProgress, {
+      toValue: isBlockListOpen ? 1 : 0,
+      duration: isBlockListOpen ? 420 : 320,
+      easing: isBlockListOpen
+        ? Easing.out(Easing.cubic)
+        : Easing.in(Easing.cubic),
+      useNativeDriver: false,
+    });
+
+    animation.start(({ finished }) => {
+      if (finished && !isBlockListOpen) {
+        setIsBlockListMounted(false);
+      }
+    });
+
+    return () => animation.stop();
+  }, [isBlockListOpen, blockListProgress]);
+
+  const toggleBlockList = () => {
+    if (isBlockListOpen) {
+      setBlockSearch('');
+    }
+    setIsBlockListOpen(isOpen => !isOpen);
+  };
+
+  const handleUnblock = async (blockedUserId: string, nickname: string) => {
+    if (!token) {
+      return;
+    }
+    const ok = await confirm({
+      title: '차단을 해제할까요?',
+      message: `${nickname}님의 차단을 해제하면 서로의 꿈카드와 댓글을 다시 볼 수 있어요.`,
+      confirmText: '차단 해제',
+    });
+    if (!ok) {
+      return;
+    }
+    setUnblockingId(blockedUserId);
+    try {
+      await unblockUser(blockedUserId, token);
+      await queryClient.invalidateQueries({ queryKey: ['safety', 'blocks'] });
+      await queryClient.invalidateQueries({ queryKey: ['dreams'] });
+    } catch {
+      // Leave the entry in place; the user can retry.
+    } finally {
+      setUnblockingId(null);
+    }
   };
 
   const handleTogglePush = (type: PushNotificationType, next: boolean) => {
@@ -267,6 +354,41 @@ export function ProfileScreen() {
     }
     await signOutGoogle();
     clearSession();
+  };
+
+  const deleteAccountConfirmed = async () => {
+    if (!token) {
+      setStatusText('로그인이 필요합니다.');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    setStatusText(null);
+    try {
+      await deleteAccount(token);
+      await signOutGoogle();
+      queryClient.clear();
+      clearSession();
+    } catch (error) {
+      setStatusText(
+        error instanceof Error ? error.message : '계정을 삭제하지 못했어요.',
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    const ok = await confirm({
+      title: '계정을 삭제할까요?',
+      message:
+        '계정 정보와 로그인 정보는 삭제 또는 익명화되고, 이미 전달된 꿈카드의 FROM/TO 표시명은 카드 기록의 일부로 남을 수 있어요.',
+      confirmText: '삭제',
+      tone: 'danger',
+    });
+    if (ok) {
+      await deleteAccountConfirmed();
+    }
   };
 
   const restorePass = async () => {
@@ -722,6 +844,122 @@ export function ProfileScreen() {
           ) : null}
         </View>
 
+        <View style={styles.panel}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isBlockListOpen }}
+            onPress={toggleBlockList}
+            style={({ pressed }) => [
+              styles.settingsHeader,
+              pressed && interactionStyles.pressedSoft,
+            ]}
+          >
+            <UserX color={colors.primaryDark} size={22} strokeWidth={2.2} />
+            <Text style={styles.settingsHeaderTitle}>차단 관리</Text>
+            {blockedUsers.length > 0 ? (
+              <View style={styles.blockCountBadge}>
+                <Text style={styles.blockCountText}>{blockedUsers.length}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+
+          {isBlockListMounted ? (
+            <Animated.View
+              pointerEvents={isBlockListOpen ? 'auto' : 'none'}
+              style={[
+                styles.settingsShell,
+                {
+                  maxHeight: blockListProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, BLOCK_PANEL_MAX_HEIGHT],
+                  }),
+                  opacity: blockListProgress,
+                  marginTop: blockListProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [BLOCK_PANEL_COLLAPSED_GAP, 0],
+                  }),
+                },
+              ]}
+            >
+              <Animated.View
+                style={[
+                  styles.settingsBody,
+                  {
+                    transform: [
+                      {
+                        translateY: blockListProgress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-14, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <TextInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  value={blockSearch}
+                  onChangeText={setBlockSearch}
+                  placeholder="이름으로 검색"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.input}
+                />
+                {blockedUsers.length === 0 ? (
+                  <Text style={styles.settingsItemDescription}>
+                    차단한 사용자가 없어요.
+                  </Text>
+                ) : filteredBlockedUsers.length === 0 ? (
+                  <Text style={styles.settingsItemDescription}>
+                    검색 결과가 없어요.
+                  </Text>
+                ) : (
+                  <View style={styles.blockList}>
+                    {filteredBlockedUsers.map(item => {
+                      const name =
+                        item.blockedUserNickname ?? '알 수 없는 사용자';
+                      const isUnblocking = unblockingId === item.blockedUserId;
+                      return (
+                        <View key={item.id} style={styles.blockRow}>
+                          <ProfileAvatar
+                            value={item.blockedUserProfileImageUrl}
+                            name={name}
+                            size={40}
+                          />
+                          <Text style={styles.blockName} numberOfLines={1}>
+                            {name}
+                          </Text>
+                          <Pressable
+                            accessibilityRole="button"
+                            disabled={isUnblocking}
+                            onPress={() => {
+                              handleUnblock(item.blockedUserId, name).catch(
+                                () => undefined,
+                              );
+                            }}
+                            style={({ pressed }) => [
+                              styles.unblockButton,
+                              isUnblocking && styles.disabledButton,
+                              pressed &&
+                                !isUnblocking &&
+                                interactionStyles.pressedSoft,
+                            ]}
+                          >
+                            <Text style={styles.unblockText}>
+                              {isUnblocking ? '해제 중...' : '차단 해제'}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </Animated.View>
+            </Animated.View>
+          ) : null}
+        </View>
+
         <Pressable
           accessibilityRole="button"
           onPress={logout}
@@ -732,7 +970,27 @@ export function ProfileScreen() {
         >
           <Text style={styles.logoutText}>로그아웃</Text>
         </Pressable>
+
+        <View style={styles.dangerZone}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isDeletingAccount}
+            onPress={() => {
+              confirmDeleteAccount().catch(() => undefined);
+            }}
+            style={({ pressed }) => [
+              styles.deleteAccountButton,
+              isDeletingAccount && styles.disabledButton,
+              pressed && !isDeletingAccount && interactionStyles.pressed,
+            ]}
+          >
+            <Text style={styles.deleteAccountText}>
+              {isDeletingAccount ? '삭제 중...' : '계정 삭제'}
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
+      {dialog}
     </Screen>
   );
 }
@@ -944,6 +1202,56 @@ const styles = StyleSheet.create({
     fontSize: 19,
     includeFontPadding: false,
   },
+  blockCountBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lavenderMist,
+  },
+  blockCountText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 12,
+    includeFontPadding: false,
+  },
+  blockList: {
+    gap: 8,
+  },
+  blockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 52,
+  },
+  blockName: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 15,
+    includeFontPadding: false,
+  },
+  unblockButton: {
+    minHeight: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    backgroundColor: colors.lavenderMist,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  unblockText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 13,
+    includeFontPadding: false,
+  },
   settingsShell: {
     overflow: 'hidden',
   },
@@ -1044,6 +1352,26 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
     fontSize: 16,
+    includeFontPadding: false,
+  },
+  dangerZone: {
+    paddingTop: 28,
+    marginTop: 8,
+  },
+  deleteAccountButton: {
+    minHeight: 50,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  deleteAccountText: {
+    color: colors.error,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 15,
     includeFontPadding: false,
   },
 });

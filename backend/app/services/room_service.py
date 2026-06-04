@@ -12,6 +12,7 @@ from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models.dream import Dream, DreamGroup
 from app.models.group import Group, GroupMember
 from app.models.user import User
+from app.services.safety_service import blocked_user_ids_for
 
 
 @dataclass
@@ -200,6 +201,7 @@ async def list_room_dreams(
 
     group_id = _parse_room_id(room_id)
     await _require_group_member(session, group_id, user_id)
+    blocked_ids = await blocked_user_ids_for(session, user_id)
     activity_at = func.coalesce(Dream.given_at, Dream.created_at)
     stmt = (
         select(Dream)
@@ -208,6 +210,10 @@ async def list_room_dreams(
         .order_by(activity_at.desc(), Dream.created_at.desc(), Dream.id.desc())
         .limit(limit + 1)
     )
+    if blocked_ids:
+        stmt = stmt.where(Dream.giver_id.notin_(blocked_ids)).where(
+            or_(Dream.receiver_id.is_(None), Dream.receiver_id.notin_(blocked_ids))
+        )
     if before:
         before_activity_at, before_created_at, before_dream_id = _decode_dream_cursor(before)
         stmt = stmt.where(

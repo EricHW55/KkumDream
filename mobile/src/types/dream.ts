@@ -50,6 +50,8 @@ export interface Dream {
   giverId: string;
   receiverId: string | null;
   receiverLabel: string | null;
+  giverDisplayName?: string | null;
+  receiverDisplayName?: string | null;
   privatePostscript: string | null;
   groupIds: string[];
   rawInput: string;

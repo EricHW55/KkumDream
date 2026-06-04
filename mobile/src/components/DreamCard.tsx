@@ -104,13 +104,15 @@ export function DreamCard({
   }, [dream.receiverId, giverNameOverride, receiverNameOverride, sessionUserId]);
   const giverName =
     giverNameOverride ??
+    dream.giverDisplayName ??
     roomMembers.find(member => member.id === dream.giverId)?.name ??
     getDisplayMember(dream.giverId, sessionUserId).name;
   const receiverName = dream.receiverId
     ? receiverNameOverride ??
+      dream.receiverDisplayName ??
       roomMembers.find(member => member.id === dream.receiverId)?.name ??
       getDisplayMember(dream.receiverId, sessionUserId).name
-    : dream.receiverLabel ?? '받는 사람 미정';
+    : dream.receiverDisplayName ?? dream.receiverLabel ?? '받는 사람 미정';
 
   const imageUrl = dream.imageUrl ?? dream.thumbnailUrl;
   const shouldLoadFullImageProgressively = Boolean(

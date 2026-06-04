@@ -38,6 +38,7 @@ from app.services.push_service import (
     send_dream_given_push,
     send_owner_comment_push,
 )
+from app.services.safety_service import blocked_user_ids_for, is_blocked_between
 
 
 _KST = ZoneInfo("Asia/Seoul")
@@ -152,6 +153,7 @@ async def create_dream_draft(
     )
     dream = Dream(
         giver_id=giver_id,
+        giver_display_name=await _snapshot_user_name(session, giver_id),
         raw_input=payload.raw_input,
         title=result.title,
         title_visible=True,
@@ -244,6 +246,8 @@ async def give_dream(
 
     if payload.receiver_id is not None:
         await _require_shared_group_member(session, user_id, payload.receiver_id)
+        if await is_blocked_between(session, user_id, payload.receiver_id):
+            raise ForbiddenError("You cannot send a dream to this user")
 
     group_ids = list(dict.fromkeys(payload.group_ids))
     for group_id in group_ids:
@@ -254,6 +258,13 @@ async def give_dream(
 
     dream.receiver_id = payload.receiver_id
     dream.receiver_label = label
+    if not dream.giver_display_name:
+        dream.giver_display_name = await _snapshot_user_name(session, user_id)
+    dream.receiver_display_name = (
+        await _snapshot_user_name(session, payload.receiver_id)
+        if payload.receiver_id is not None
+        else label
+    )
     dream.private_postscript = private_postscript or None
     dream.status = "given"
     dream.image_status = "queued"
@@ -291,23 +302,31 @@ def to_dream_out(dream: Dream, user_id: UUID) -> DreamOut:
 
 
 async def list_inbox(session: AsyncSession, user_id: UUID, limit: int) -> list[Dream]:
+    blocked_ids = await blocked_user_ids_for(session, user_id)
     stmt = (
         select(Dream)
         .where(Dream.receiver_id == user_id, Dream.status != "draft")
         .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
         .limit(limit)
     )
+    if blocked_ids:
+        stmt = stmt.where(Dream.giver_id.notin_(blocked_ids))
     dreams = list((await session.scalars(stmt)).all())
     return await _attach_group_ids_batch(session, dreams)
 
 
 async def list_outbox(session: AsyncSession, user_id: UUID, limit: int) -> list[Dream]:
+    blocked_ids = await blocked_user_ids_for(session, user_id)
     stmt = (
         select(Dream)
         .where(Dream.giver_id == user_id, Dream.status != "draft")
         .order_by(Dream.given_at.desc().nullslast(), Dream.created_at.desc())
         .limit(limit)
     )
+    if blocked_ids:
+        stmt = stmt.where(
+            or_(Dream.receiver_id.is_(None), Dream.receiver_id.notin_(blocked_ids))
+        )
     dreams = list((await session.scalars(stmt)).all())
     return await _attach_group_ids_batch(session, dreams)
 
@@ -334,6 +353,8 @@ async def get_dream_for_user(session: AsyncSession, user_id: UUID, dream_id: UUI
     dream = await _get_dream(session, dream_id)
     if not await _can_access_dream(session, dream, user_id):
         raise ForbiddenError("You cannot access this dream")
+    if await _is_dream_hidden_by_block(session, dream, user_id):
+        raise ForbiddenError("You cannot access this dream")
     return await _attach_group_ids(session, dream)
 
 
@@ -343,12 +364,15 @@ async def list_dream_comments(
     dream_id: UUID,
 ) -> list[DreamCommentView]:
     dream = await get_dream_for_user(session, user_id, dream_id)
+    blocked_ids = await blocked_user_ids_for(session, user_id)
     stmt = (
         select(DreamComment, User)
         .join(User, User.id == DreamComment.user_id)
         .where(DreamComment.dream_id == dream.id)
         .order_by(DreamComment.is_owner_main.desc(), DreamComment.created_at.asc())
     )
+    if blocked_ids:
+        stmt = stmt.where(DreamComment.user_id.notin_(blocked_ids))
     rows = (await session.execute(stmt)).all()
     return [DreamCommentView(comment, author) for comment, author in rows]
 
@@ -362,6 +386,9 @@ async def create_dream_comment(
     dream = await get_dream_for_user(session, user_id, dream_id)
     if dream.giver_id == user_id:
         raise ForbiddenError("The giver cannot comment on this dream")
+    counterpart_id = dream.giver_id if dream.receiver_id == user_id else dream.receiver_id
+    if await is_blocked_between(session, user_id, counterpart_id):
+        raise ForbiddenError("You cannot comment on this dream")
     normalized_content = content.strip()
     if not normalized_content:
         raise BadRequestError("Comment content is required")
@@ -549,6 +576,8 @@ async def claim_dream_via_token(
     dream = await _get_dream(session, record.dream_id)
     if dream.giver_id == user_id:
         raise BadRequestError("Cannot claim your own dream")
+    if await is_blocked_between(session, dream.giver_id, user_id):
+        raise ForbiddenError("You cannot receive this dream")
 
     if record.claimed_by_id == user_id and dream.receiver_id == user_id:
         return await _attach_group_ids(session, dream)
@@ -566,6 +595,8 @@ async def claim_dream_via_token(
         )
 
     dream.receiver_id = user_id
+    if not dream.receiver_display_name:
+        dream.receiver_display_name = await _snapshot_user_name(session, user_id)
     record.claimed_at = now
     record.claimed_by_id = user_id
     await session.commit()
@@ -682,6 +713,31 @@ async def _can_access_dream(session: AsyncSession, dream: Dream, user_id: UUID) 
         .limit(1)
     )
     return member_id is not None
+
+
+async def _is_dream_hidden_by_block(
+    session: AsyncSession,
+    dream: Dream,
+    user_id: UUID,
+) -> bool:
+    blocked_ids = await blocked_user_ids_for(session, user_id)
+    if not blocked_ids:
+        return False
+    participant_ids = [
+        participant_id
+        for participant_id in (dream.giver_id, dream.receiver_id)
+        if participant_id is not None and participant_id != user_id
+    ]
+    return any(participant_id in blocked_ids for participant_id in participant_ids)
+
+
+async def _snapshot_user_name(session: AsyncSession, user_id: UUID | None) -> str | None:
+    if user_id is None:
+        return None
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    return user.nickname.strip()[:50] or None
 
 
 async def _attach_group_ids(session: AsyncSession, dream: Dream) -> Dream:
