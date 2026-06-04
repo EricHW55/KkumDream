@@ -14,7 +14,10 @@ import {
 } from 'react-native';
 import { launchImageLibrary, type Asset } from 'react-native-image-picker';
 import {
+  ArrowDown,
   ExternalLink,
+  Inbox,
+  Minus,
   Plus,
   RefreshCw,
   Settings,
@@ -45,6 +48,7 @@ import {
   useSettingsStore,
   type ArchiveColumns,
   type PushNotificationType,
+  type WakeReminderTime,
 } from '../store/settingsStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
@@ -56,7 +60,9 @@ import { fontFamily } from '../theme/typography';
 
 const PROFILE_EDITOR_MAX_HEIGHT = 560;
 const PROFILE_EDITOR_COLLAPSED_GAP = -12;
-const SETTINGS_PANEL_MAX_HEIGHT = 620;
+const CLAIM_PANEL_MAX_HEIGHT = 260;
+const CLAIM_PANEL_COLLAPSED_GAP = -12;
+const SETTINGS_PANEL_MAX_HEIGHT = 720;
 const SETTINGS_PANEL_COLLAPSED_GAP = -12;
 const BLOCK_PANEL_MAX_HEIGHT = 520;
 const BLOCK_PANEL_COLLAPSED_GAP = -12;
@@ -64,13 +70,41 @@ const BLOCK_PANEL_COLLAPSED_GAP = -12;
 const PUSH_NOTIFICATION_ITEMS: {
   type: PushNotificationType;
   label: string;
+  description?: string;
 }[] = [
   { type: 'dream_given', label: '새 꿈카드가 도착했을 때' },
   { type: 'dream_ready', label: '내가 보낸 꿈의 이미지가 완성됐을 때' },
   { type: 'dream_comment', label: '받은 꿈카드에 댓글이 달렸을 때' },
   { type: 'owner_comment', label: '꿈 주인이 댓글에 답을 남겼을 때' },
   { type: 'dream_claimed', label: '공유한 꿈카드를 상대가 받았을 때' },
+  {
+    type: 'morning_dream_card',
+    label: '아침에 일어나 꿈카드를 적을 때',
+    description: '간밤의 꿈이 흐려지기 전에 살짝 깨워드릴게요.',
+  },
 ];
+
+const WAKE_REMINDER_STEP_MINUTES = 10;
+
+function formatWakeReminderTime(time: WakeReminderTime) {
+  const period = time.hour < 12 ? '오전' : '오후';
+  const hour12 = time.hour % 12 || 12;
+  return `${period} ${hour12}:${String(time.minute).padStart(2, '0')}`;
+}
+
+function shiftWakeReminderTime(
+  time: WakeReminderTime,
+  minuteDelta: number,
+): WakeReminderTime {
+  const minutesInDay = 24 * 60;
+  const currentMinutes = time.hour * 60 + time.minute;
+  const nextMinutes =
+    (currentMinutes + minuteDelta + minutesInDay) % minutesInDay;
+  return {
+    hour: Math.floor(nextMinutes / 60),
+    minute: nextMinutes % 60,
+  };
+}
 
 const CARD_SIZE_OPTIONS: {
   columns: ArchiveColumns;
@@ -101,6 +135,9 @@ export function ProfileScreen() {
   const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   const [isProfileEditorMounted, setIsProfileEditorMounted] = useState(false);
   const profileEditorProgress = useRef(new Animated.Value(0)).current;
+  const [isClaimPanelOpen, setIsClaimPanelOpen] = useState(false);
+  const [isClaimPanelMounted, setIsClaimPanelMounted] = useState(false);
+  const claimPanelProgress = useRef(new Animated.Value(0)).current;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSettingsMounted, setIsSettingsMounted] = useState(false);
   const settingsProgress = useRef(new Animated.Value(0)).current;
@@ -111,6 +148,10 @@ export function ProfileScreen() {
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const pushPreferences = useSettingsStore(state => state.pushPreferences);
   const setPushPreference = useSettingsStore(state => state.setPushPreference);
+  const wakeReminderTime = useSettingsStore(state => state.wakeReminderTime);
+  const setWakeReminderTime = useSettingsStore(
+    state => state.setWakeReminderTime,
+  );
   const archiveColumns = useSettingsStore(state => state.archiveColumns);
   const setArchiveColumns = useSettingsStore(state => state.setArchiveColumns);
   const [statusText, setStatusText] = useState<string | null>(null);
@@ -187,6 +228,33 @@ export function ProfileScreen() {
       setPendingProfileImage(null);
     }
     setIsProfileEditorOpen(isOpen => !isOpen);
+  };
+
+  useEffect(() => {
+    if (isClaimPanelOpen) {
+      setIsClaimPanelMounted(true);
+    }
+
+    const animation = Animated.timing(claimPanelProgress, {
+      toValue: isClaimPanelOpen ? 1 : 0,
+      duration: isClaimPanelOpen ? 420 : 320,
+      easing: isClaimPanelOpen
+        ? Easing.out(Easing.cubic)
+        : Easing.in(Easing.cubic),
+      useNativeDriver: false,
+    });
+
+    animation.start(({ finished }) => {
+      if (finished && !isClaimPanelOpen) {
+        setIsClaimPanelMounted(false);
+      }
+    });
+
+    return () => animation.stop();
+  }, [claimPanelProgress, isClaimPanelOpen]);
+
+  const toggleClaimPanel = () => {
+    setIsClaimPanelOpen(isOpen => !isOpen);
   };
 
   useEffect(() => {
@@ -287,6 +355,12 @@ export function ProfileScreen() {
     } else if (!willHaveAnyEnabled && hadAnyEnabled) {
       unregisterPushToken(token).catch(() => undefined);
     }
+  };
+
+  const adjustWakeReminderTime = (minuteDelta: number) => {
+    setWakeReminderTime(
+      shiftWakeReminderTime(wakeReminderTime, minuteDelta),
+    );
   };
 
   const pickProfileImage = async () => {
@@ -637,80 +711,120 @@ export function ProfileScreen() {
           ) : null}
         </View>
         <View style={styles.panel}>
-          <Text style={styles.sectionHeading}>꿈카드 받기</Text>
-          <Text style={styles.sectionDescription}>
-            누군가 카톡 등으로 보낸 꿈카드 링크를 여기에 붙여넣으면 받은
-            카드함에 담을 수 있어요.
-          </Text>
-          <TextInput
-            autoCapitalize="none"
-            autoCorrect={false}
-            spellCheck={false}
-            value={claimToken}
-            onChangeText={setClaimToken}
-            placeholder="https://kkumdream.app/d/...?claim=... 또는 토큰"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-          />
-          {claimStatus ? (
-            <Text style={styles.statusText}>{claimStatus}</Text>
-          ) : null}
           <Pressable
             accessibilityRole="button"
-            disabled={isClaiming}
-            onPress={submitClaim}
+            accessibilityState={{ expanded: isClaimPanelOpen }}
+            onPress={toggleClaimPanel}
             style={({ pressed }) => [
-              styles.saveButton,
-              isClaiming && styles.disabledButton,
-              pressed && !isClaiming && interactionStyles.pressed,
+              styles.settingsHeader,
+              pressed && interactionStyles.pressedSoft,
             ]}
           >
-            <Text style={styles.saveText}>
-              {isClaiming ? '받는 중...' : '카드 받기'}
-            </Text>
+            <View style={styles.claimHeaderIconWrap}>
+              <Inbox color={colors.primaryDark} size={23} strokeWidth={2.2} />
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.claimHeaderArrowWrap,
+                  {
+                    opacity: claimPanelProgress.interpolate({
+                      inputRange: [0, 0.2, 0.8, 1],
+                      outputRange: [0, 1, 0.8, 0.18],
+                    }),
+                    transform: [
+                      {
+                        translateY: claimPanelProgress.interpolate({
+                          inputRange: [0, 0.5, 1],
+                          outputRange: [-9, -1, 5],
+                        }),
+                      },
+                      {
+                        scale: claimPanelProgress.interpolate({
+                          inputRange: [0, 0.5, 1],
+                          outputRange: [0.86, 1, 0.9],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <ArrowDown
+                  color={colors.primaryDark}
+                  size={12}
+                  strokeWidth={2.8}
+                />
+              </Animated.View>
+            </View>
+            <Text style={styles.settingsHeaderTitle}>꿈카드 받기</Text>
           </Pressable>
-        </View>
 
-        <View style={styles.panel}>
-          <Text style={styles.sectionHeading}>꿈드림 패스</Text>
-          <Text style={styles.sectionDescription}>
-            {entitlement?.active
-              ? '패스가 활성화되어 있어요. 구독 취소 후에도 남은 기간까지 사용할 수 있어요.'
-              : '구매했는데 패스가 보이지 않으면 구매 내역을 복원하세요.'}
-          </Text>
-          {passStatus ? <Text style={styles.statusText}>{passStatus}</Text> : null}
-          <View style={styles.passActions}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={isRestoringPass}
-              onPress={restorePass}
-              style={({ pressed }) => [
-                styles.passActionButton,
-                isRestoringPass && styles.disabledButton,
-                pressed && !isRestoringPass && interactionStyles.pressedSoft,
+          {isClaimPanelMounted ? (
+            <Animated.View
+              pointerEvents={isClaimPanelOpen ? 'auto' : 'none'}
+              style={[
+                styles.settingsShell,
+                {
+                  maxHeight: claimPanelProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, CLAIM_PANEL_MAX_HEIGHT],
+                  }),
+                  opacity: claimPanelProgress,
+                  marginTop: claimPanelProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [CLAIM_PANEL_COLLAPSED_GAP, 2],
+                  }),
+                },
               ]}
             >
-              <RefreshCw color={colors.primaryDark} size={18} strokeWidth={2.3} />
-              <Text style={styles.passActionText}>
-                {isRestoringPass ? '복원 중...' : '구매 복원'}
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={openSubscriptionManagement}
-              style={({ pressed }) => [
-                styles.passActionButton,
-                pressed && interactionStyles.pressedSoft,
-              ]}
-            >
-              <ExternalLink color={colors.primaryDark} size={18} strokeWidth={2.3} />
-              <Text style={styles.passActionText}>구독 관리</Text>
-            </Pressable>
-          </View>
-          <Text style={styles.sectionDescription}>
-            환불이나 취소는 스토어 구독 관리 화면에서 처리됩니다. 환불이 승인되면
-            서버가 알림을 받아 패스 권한을 회수합니다.
-          </Text>
+              <Animated.View
+                style={[
+                  styles.settingsBody,
+                  {
+                    transform: [
+                      {
+                        translateY: claimPanelProgress.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-14, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Text style={styles.sectionDescription}>
+                  누군가 카톡 등으로 보낸 꿈카드 링크를 여기에 붙여넣으면 받은
+                  카드함에 담을 수 있어요.
+                </Text>
+                <TextInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  value={claimToken}
+                  onChangeText={setClaimToken}
+                  placeholder="https://kkumdream.app/d/...?claim=... 또는 토큰"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.input}
+                />
+                {claimStatus ? (
+                  <Text style={styles.statusText}>{claimStatus}</Text>
+                ) : null}
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={isClaiming}
+                  onPress={submitClaim}
+                  style={({ pressed }) => [
+                    styles.saveButton,
+                    isClaiming && styles.disabledButton,
+                    pressed && !isClaiming && interactionStyles.pressed,
+                  ]}
+                >
+                  <Text style={styles.saveText}>
+                    {isClaiming ? '받는 중...' : '카드 받기'}
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            </Animated.View>
+          ) : null}
         </View>
 
         <View style={styles.panel}>
@@ -779,20 +893,86 @@ export function ProfileScreen() {
                     받고 싶은 알림만 켜 두세요.
                   </Text>
                   <View style={styles.pushItemList}>
-                    {PUSH_NOTIFICATION_ITEMS.map(item => (
-                      <View key={item.type} style={styles.pushItemRow}>
-                        <Text style={styles.pushItemLabel}>{item.label}</Text>
-                        <Switch
-                          value={pushPreferences[item.type]}
-                          onValueChange={next => handleTogglePush(item.type, next)}
-                          thumbColor="#FFFFFF"
-                          trackColor={{
-                            false: colors.divider,
-                            true: colors.primary,
-                          }}
-                        />
-                      </View>
-                    ))}
+                    {PUSH_NOTIFICATION_ITEMS.map(item => {
+                      const isMorningReminder =
+                        item.type === 'morning_dream_card';
+                      const isEnabled = pushPreferences[item.type];
+                      return (
+                        <View key={item.type} style={styles.pushItemBlock}>
+                          <View style={styles.pushItemRow}>
+                            <View style={styles.pushItemText}>
+                              <Text style={styles.pushItemLabel}>
+                                {item.label}
+                              </Text>
+                              {item.description ? (
+                                <Text style={styles.pushItemDescription}>
+                                  {item.description}
+                                </Text>
+                              ) : null}
+                            </View>
+                            <Switch
+                              value={isEnabled}
+                              onValueChange={next =>
+                                handleTogglePush(item.type, next)
+                              }
+                              thumbColor="#FFFFFF"
+                              trackColor={{
+                                false: colors.divider,
+                                true: colors.primary,
+                              }}
+                            />
+                          </View>
+                          {isMorningReminder && isEnabled ? (
+                            <View style={styles.wakeTimeRow}>
+                              <Text style={styles.wakeTimeLabel}>기상 시간</Text>
+                              <View style={styles.wakeTimeControls}>
+                                <Pressable
+                                  accessibilityRole="button"
+                                  accessibilityLabel="기상 알림 시간을 10분 앞당기기"
+                                  onPress={() =>
+                                    adjustWakeReminderTime(
+                                      -WAKE_REMINDER_STEP_MINUTES,
+                                    )
+                                  }
+                                  style={({ pressed }) => [
+                                    styles.wakeTimeButton,
+                                    pressed && interactionStyles.pressedSoft,
+                                  ]}
+                                >
+                                  <Minus
+                                    color={colors.primaryDark}
+                                    size={15}
+                                    strokeWidth={2.4}
+                                  />
+                                </Pressable>
+                                <Text style={styles.wakeTimeValue}>
+                                  {formatWakeReminderTime(wakeReminderTime)}
+                                </Text>
+                                <Pressable
+                                  accessibilityRole="button"
+                                  accessibilityLabel="기상 알림 시간을 10분 늦추기"
+                                  onPress={() =>
+                                    adjustWakeReminderTime(
+                                      WAKE_REMINDER_STEP_MINUTES,
+                                    )
+                                  }
+                                  style={({ pressed }) => [
+                                    styles.wakeTimeButton,
+                                    pressed && interactionStyles.pressedSoft,
+                                  ]}
+                                >
+                                  <Plus
+                                    color={colors.primaryDark}
+                                    size={15}
+                                    strokeWidth={2.4}
+                                  />
+                                </Pressable>
+                              </View>
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })}
                   </View>
                 </View>
 
@@ -958,6 +1138,48 @@ export function ProfileScreen() {
               </Animated.View>
             </Animated.View>
           ) : null}
+        </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.sectionHeading}>꿈드림 패스</Text>
+          <Text style={styles.sectionDescription}>
+            {entitlement?.active
+              ? '패스가 활성화되어 있어요. 구독 취소 후에도 남은 기간까지 사용할 수 있어요.'
+              : '구매했는데 패스가 보이지 않으면 구매 내역을 복원하세요.'}
+          </Text>
+          {passStatus ? <Text style={styles.statusText}>{passStatus}</Text> : null}
+          <View style={styles.passActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isRestoringPass}
+              onPress={restorePass}
+              style={({ pressed }) => [
+                styles.passActionButton,
+                isRestoringPass && styles.disabledButton,
+                pressed && !isRestoringPass && interactionStyles.pressedSoft,
+              ]}
+            >
+              <RefreshCw color={colors.primaryDark} size={18} strokeWidth={2.3} />
+              <Text style={styles.passActionText}>
+                {isRestoringPass ? '복원 중...' : '구매 복원'}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={openSubscriptionManagement}
+              style={({ pressed }) => [
+                styles.passActionButton,
+                pressed && interactionStyles.pressedSoft,
+              ]}
+            >
+              <ExternalLink color={colors.primaryDark} size={18} strokeWidth={2.3} />
+              <Text style={styles.passActionText}>구독 관리</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.sectionDescription}>
+            환불이나 취소는 스토어 구독 관리 화면에서 처리됩니다. 환불이 승인되면
+            서버가 알림을 받아 패스 권한을 회수합니다.
+          </Text>
         </View>
 
         <Pressable
@@ -1202,6 +1424,18 @@ const styles = StyleSheet.create({
     fontSize: 19,
     includeFontPadding: false,
   },
+  claimHeaderIconWrap: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  claimHeaderArrowWrap: {
+    position: 'absolute',
+    top: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   blockCountBadge: {
     minWidth: 24,
     height: 24,
@@ -1277,7 +1511,10 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   pushItemList: {
-    gap: 4,
+    gap: 6,
+  },
+  pushItemBlock: {
+    gap: 6,
   },
   pushItemRow: {
     flexDirection: 'row',
@@ -1286,13 +1523,66 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 40,
   },
-  pushItemLabel: {
+  pushItemText: {
     flex: 1,
+    gap: 2,
+  },
+  pushItemLabel: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
     fontSize: 13.5,
     lineHeight: 19,
+  },
+  pushItemDescription: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  wakeTimeRow: {
+    marginLeft: 8,
+    paddingLeft: 12,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.divider,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  wakeTimeLabel: {
+    width: 48,
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 12.5,
+    lineHeight: 18,
+    includeFontPadding: false,
+    flexShrink: 0,
+  },
+  wakeTimeControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+  },
+  wakeTimeButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lavenderMist,
+  },
+  wakeTimeValue: {
+    minWidth: 72,
+    textAlign: 'center',
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 13.5,
+    includeFontPadding: false,
   },
   settingsDivider: {
     height: 1,
