@@ -30,12 +30,19 @@ export type DreamFontStyle =
   | 'rounded'
   | 'serif'
   | 'clean';
+export type DreamImageTexture =
+  | 'watercolor'
+  | 'acrylic'
+  | 'crayon'
+  | 'colored_pencil'
+  | 'oil_pastel';
 export type DreamStoryLength = 'short' | 'standard' | 'long';
 
 export interface DreamDesign {
   cardColor: DreamCardColor;
   cardFrame: DreamCardFrame;
   fontStyle: DreamFontStyle;
+  imageTexture: DreamImageTexture;
 }
 
 export interface Dream {

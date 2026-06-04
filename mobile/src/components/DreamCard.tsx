@@ -25,6 +25,7 @@ import { colors } from '../theme/colors';
 import {
   CARD_COLOR_THEMES,
   getDreamFontStyle,
+  getImageTextureLabel,
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
@@ -136,6 +137,7 @@ export function DreamCard({
     dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
   const design = normalizeDreamDesign(dream.design);
   const designTheme = CARD_COLOR_THEMES[design.cardColor];
+  const imageTextureLabel = getImageTextureLabel(design.imageTexture);
   const usesCenteredFromTo =
     design.cardFrame === 'classic' || design.cardFrame === 'ticket';
   const isMovieTicketFrame = design.cardFrame === 'beveled';
@@ -485,6 +487,10 @@ export function DreamCard({
             ]}
           >
             {dream.mainMood}
+            {'\n'}
+            <Text style={styles.placeholderTextureText}>
+              {imageTextureLabel}
+            </Text>
           </Text>
         </View>
       )}
@@ -1290,7 +1296,12 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: '500',
     includeFontPadding: false,
+    lineHeight: 38,
     textAlign: 'center',
+  },
+  placeholderTextureText: {
+    fontSize: 17,
+    fontWeight: '700',
   },
   failureText: {
     color: colors.primaryDark,

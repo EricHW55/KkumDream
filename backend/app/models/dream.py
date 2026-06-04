@@ -24,6 +24,7 @@ DEFAULT_DREAM_DESIGN = {
     "card_color": "beige",
     "card_frame": "classic",
     "font_style": "dahaeng",
+    "image_texture": "oil_pastel",
 }
 
 
@@ -73,7 +74,12 @@ class Dream(Base):
         nullable=False,
         default=lambda: DEFAULT_DREAM_DESIGN.copy(),
         server_default=text(
-            """'{"card_color": "beige", "card_frame": "classic", "font_style": "dahaeng"}'::jsonb"""
+            "'{"
+            '"card_color": "beige", '
+            '"card_frame": "classic", '
+            '"font_style": "dahaeng", '
+            '"image_texture": "oil_pastel"'
+            "}'::jsonb"
         ),
     )
 

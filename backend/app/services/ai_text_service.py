@@ -190,8 +190,7 @@ Use the create_dream_card tool exactly once.
 # tint palette/atmosphere; they must never change the medium or rendering style.
 IMAGE_STYLE_PREFIX = "A hand-drawn pastel storybook illustration"
 IMAGE_STYLE_GUIDE = """
-drawn by hand with soft oil pastels and gouache, visible crayon and brush-stroke
-texture, grainy textured art paper, gentle muted pastel color palette, naive
+drawn by hand on grainy textured art paper, gentle muted pastel color palette, naive
 children's picture-book art, rounded hand-painted shapes, imperfect hand-made
 linework, flat soft matte lighting, cozy and emotionally warm, clear focal subject,
 mobile card thumbnail friendly, absolutely not a photograph, not photorealistic,

@@ -26,6 +26,13 @@ FontStyle = Literal[
     "serif",
     "clean",
 ]
+ImageTexture = Literal[
+    "watercolor",
+    "acrylic",
+    "crayon",
+    "colored_pencil",
+    "oil_pastel",
+]
 StoryLength = Literal["short", "standard", "long"]
 
 
@@ -33,6 +40,7 @@ class DreamDesign(ApiModel):
     card_color: CardColor = "beige"
     card_frame: CardFrame = "classic"
     font_style: FontStyle = "dahaeng"
+    image_texture: ImageTexture = "oil_pastel"
 
 
 class DreamDraftCreate(ApiModel):

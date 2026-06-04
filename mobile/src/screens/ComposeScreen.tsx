@@ -71,6 +71,8 @@ import {
   CARD_FRAME_OPTIONS,
   DEFAULT_DREAM_DESIGN,
   FONT_STYLE_OPTIONS,
+  IMAGE_TEXTURE_OPTIONS,
+  getImageTextureLabel,
   getDreamFontStyle,
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
@@ -539,6 +541,11 @@ export function ComposeScreen({ navigation }: Props) {
   const selectedFontOption =
     FONT_STYLE_OPTIONS.find(item => item.value === selectedDesign.fontStyle) ??
     FONT_STYLE_OPTIONS[0];
+  const selectedTextureOption =
+    IMAGE_TEXTURE_OPTIONS.find(
+      item => item.value === selectedDesign.imageTexture,
+    ) ?? IMAGE_TEXTURE_OPTIONS[0];
+  const selectedTextureLabel = getImageTextureLabel(selectedDesign.imageTexture);
   const trimmedLabel = externalLabel.trim();
   const trimmedPrivatePostscript = privatePostscript.trim();
   const recipientReady =
@@ -616,6 +623,10 @@ export function ComposeScreen({ navigation }: Props) {
     updateSelectedDesign({ ...selectedDesign, fontStyle });
   };
 
+  const updateImageTexture = (imageTexture: DreamDesign['imageTexture']) => {
+    updateSelectedDesign({ ...selectedDesign, imageTexture });
+  };
+
   const createPreview = async () => {
     const input = rawInput.trim();
     if (!input) {
@@ -668,6 +679,13 @@ export function ComposeScreen({ navigation }: Props) {
 
   const openEdit = () => {
     if (!draft) {
+      return;
+    }
+    if (isEditOpen) {
+      setEditTitle(draft.title);
+      setEditShortMessage(draft.shortMessage);
+      setEditStory(draft.story);
+      setIsEditOpen(false);
       return;
     }
     setEditTitle(draft.title);
@@ -994,6 +1012,39 @@ export function ComposeScreen({ navigation }: Props) {
           </View>
           <Text style={styles.toneHint}>{selectedLength.description}</Text>
 
+          <Text style={styles.label}>그림 질감</Text>
+          <View style={styles.textureGrid}>
+            {IMAGE_TEXTURE_OPTIONS.map(option => {
+              const isSelected = option.value === selectedDesign.imageTexture;
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  onPress={() => updateImageTexture(option.value)}
+                  style={({ pressed }) => [
+                    styles.textureOption,
+                    isSelected && styles.textureOptionActive,
+                    pressed && interactionStyles.pressedSoft,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.textureOptionTitle,
+                      isSelected && styles.textureOptionTitleActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  <Text style={styles.textureOptionDescription}>
+                    {option.description}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.toneHint}>{selectedTextureOption.description}</Text>
+
           {draft ? (
             <View style={styles.designPanel}>
               <View style={styles.designHeader}>
@@ -1002,7 +1053,7 @@ export function ComposeScreen({ navigation }: Props) {
                   <Text style={styles.designTitle}>카드 디자인</Text>
                   <Text style={styles.designSummary}>
                     {selectedFrameOption.label} · {selectedColorOption.label} ·{' '}
-                    {selectedFontOption.label}
+                    {selectedFontOption.label} · {selectedTextureLabel}
                   </Text>
                 </View>
               </View>
@@ -1201,7 +1252,9 @@ export function ComposeScreen({ navigation }: Props) {
               ]}
             >
               <PencilLine color={colors.primary} size={18} />
-              <Text style={styles.editButtonText}>수정</Text>
+              <Text style={styles.editButtonText}>
+                {isEditOpen ? '닫기' : '수정'}
+              </Text>
             </Pressable>
           </View>
 
@@ -1254,7 +1307,7 @@ export function ComposeScreen({ navigation }: Props) {
                 <Text style={styles.designTitle}>카드 디자인</Text>
                 <Text style={styles.designSummary}>
                   {selectedFrameOption.label} · {selectedColorOption.label} ·{' '}
-                  {selectedFontOption.label}
+                  {selectedFontOption.label} · {selectedTextureLabel}
                 </Text>
               </View>
             </View>
@@ -1381,6 +1434,38 @@ export function ComposeScreen({ navigation }: Props) {
                 );
               })}
             </FadingHorizontalScroll>
+
+            <Text style={styles.designLabel}>그림 질감</Text>
+            <View style={styles.textureGrid}>
+              {IMAGE_TEXTURE_OPTIONS.map(option => {
+                const isSelected = option.value === selectedDesign.imageTexture;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    onPress={() => updateImageTexture(option.value)}
+                    style={({ pressed }) => [
+                      styles.textureOption,
+                      isSelected && styles.textureOptionActive,
+                      pressed && interactionStyles.pressedSoft,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.textureOptionTitle,
+                        isSelected && styles.textureOptionTitleActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text style={styles.textureOptionDescription}>
+                      {option.description}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
             <Text style={styles.designLabel}>뒷면 글씨체</Text>
             <View style={styles.fontGrid}>
@@ -1860,6 +1945,7 @@ function getDraftDesignSyncKey(draftId: string, design: DreamDesign) {
     normalized.cardColor,
     normalized.cardFrame,
     normalized.fontStyle,
+    normalized.imageTexture,
   ].join(':');
 }
 
@@ -2342,6 +2428,44 @@ const styles = StyleSheet.create({
   },
   fontOptionDescription: {
     marginTop: 5,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  textureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  textureOption: {
+    width: '48%',
+    minHeight: 82,
+    borderRadius: 16,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    justifyContent: 'center',
+  },
+  textureOptionActive: {
+    backgroundColor: colors.lavenderMist,
+    borderColor: colors.primary,
+  },
+  textureOptionTitle: {
+    color: colors.textPrimary,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 14,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  textureOptionTitleActive: {
+    color: colors.primaryDark,
+  },
+  textureOptionDescription: {
+    marginTop: 6,
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
     fontWeight: '600',

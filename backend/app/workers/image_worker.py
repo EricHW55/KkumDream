@@ -44,7 +44,12 @@ async def run_once() -> bool:
         await session.commit()
 
         try:
-            source_url = await generate_image_url(dream.image_prompt)
+            image_texture = (
+                dream.design.get("image_texture")
+                if isinstance(dream.design, dict)
+                else None
+            )
+            source_url = await generate_image_url(dream.image_prompt, image_texture)
             image_url, thumbnail_url = await store_generated_image(dream.id, source_url)
             dream.image_url = image_url
             dream.thumbnail_url = thumbnail_url

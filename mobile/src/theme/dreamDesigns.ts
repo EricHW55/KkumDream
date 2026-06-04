@@ -5,6 +5,7 @@ import type {
   DreamCardFrame,
   DreamDesign,
   DreamFontStyle,
+  DreamImageTexture,
 } from '../types/dream';
 import { nanumHandwritingFonts } from './fonts';
 
@@ -12,6 +13,7 @@ export const DEFAULT_DREAM_DESIGN: DreamDesign = {
   cardColor: 'beige',
   cardFrame: 'classic',
   fontStyle: 'dahaeng',
+  imageTexture: 'oil_pastel',
 };
 
 export const CARD_COLOR_OPTIONS: {
@@ -83,6 +85,38 @@ export const CARD_FRAME_OPTIONS: {
     value: 'tag',
     label: '선물 태그',
     description: '작은 선물에 묶인 종이 태그',
+  },
+];
+
+export const IMAGE_TEXTURE_OPTIONS: {
+  value: DreamImageTexture;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'oil_pastel',
+    label: '오일 파스텔',
+    description: '부드러운 파스텔 결을 살려요.',
+  },
+  {
+    value: 'watercolor',
+    label: '수채화',
+    description: '번지는 물감과 종이 질감이 보여요.',
+  },
+  {
+    value: 'acrylic',
+    label: '아크릴',
+    description: '선명한 색과 두꺼운 붓자국을 더해요.',
+  },
+  {
+    value: 'crayon',
+    label: '크레파스',
+    description: '거친 손그림 결이 또렷해져요.',
+  },
+  {
+    value: 'colored_pencil',
+    label: '색연필',
+    description: '섬세한 선과 종이결을 남겨요.',
   },
 ];
 
@@ -192,6 +226,7 @@ export const CARD_COLOR_THEMES: Record<
 const CARD_COLOR_VALUES = CARD_COLOR_OPTIONS.map(option => option.value);
 const CARD_FRAME_VALUES = CARD_FRAME_OPTIONS.map(option => option.value);
 const FONT_STYLE_VALUES = FONT_STYLE_OPTIONS.map(option => option.value);
+const IMAGE_TEXTURE_VALUES = IMAGE_TEXTURE_OPTIONS.map(option => option.value);
 const FONT_STYLE_FAMILIES: Record<DreamFontStyle, string> = {
   dahaeng: nanumHandwritingFonts.dahaeng,
   daegwangyuri: nanumHandwritingFonts.daegwangyuri,
@@ -263,8 +298,20 @@ export function normalizeDreamDesign(
   )
     ? (design?.cardFrame as DreamCardFrame)
     : DEFAULT_DREAM_DESIGN.cardFrame;
+  const imageTexture = IMAGE_TEXTURE_VALUES.includes(
+    design?.imageTexture as DreamImageTexture,
+  )
+    ? (design?.imageTexture as DreamImageTexture)
+    : DEFAULT_DREAM_DESIGN.imageTexture;
 
-  return { cardColor, cardFrame, fontStyle };
+  return { cardColor, cardFrame, fontStyle, imageTexture };
+}
+
+export function getImageTextureLabel(texture: DreamImageTexture): string {
+  return (
+    IMAGE_TEXTURE_OPTIONS.find(option => option.value === texture)?.label ??
+    IMAGE_TEXTURE_OPTIONS[0].label
+  );
 }
 
 export function getDreamFontStyle(fontStyle: DreamFontStyle): TextStyle {
