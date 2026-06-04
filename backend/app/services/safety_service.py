@@ -2,11 +2,12 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, delete, distinct, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.core.config import settings
-from app.core.errors import BadRequestError, NotFoundError
+from app.core.errors import BadRequestError, ConflictError, NotFoundError
 from app.models.dream import Dream, DreamComment
 from app.models.safety import ContentReport, UserBlock
 from app.models.user import User
@@ -30,10 +31,22 @@ async def create_report(
         detail=payload.detail.strip() if payload.detail else None,
     )
     session.add(report)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ConflictError(_already_reported_message(payload.target_type)) from exc
     await session.refresh(report)
     await _maybe_auto_hide(session, payload.target_type, payload.target_id)
     return report
+
+
+def _already_reported_message(target_type: str) -> str:
+    if target_type == "dream":
+        return "이미 신고한 카드예요."
+    if target_type == "comment":
+        return "이미 신고한 댓글이에요."
+    return "이미 신고했어요."
 
 
 async def _maybe_auto_hide(

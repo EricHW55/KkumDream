@@ -39,6 +39,14 @@ class UserBlock(Base):
 class ContentReport(Base):
     __tablename__ = "content_reports"
     __table_args__ = (
+        # One report per user per target. Postgres treats NULL target_id as
+        # distinct, so user/room reports (no target_id) are not deduped here.
+        UniqueConstraint(
+            "reporter_id",
+            "target_type",
+            "target_id",
+            name="content_reports_reporter_target_key",
+        ),
         Index("ix_content_reports_reporter_id", "reporter_id"),
         Index("ix_content_reports_target", "target_type", "target_id"),
         Index("ix_content_reports_reported_user_id", "reported_user_id"),
