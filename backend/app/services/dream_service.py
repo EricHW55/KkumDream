@@ -243,8 +243,6 @@ async def give_dream(
     group_ids = list(dict.fromkeys(payload.group_ids))
     for group_id in group_ids:
         await _require_group_member(session, group_id, user_id)
-        if payload.receiver_id is not None:
-            await _require_group_member(session, group_id, payload.receiver_id)
 
     if settings.environment == "production":
         await _consume_daily_give_limit(session, user_id)
