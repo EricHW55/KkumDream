@@ -675,8 +675,8 @@ export function DreamDetailScreen({ route, navigation }: Props) {
               comment={ownerComment}
               isOwner
               canDelete={ownerComment.authorId === currentUserId}
-              canReport={ownerComment.authorId !== currentUserId}
-              canBlock={ownerComment.authorId !== currentUserId}
+              canReport={ownerComment.authorId !== currentUserId && !ownerComment.isHidden}
+              canBlock={ownerComment.authorId !== currentUserId && !ownerComment.isHidden}
               onDelete={() => onDeleteComment(ownerComment.id)}
               onReport={() => confirmReportComment(ownerComment)}
               onBlock={() => confirmBlockCommentAuthor(ownerComment)}
@@ -688,8 +688,8 @@ export function DreamDetailScreen({ route, navigation }: Props) {
               key={comment.id}
               comment={comment}
               canDelete={comment.authorId === currentUserId}
-              canReport={comment.authorId !== currentUserId}
-              canBlock={comment.authorId !== currentUserId}
+              canReport={comment.authorId !== currentUserId && !comment.isHidden}
+              canBlock={comment.authorId !== currentUserId && !comment.isHidden}
               onDelete={() => onDeleteComment(comment.id)}
               onReport={() => confirmReportComment(comment)}
               onBlock={() => confirmBlockCommentAuthor(comment)}
@@ -930,7 +930,14 @@ function CommentItem({
           </View>
         ) : null}
       </View>
-      <Text style={styles.commentText}>{comment.content}</Text>
+      <Text
+        style={[
+          styles.commentText,
+          comment.isHidden && styles.hiddenCommentText,
+        ]}
+      >
+        {comment.content}
+      </Text>
     </View>
   );
 }
@@ -1177,6 +1184,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontSize: 15,
     lineHeight: 23,
+  },
+  hiddenCommentText: {
+    color: colors.textMuted,
+    fontStyle: 'italic',
   },
   composer: {
     gap: 10,

@@ -62,3 +62,30 @@ class BlockedUserOut(ApiModel):
     blocked_user_nickname: str | None = None
     blocked_user_profile_image_url: str | None = None
     created_at: datetime
+
+
+class AdminReportOut(ApiModel):
+    id: UUID
+    target_type: str
+    target_id: UUID | None = None
+    reporter_id: UUID
+    reporter_nickname: str | None = None
+    reported_user_id: UUID | None = None
+    reported_user_nickname: str | None = None
+    reason: str
+    detail: str | None = None
+    status: str
+    created_at: datetime
+
+
+class ReportTargetSummary(ApiModel):
+    target_type: str
+    target_id: UUID
+    distinct_reporters: int
+    total_reports: int
+
+
+class ReportSummaryOut(ApiModel):
+    open_reports: int
+    auto_hide_threshold: int
+    top_targets: list[ReportTargetSummary]

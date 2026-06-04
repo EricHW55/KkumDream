@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     app_jwt_expire_days: int = 30
     google_web_client_id: str | None = None
 
+    # Safety / moderation. When this many *distinct* users report the same dream
+    # or comment, it is auto-hidden (masked as "신고됨") without an operator. The
+    # admin token guards the read-only moderation endpoints.
+    report_auto_hide_threshold: int = 5
+    admin_api_token: str | None = None
+
     ai_mock_mode: bool = True
     anthropic_api_key: str | None = None
     anthropic_text_model: str = "claude-haiku-4-5"

@@ -73,6 +73,7 @@ export interface Dream {
   readAt: string | null;
   openedBackAt: string | null;
   ownerMainCommentId: string | null;
+  isHidden?: boolean;
 }
 
 export interface DreamDraftPayload {
@@ -116,6 +117,7 @@ export interface DreamComment {
   content: string;
   isOwnerMain: boolean;
   createdAt: string;
+  isHidden?: boolean;
 }
 
 export type DreamReactionType =

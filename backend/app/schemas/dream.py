@@ -102,6 +102,7 @@ class DreamOut(ApiModel):
     read_at: datetime | None = None
     opened_back_at: datetime | None = None
     owner_main_comment_id: UUID | None = None
+    is_hidden: bool = False
 
 
 class DreamCommentCreate(ApiModel):
@@ -117,6 +118,7 @@ class DreamCommentOut(ApiModel):
     content: str
     is_owner_main: bool
     created_at: datetime
+    is_hidden: bool = False
 
 
 class DreamReactionToggle(ApiModel):

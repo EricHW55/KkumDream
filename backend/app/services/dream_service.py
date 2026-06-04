@@ -116,7 +116,10 @@ class DreamCommentView:
         self.author_id = comment.user_id
         self.author_nickname = author.nickname
         self.author_profile_image_url = author.profile_image_url
-        self.content = comment.content
+        self.is_hidden = comment.hidden_at is not None
+        self.content = (
+            "신고가 접수되어 가려진 댓글이에요." if self.is_hidden else comment.content
+        )
         self.is_owner_main = comment.is_owner_main
         self.created_at = comment.created_at
 
@@ -244,10 +247,13 @@ async def give_dream(
             detail="Private postscript requires an active pass",
         )
 
+    # Shadow ban: a blocked sender's card is still created (their outbox looks
+    # normal), but it is never delivered to the blocker — filtered from the
+    # blocker's inbox and no push sent.
+    suppress_delivery = False
     if payload.receiver_id is not None:
         await _require_shared_group_member(session, user_id, payload.receiver_id)
-        if await is_blocked_between(session, user_id, payload.receiver_id):
-            raise ForbiddenError("You cannot send a dream to this user")
+        suppress_delivery = await is_blocked_between(session, user_id, payload.receiver_id)
 
     group_ids = list(dict.fromkeys(payload.group_ids))
     for group_id in group_ids:
@@ -284,7 +290,7 @@ async def give_dream(
     )
     await session.commit()
     await session.refresh(dream)
-    if dream.receiver_id is not None:
+    if dream.receiver_id is not None and not suppress_delivery:
         await send_dream_given_push(
             session,
             dream.receiver_id,
@@ -298,7 +304,27 @@ def to_dream_out(dream: Dream, user_id: UUID) -> DreamOut:
     result = DreamOut.model_validate(dream)
     if dream.giver_id != user_id and dream.receiver_id != user_id:
         result.private_postscript = None
+    if dream.hidden_at is not None:
+        _mask_hidden_dream(result)
     return result
+
+
+def _mask_hidden_dream(result: DreamOut) -> None:
+    """Blank a report-hidden card's content so the client shows a "신고됨" state.
+
+    FROM/TO names and dates are kept so the masked card still reads as a card.
+    """
+    result.is_hidden = True
+    result.title = "신고된 카드"
+    result.title_visible = True
+    result.short_message = "신고가 누적되어 가려진 카드예요."
+    result.summary = ""
+    result.story = "신고가 누적되어 가려진 카드예요. 검토 후 다시 표시될 수 있어요."
+    result.image_prompt = ""
+    result.image_url = None
+    result.thumbnail_url = None
+    result.tags = []
+    result.private_postscript = None
 
 
 async def list_inbox(session: AsyncSession, user_id: UUID, limit: int) -> list[Dream]:
@@ -387,8 +413,10 @@ async def create_dream_comment(
     if dream.giver_id == user_id:
         raise ForbiddenError("The giver cannot comment on this dream")
     counterpart_id = dream.giver_id if dream.receiver_id == user_id else dream.receiver_id
-    if await is_blocked_between(session, user_id, counterpart_id):
-        raise ForbiddenError("You cannot comment on this dream")
+    # Shadow ban: a blocked user can still comment, but it never reaches the
+    # blocker — their comment is filtered out of the blocker's view and no push
+    # is delivered.
+    suppress_delivery = await is_blocked_between(session, user_id, counterpart_id)
     normalized_content = content.strip()
     if not normalized_content:
         raise BadRequestError("Comment content is required")
@@ -408,15 +436,16 @@ async def create_dream_comment(
     if author is None:
         raise NotFoundError("User not found")
     await session.refresh(comment)
-    if is_owner_main:
-        await send_owner_comment_push(session, dream.giver_id, str(dream.id), dream.title)
-    else:
-        recipient_ids = [
-            recipient_id
-            for recipient_id in (dream.giver_id, dream.receiver_id)
-            if recipient_id is not None and recipient_id != user_id
-        ]
-        await send_dream_comment_push(session, recipient_ids, str(dream.id), dream.title)
+    if not suppress_delivery:
+        if is_owner_main:
+            await send_owner_comment_push(session, dream.giver_id, str(dream.id), dream.title)
+        else:
+            recipient_ids = [
+                recipient_id
+                for recipient_id in (dream.giver_id, dream.receiver_id)
+                if recipient_id is not None and recipient_id != user_id
+            ]
+            await send_dream_comment_push(session, recipient_ids, str(dream.id), dream.title)
     return DreamCommentView(comment, author)
 
 
@@ -576,8 +605,9 @@ async def claim_dream_via_token(
     dream = await _get_dream(session, record.dream_id)
     if dream.giver_id == user_id:
         raise BadRequestError("Cannot claim your own dream")
-    if await is_blocked_between(session, dream.giver_id, user_id):
-        raise ForbiddenError("You cannot receive this dream")
+    # Shadow ban: claiming still works for the receiver, but the giver who
+    # blocked them gets no "claimed" push and won't see them in their outbox.
+    suppress_delivery = await is_blocked_between(session, dream.giver_id, user_id)
 
     if record.claimed_by_id == user_id and dream.receiver_id == user_id:
         return await _attach_group_ids(session, dream)
@@ -601,7 +631,8 @@ async def claim_dream_via_token(
     record.claimed_by_id = user_id
     await session.commit()
     await session.refresh(dream)
-    await send_dream_claimed_push(session, dream.giver_id, str(dream.id), dream.title)
+    if not suppress_delivery:
+        await send_dream_claimed_push(session, dream.giver_id, str(dream.id), dream.title)
     return await _attach_group_ids(session, dream)
 
 

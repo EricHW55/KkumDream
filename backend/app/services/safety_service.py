@@ -1,9 +1,13 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, distinct, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
+from app.core.config import settings
 from app.core.errors import BadRequestError, NotFoundError
+from app.models.dream import Dream, DreamComment
 from app.models.safety import ContentReport, UserBlock
 from app.models.user import User
 from app.schemas.safety import ReportCreate
@@ -28,7 +32,43 @@ async def create_report(
     session.add(report)
     await session.commit()
     await session.refresh(report)
+    await _maybe_auto_hide(session, payload.target_type, payload.target_id)
     return report
+
+
+async def _maybe_auto_hide(
+    session: AsyncSession,
+    target_type: str,
+    target_id: UUID | None,
+) -> None:
+    """Hide a dream/comment once enough *distinct* users have reported it.
+
+    This is the unmanned safeguard: no operator is required to take obviously
+    objectionable content out of circulation. The content is masked (not
+    deleted), so it can be restored on review.
+    """
+    if target_id is None or target_type not in ("dream", "comment"):
+        return
+    threshold = settings.report_auto_hide_threshold
+    if threshold <= 0:
+        return
+
+    distinct_reporters = await session.scalar(
+        select(func.count(distinct(ContentReport.reporter_id))).where(
+            ContentReport.target_type == target_type,
+            ContentReport.target_id == target_id,
+        )
+    )
+    if (distinct_reporters or 0) < threshold:
+        return
+
+    model = Dream if target_type == "dream" else DreamComment
+    await session.execute(
+        update(model)
+        .where(model.id == target_id, model.hidden_at.is_(None))
+        .values(hidden_at=datetime.now(UTC))
+    )
+    await session.commit()
 
 
 async def block_user(
@@ -111,15 +151,66 @@ async def is_blocked_between(
 
 
 async def blocked_user_ids_for(session: AsyncSession, user_id: UUID) -> set[UUID]:
-    rows = await session.execute(
-        select(UserBlock.blocker_id, UserBlock.blocked_user_id).where(
-            or_(
-                UserBlock.blocker_id == user_id,
-                UserBlock.blocked_user_id == user_id,
-            )
-        )
+    """Users that ``user_id`` has chosen to hide (the people *this* user blocked).
+
+    Visibility is intentionally one-directional so blocking behaves like a shadow
+    ban: the blocker stops seeing the blocked user everywhere, but the blocked
+    user's app looks normal — their cards/comments are simply never delivered to
+    or shown to the blocker.
+    """
+    rows = await session.scalars(
+        select(UserBlock.blocked_user_id).where(UserBlock.blocker_id == user_id)
     )
-    blocked_ids: set[UUID] = set()
-    for blocker_id, blocked_user_id in rows:
-        blocked_ids.add(blocked_user_id if blocker_id == user_id else blocker_id)
-    return blocked_ids
+    return set(rows.all())
+
+
+async def list_reports_for_admin(
+    session: AsyncSession,
+    status_filter: str | None,
+    limit: int,
+) -> list[tuple[ContentReport, str | None, str | None]]:
+    reporter = aliased(User)
+    reported = aliased(User)
+    stmt = (
+        select(ContentReport, reporter.nickname, reported.nickname)
+        .join(reporter, reporter.id == ContentReport.reporter_id)
+        .outerjoin(reported, reported.id == ContentReport.reported_user_id)
+        .order_by(ContentReport.created_at.desc())
+        .limit(limit)
+    )
+    if status_filter:
+        stmt = stmt.where(ContentReport.status == status_filter)
+    rows = (await session.execute(stmt)).all()
+    return [(report, reporter_nick, reported_nick) for report, reporter_nick, reported_nick in rows]
+
+
+async def report_summary(
+    session: AsyncSession,
+    limit: int,
+) -> tuple[int, list[tuple[str, UUID, int, int]]]:
+    open_count = (
+        await session.scalar(
+            select(func.count())
+            .select_from(ContentReport)
+            .where(ContentReport.status == "open")
+        )
+    ) or 0
+    rows = (
+        await session.execute(
+            select(
+                ContentReport.target_type,
+                ContentReport.target_id,
+                func.count(distinct(ContentReport.reporter_id)),
+                func.count(ContentReport.id),
+            )
+            .where(ContentReport.target_id.is_not(None))
+            .group_by(ContentReport.target_type, ContentReport.target_id)
+            .order_by(func.count(distinct(ContentReport.reporter_id)).desc())
+            .limit(limit)
+        )
+    ).all()
+    top_targets = [
+        (target_type, target_id, reporters, reports)
+        for target_type, target_id, reporters, reports in rows
+    ]
+    return open_count, top_targets

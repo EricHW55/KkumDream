@@ -74,7 +74,8 @@ export function DreamCard({
   const { width: windowWidth } = useWindowDimensions();
   const sessionUserId = useSessionStore(state => state.userId);
   const isLite = variant === 'lite';
-  const flipDisabled = disableFlip || isLite;
+  const isHidden = Boolean(dream.isHidden);
+  const flipDisabled = disableFlip || isLite || isHidden;
   const useThumbnail = preferThumbnail || isLite;
   const allowImageActions = showImageActions && !isLite;
   const [isBackVisible, setIsBackVisible] = useState(false);
@@ -391,7 +392,29 @@ export function DreamCard({
         },
       ]}
     >
-      {hasImage ? (
+      {isHidden ? (
+        <View
+          style={[
+            styles.placeholder,
+            { backgroundColor: designTheme.placeholder },
+          ]}
+        >
+          <View
+            style={[styles.placeholderStamp, { borderColor: frameBorderColor }]}
+          />
+          <Text style={[styles.failureText, { color: designTheme.accent }]}>
+            신고된 카드
+          </Text>
+          <Text
+            style={[
+              styles.placeholderHint,
+              { color: designTheme.secondaryText },
+            ]}
+          >
+            신고가 누적되어 가려졌어요.
+          </Text>
+        </View>
+      ) : hasImage ? (
         <>
           <Image
             onError={() => {
