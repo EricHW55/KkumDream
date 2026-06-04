@@ -1,0 +1,26 @@
+# EAS archives from the repository root in this project.
+# Keep the mobile app, but skip backend and generated local artifacts.
+backend/
+
+# Local dependencies and build output
+node_modules/
+mobile/node_modules/
+mobile/android/app/build/
+mobile/android/build/
+mobile/ios/Pods/
+mobile/ios/build/
+
+# Test and tooling caches
+.pytest_cache/
+pytest-cache-files-*/
+backend/pytest-cache-files-*/
+.ruff_cache/
+.mypy_cache/
+__pycache__/
+
+# Local secrets and editor state
+.env
+.env.*
+secrets/
+.idea/
+.vscode/

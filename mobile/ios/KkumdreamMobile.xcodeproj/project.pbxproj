@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0C80B921A6F3F58F76C31292 /* libPods-KkumdreamMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-KkumdreamMobile.a */; };
+		A10000000000000000000006 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* GoogleService-Info.plist */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		A10100000000000000000001 /* NanumAGiSaRangCe.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000001 /* NanumAGiSaRangCe.ttf */; };
 		A10100000000000000000002 /* NanumDaeGwangYuRi.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000002 /* NanumDaeGwangYuRi.ttf */; };
@@ -21,6 +22,7 @@
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* KkumdreamMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KkumdreamMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = KkumdreamMobile/Images.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000006 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = GoogleService-Info.plist; path = KkumdreamMobile/GoogleService-Info.plist; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = KkumdreamMobile/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = KkumdreamMobile/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A20100000000000000000001 /* NanumAGiSaRangCe.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumAGiSaRangCe.ttf; path = ../src/assets/fonts/NanumAGiSaRangCe.ttf; sourceTree = "<group>"; };
@@ -58,6 +60,7 @@
 				A20100000000000000000004 /* NanumMiRaeNaMu.ttf */,
 				A20100000000000000000005 /* NanumYeDangCe.ttf */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
+				A20000000000000000000006 /* GoogleService-Info.plist */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -177,6 +180,7 @@
 				A10100000000000000000003 /* NanumDaHaengCe.ttf in Resources */,
 				A10100000000000000000004 /* NanumMiRaeNaMu.ttf in Resources */,
 				A10100000000000000000005 /* NanumYeDangCe.ttf in Resources */,
+				A10000000000000000000006 /* GoogleService-Info.plist in Resources */,
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 			);
@@ -277,7 +281,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = KkumdreamMobile/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -285,7 +289,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.2.2;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -307,14 +311,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = KkumdreamMobile/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.2.2;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
