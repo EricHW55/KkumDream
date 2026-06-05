@@ -39,6 +39,9 @@ import { DREAM_CARD_ASPECT_RATIO, DreamCardFrame } from './DreamCardFrame';
 import { DreamGenerationAnimation } from './DreamGenerationAnimation';
 
 const BACK_SCROLL_EDGE_EPS = 2;
+const LETTER_LINE_MAX_COUNT = 72;
+const LETTER_LINE_CHAR_WIDTH = 18;
+const LETTER_EXTRA_LINE_COUNT = 3;
 
 type Props = {
   dream: Dream;
@@ -88,6 +91,10 @@ export function DreamCard({
   const backLayoutHeight = useRef(0);
   const backDragLastY = useRef<number | null>(null);
   const parentScrollEnabled = useRef(true);
+  const [backScrollViewportHeight, setBackScrollViewportHeight] = useState(0);
+  const [measuredBackTextLineCount, setMeasuredBackTextLineCount] = useState<
+    number | null
+  >(null);
   const rotation = useSharedValue(0);
   const horizontalMargin = size === 'full' ? 44 : 36;
   const requestedCardWidth =
@@ -175,6 +182,56 @@ export function DreamCard({
   const backStory = dream.privatePostscript
     ? `${dream.story}\n\np.s. ${dream.privatePostscript}`
     : dream.story;
+  const letterLineHeight =
+    typeof dreamFontStyle.lineHeight === 'number' ? dreamFontStyle.lineHeight : 27;
+  const estimatedLetterLineCount = backStory
+    .split('\n')
+    .reduce(
+      (sum, line) =>
+        sum + Math.max(1, Math.ceil(line.length / LETTER_LINE_CHAR_WIDTH)),
+      0,
+    );
+  const visibleLetterLineCount = Math.ceil(
+    Math.max(220, cardHeight - 130) / letterLineHeight,
+  );
+  const measuredLetterLineCount =
+    measuredBackTextLineCount ?? estimatedLetterLineCount;
+  const letterTextHeight = Math.max(
+    letterLineHeight,
+    measuredLetterLineCount * letterLineHeight,
+  );
+  const letterViewportContentHeight =
+    backScrollViewportHeight > 0
+      ? Math.max(0, backScrollViewportHeight - 32)
+      : visibleLetterLineCount * letterLineHeight;
+  const estimatedLetterTextHeight = Math.max(
+    letterLineHeight,
+    estimatedLetterLineCount * letterLineHeight,
+  );
+  const isBackStoryScrollable =
+    backScrollViewportHeight > 0
+      ? letterTextHeight > letterViewportContentHeight + BACK_SCROLL_EDGE_EPS
+      : estimatedLetterTextHeight > visibleLetterLineCount * letterLineHeight;
+  const hasLetterRules =
+    design.letterPaper !== 'plain' && design.letterPaper !== 'postcard';
+  const letterLineCount = Math.min(
+    LETTER_LINE_MAX_COUNT,
+    Math.max(1, measuredLetterLineCount + LETTER_EXTRA_LINE_COUNT),
+  );
+  const isMoonlitLetterPaper = design.letterPaper === 'moonlit';
+  const letterRuleColor = isMoonlitLetterPaper
+    ? 'rgba(245, 215, 147, 0.35)'
+    : isDarkTheme
+    ? 'rgba(217, 199, 147, 0.24)'
+    : 'rgba(113, 91, 64, 0.26)';
+  const letterAccentColor = isMoonlitLetterPaper
+    ? 'rgba(255, 221, 154, 0.86)'
+    : isDarkTheme
+    ? 'rgba(217, 199, 147, 0.72)'
+    : 'rgba(141, 119, 91, 0.72)';
+  const letterTextColor = isMoonlitLetterPaper
+    ? '#FFF7D6'
+    : designTheme.text;
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
   }));
@@ -214,6 +271,11 @@ export function DreamCard({
       }
     };
   }, [displayImageUrl, fullImageUrl]);
+
+  useEffect(() => {
+    setMeasuredBackTextLineCount(null);
+    backScrollY.current = 0;
+  }, [backStory, design.fontStyle, layoutCardWidth]);
 
   const flip = () => {
     if (flipDisabled) {
@@ -322,6 +384,7 @@ export function DreamCard({
   };
   const getBackScrollEdges = () => {
     const scrollable =
+      isBackStoryScrollable &&
       backContentHeight.current > backLayoutHeight.current + BACK_SCROLL_EDGE_EPS;
     const atTop = backScrollY.current <= BACK_SCROLL_EDGE_EPS;
     const atBottom =
@@ -975,42 +1038,174 @@ export function DreamCard({
                     isDarkTheme
                       ? styles.darkLetterPaper
                       : styles.lightLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'ornament' &&
+                      styles.ornamentLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'vintage' &&
+                      styles.vintageLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'botanical' &&
+                      styles.botanicalLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'postcard' &&
+                      styles.postcardLetterPaper,
+                    isMoonlitLetterPaper && styles.moonlitLetterPaper,
                     { borderColor: frameBorderColor },
                   ]}
                 >
                   <PaperTape style={styles.letterTape} />
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.letterStampMark,
-                      { borderColor: frameBorderColor },
-                    ]}
-                  />
-                  <Text
-                    pointerEvents="none"
-                    style={[
-                      styles.letterDoodle,
-                      styles.letterDoodleTop,
-                      isDarkTheme
-                        ? styles.darkStarAccent
-                        : styles.warmStarAccent,
-                    ]}
-                  >
-                    ✦
-                  </Text>
-                  <Text
-                    pointerEvents="none"
-                    style={[
-                      styles.letterDoodle,
-                      styles.letterDoodleBottom,
-                      { color: metaColor },
-                    ]}
-                  >
-                    ✧
-                  </Text>
+                  {design.letterPaper === 'lined' ||
+                  design.letterPaper === 'moonlit' ? (
+                    <Text
+                      pointerEvents="none"
+                      style={[
+                        styles.letterHeaderStars,
+                        { color: letterAccentColor },
+                      ]}
+                    >
+                      ✦  ✦  ✦
+                    </Text>
+                  ) : null}
+                  {design.letterPaper === 'moonlit' ? (
+                    <>
+                      <Text
+                        pointerEvents="none"
+                        style={[
+                          styles.letterMoonMark,
+                          { color: letterAccentColor },
+                        ]}
+                      >
+                        ☾
+                      </Text>
+                      <View
+                        pointerEvents="none"
+                        style={[
+                          styles.letterMoonGlow,
+                          { borderColor: letterAccentColor },
+                        ]}
+                      />
+                    </>
+                  ) : null}
+                  {design.letterPaper === 'ornament' ? (
+                    <>
+                      <Text
+                        pointerEvents="none"
+                        style={[
+                          styles.letterOrnament,
+                          styles.letterOrnamentTopLeft,
+                          { color: letterAccentColor },
+                        ]}
+                      >
+                        ❦
+                      </Text>
+                      <Text
+                        pointerEvents="none"
+                        style={[
+                          styles.letterOrnament,
+                          styles.letterOrnamentTopRight,
+                          { color: letterAccentColor },
+                        ]}
+                      >
+                        ❦
+                      </Text>
+                      <View
+                        pointerEvents="none"
+                        style={[
+                          styles.letterSideRule,
+                          styles.letterSideRuleLeft,
+                          { backgroundColor: letterRuleColor },
+                        ]}
+                      />
+                      <View
+                        pointerEvents="none"
+                        style={[
+                          styles.letterSideRule,
+                          styles.letterSideRuleRight,
+                          { backgroundColor: letterRuleColor },
+                        ]}
+                      />
+                    </>
+                  ) : null}
+                  {design.letterPaper === 'vintage' ? (
+                    <>
+                      <View
+                        pointerEvents="none"
+                        style={[
+                          styles.letterStampMark,
+                          { borderColor: frameBorderColor },
+                        ]}
+                      />
+                      <Text
+                        pointerEvents="none"
+                        style={[
+                          styles.letterDoodle,
+                          styles.letterDoodleTop,
+                          isDarkTheme
+                            ? styles.darkStarAccent
+                            : styles.warmStarAccent,
+                        ]}
+                      >
+                        ✦
+                      </Text>
+                      <Text
+                        pointerEvents="none"
+                        style={[
+                          styles.letterDoodle,
+                          styles.letterDoodleBottom,
+                          { color: metaColor },
+                        ]}
+                      >
+                        ✧
+                      </Text>
+                      <Text
+                        pointerEvents="none"
+                        style={[
+                          styles.letterFlowerMark,
+                          { color: letterAccentColor },
+                        ]}
+                      >
+                        ✿
+                      </Text>
+                    </>
+                  ) : null}
+                  {design.letterPaper === 'botanical' ? (
+                    <>
+                      <Text
+                        pointerEvents="none"
+                        style={[
+                          styles.letterBotanicalMark,
+                          styles.letterBotanicalTop,
+                          { color: letterAccentColor },
+                        ]}
+                      >
+                        ✾
+                      </Text>
+                      <Text
+                        pointerEvents="none"
+                        style={[
+                          styles.letterBotanicalMark,
+                          styles.letterBotanicalBottom,
+                          { color: letterAccentColor },
+                        ]}
+                      >
+                        ✿
+                      </Text>
+                    </>
+                  ) : null}
+                  {design.letterPaper === 'postcard' ? (
+                    <View
+                      pointerEvents="none"
+                      style={[
+                        styles.letterPostcardStamp,
+                        { borderColor: letterRuleColor },
+                      ]}
+                    />
+                  ) : null}
                   <ScrollView
                     bounces={false}
                     nestedScrollEnabled
+                    scrollEnabled={isBackStoryScrollable}
                     scrollEventThrottle={16}
                     onScroll={event => {
                       backScrollY.current = event.nativeEvent.contentOffset.y;
@@ -1019,7 +1214,11 @@ export function DreamCard({
                       backContentHeight.current = height;
                     }}
                     onLayout={event => {
-                      backLayoutHeight.current = event.nativeEvent.layout.height;
+                      const nextHeight = event.nativeEvent.layout.height;
+                      backLayoutHeight.current = nextHeight;
+                      setBackScrollViewportHeight(current =>
+                        Math.abs(current - nextHeight) < 1 ? current : nextHeight,
+                      );
                     }}
                     onScrollBeginDrag={() => {
                       backTouchMoved.current = true;
@@ -1033,15 +1232,52 @@ export function DreamCard({
                     style={styles.backScroll}
                     contentContainerStyle={styles.letterContent}
                   >
-                    <Text
+                    <View
                       style={[
-                        styles.letterStory,
-                        dreamFontStyle,
-                        { color: designTheme.text },
+                        styles.letterSheetBody,
+                        { minHeight: letterLineCount * letterLineHeight },
                       ]}
                     >
-                      {backStory}
-                    </Text>
+                      {hasLetterRules ? (
+                        <View
+                          pointerEvents="none"
+                          style={styles.letterRuleLayer}
+                        >
+                          {Array.from({ length: letterLineCount }).map(
+                            (_, index) => (
+                              <View
+                                key={`letter-line-${index}`}
+                                style={[
+                                  styles.letterRule,
+                                  {
+                                    borderBottomColor: letterRuleColor,
+                                    height: letterLineHeight,
+                                  },
+                                ]}
+                              />
+                            ),
+                          )}
+                        </View>
+                      ) : null}
+                      <Text
+                        onTextLayout={event => {
+                          const lineCount = event.nativeEvent.lines.length;
+                          setMeasuredBackTextLineCount(current =>
+                            current === lineCount ? current : lineCount,
+                          );
+                        }}
+                        style={[
+                          styles.letterStory,
+                          dreamFontStyle,
+                          {
+                            color: letterTextColor,
+                            lineHeight: letterLineHeight,
+                          },
+                        ]}
+                      >
+                        {backStory}
+                      </Text>
+                    </View>
                   </ScrollView>
                 </View>
               </View>
@@ -1575,6 +1811,21 @@ const styles = StyleSheet.create({
   lightLetterPaper: {
     backgroundColor: '#FFF8EA',
   },
+  ornamentLetterPaper: {
+    backgroundColor: '#FFF9ED',
+  },
+  vintageLetterPaper: {
+    backgroundColor: '#FFF4DF',
+  },
+  botanicalLetterPaper: {
+    backgroundColor: '#FFF9E8',
+  },
+  postcardLetterPaper: {
+    backgroundColor: '#FFF6E4',
+  },
+  moonlitLetterPaper: {
+    backgroundColor: '#28243E',
+  },
   darkLetterPaper: {
     backgroundColor: '#2C2739',
   },
@@ -1617,9 +1868,115 @@ const styles = StyleSheet.create({
     bottom: 22,
     transform: [{ rotate: '8deg' }],
   },
+  letterHeaderStars: {
+    position: 'absolute',
+    top: 19,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontSize: 9.5,
+    fontWeight: '700',
+    includeFontPadding: false,
+    opacity: 0.72,
+  },
+  letterOrnament: {
+    position: 'absolute',
+    top: 22,
+    fontSize: 18,
+    fontWeight: '700',
+    includeFontPadding: false,
+    opacity: 0.7,
+  },
+  letterOrnamentTopLeft: {
+    left: 17,
+    transform: [{ rotate: '-14deg' }],
+  },
+  letterOrnamentTopRight: {
+    right: 17,
+    transform: [{ rotate: '14deg' }, { scaleX: -1 }],
+  },
+  letterSideRule: {
+    position: 'absolute',
+    top: 62,
+    bottom: 29,
+    width: StyleSheet.hairlineWidth,
+    opacity: 0.78,
+  },
+  letterSideRuleLeft: {
+    left: 16,
+  },
+  letterSideRuleRight: {
+    right: 16,
+  },
+  letterFlowerMark: {
+    position: 'absolute',
+    left: 19,
+    bottom: 18,
+    fontSize: 15,
+    fontWeight: '700',
+    includeFontPadding: false,
+    opacity: 0.52,
+    transform: [{ rotate: '-11deg' }],
+  },
+  letterBotanicalMark: {
+    position: 'absolute',
+    fontSize: 16,
+    fontWeight: '700',
+    includeFontPadding: false,
+    opacity: 0.58,
+  },
+  letterBotanicalTop: {
+    top: 24,
+    right: 26,
+    transform: [{ rotate: '13deg' }],
+  },
+  letterBotanicalBottom: {
+    left: 24,
+    bottom: 18,
+    transform: [{ rotate: '-14deg' }],
+  },
+  letterPostcardStamp: {
+    position: 'absolute',
+    top: 24,
+    right: 20,
+    width: 38,
+    height: 30,
+    borderRadius: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    opacity: 0.46,
+  },
+  letterMoonMark: {
+    position: 'absolute',
+    top: 21,
+    right: 24,
+    fontSize: 23,
+    fontWeight: '700',
+    includeFontPadding: false,
+    opacity: 0.86,
+  },
+  letterMoonGlow: {
+    position: 'absolute',
+    right: 17,
+    bottom: 17,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: StyleSheet.hairlineWidth,
+    opacity: 0.22,
+  },
   letterContent: {
     paddingTop: 16,
     paddingBottom: 16,
+  },
+  letterSheetBody: {
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  letterRuleLayer: {
+    ...StyleSheet.absoluteFill,
+  },
+  letterRule: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   letterStory: {
     color: colors.textSecondary,

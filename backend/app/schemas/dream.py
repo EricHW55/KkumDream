@@ -33,6 +33,15 @@ ImageTexture = Literal[
     "colored_pencil",
     "oil_pastel",
 ]
+LetterPaper = Literal[
+    "plain",
+    "lined",
+    "ornament",
+    "vintage",
+    "botanical",
+    "postcard",
+    "moonlit",
+]
 StoryLength = Literal["short", "standard", "long"]
 
 
@@ -41,6 +50,7 @@ class DreamDesign(ApiModel):
     card_frame: CardFrame = "classic"
     font_style: FontStyle = "dahaeng"
     image_texture: ImageTexture = "oil_pastel"
+    letter_paper: LetterPaper = "plain"
 
 
 class DreamDraftCreate(ApiModel):

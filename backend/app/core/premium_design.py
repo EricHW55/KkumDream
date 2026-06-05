@@ -19,6 +19,9 @@ def premium_values(design: dict) -> list[str]:
     font = design.get("font_style")
     if font is not None and font not in settings.free_font_styles:
         found.append(f"font_style:{font}")
+    letter_paper = design.get("letter_paper")
+    if letter_paper is not None and letter_paper not in settings.free_letter_papers:
+        found.append(f"letter_paper:{letter_paper}")
     return found
 
 

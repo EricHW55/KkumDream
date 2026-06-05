@@ -36,6 +36,14 @@ export type DreamImageTexture =
   | 'crayon'
   | 'colored_pencil'
   | 'oil_pastel';
+export type DreamLetterPaper =
+  | 'plain'
+  | 'lined'
+  | 'ornament'
+  | 'vintage'
+  | 'botanical'
+  | 'postcard'
+  | 'moonlit';
 export type DreamStoryLength = 'short' | 'standard' | 'long';
 
 export interface DreamDesign {
@@ -43,6 +51,7 @@ export interface DreamDesign {
   cardFrame: DreamCardFrame;
   fontStyle: DreamFontStyle;
   imageTexture: DreamImageTexture;
+  letterPaper: DreamLetterPaper;
 }
 
 export interface Dream {

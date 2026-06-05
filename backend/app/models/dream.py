@@ -25,6 +25,7 @@ DEFAULT_DREAM_DESIGN = {
     "card_frame": "classic",
     "font_style": "dahaeng",
     "image_texture": "oil_pastel",
+    "letter_paper": "plain",
 }
 
 
@@ -80,7 +81,8 @@ class Dream(Base):
             '"card_color": "beige", '
             '"card_frame": "classic", '
             '"font_style": "dahaeng", '
-            '"image_texture": "oil_pastel"'
+            '"image_texture": "oil_pastel", '
+            '"letter_paper": "plain"'
             "}'::jsonb"
         ),
     )

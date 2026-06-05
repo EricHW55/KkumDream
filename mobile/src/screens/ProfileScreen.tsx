@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { launchImageLibrary, type Asset } from 'react-native-image-picker';
 import {
-  ArrowDown,
   ExternalLink,
   Inbox,
   Minus,
@@ -720,41 +719,7 @@ export function ProfileScreen() {
               pressed && interactionStyles.pressedSoft,
             ]}
           >
-            <View style={styles.claimHeaderIconWrap}>
-              <Inbox color={colors.primaryDark} size={23} strokeWidth={2.2} />
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.claimHeaderArrowWrap,
-                  {
-                    opacity: claimPanelProgress.interpolate({
-                      inputRange: [0, 0.2, 0.8, 1],
-                      outputRange: [0, 1, 0.8, 0.18],
-                    }),
-                    transform: [
-                      {
-                        translateY: claimPanelProgress.interpolate({
-                          inputRange: [0, 0.5, 1],
-                          outputRange: [-9, -1, 5],
-                        }),
-                      },
-                      {
-                        scale: claimPanelProgress.interpolate({
-                          inputRange: [0, 0.5, 1],
-                          outputRange: [0.86, 1, 0.9],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <ArrowDown
-                  color={colors.primaryDark}
-                  size={12}
-                  strokeWidth={2.8}
-                />
-              </Animated.View>
-            </View>
+            <Inbox color={colors.primaryDark} size={23} strokeWidth={2.2} />
             <Text style={styles.settingsHeaderTitle}>꿈카드 받기</Text>
           </Pressable>
 
@@ -1423,18 +1388,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 19,
     includeFontPadding: false,
-  },
-  claimHeaderIconWrap: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  claimHeaderArrowWrap: {
-    position: 'absolute',
-    top: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   blockCountBadge: {
     minWidth: 24,

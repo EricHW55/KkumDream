@@ -13,6 +13,7 @@ export interface FreeDesign {
   cardColors: string[];
   cardFrames: string[];
   fontStyles: string[];
+  letterPapers: string[];
 }
 
 export interface PassInfo {

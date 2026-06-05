@@ -25,6 +25,7 @@ class FreeDesignOut(ApiModel):
     card_colors: list[str]
     card_frames: list[str]
     font_styles: list[str]
+    letter_papers: list[str]
 
 
 class PassInfoOut(ApiModel):

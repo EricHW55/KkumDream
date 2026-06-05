@@ -6,6 +6,7 @@ import type {
   DreamDesign,
   DreamFontStyle,
   DreamImageTexture,
+  DreamLetterPaper,
 } from '../types/dream';
 import { nanumHandwritingFonts } from './fonts';
 
@@ -14,6 +15,7 @@ export const DEFAULT_DREAM_DESIGN: DreamDesign = {
   cardFrame: 'classic',
   fontStyle: 'dahaeng',
   imageTexture: 'oil_pastel',
+  letterPaper: 'plain',
 };
 
 export const CARD_COLOR_OPTIONS: {
@@ -117,6 +119,48 @@ export const IMAGE_TEXTURE_OPTIONS: {
     value: 'colored_pencil',
     label: '색연필',
     description: '섬세한 선과 종이결을 남겨요.',
+  },
+];
+
+export const LETTER_PAPER_OPTIONS: {
+  value: DreamLetterPaper;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'plain',
+    label: '빈 편지지',
+    description: '밑줄 없이 여백과 글씨만 담는 기본 편지지예요.',
+  },
+  {
+    value: 'lined',
+    label: '클래식 밑줄',
+    description: '글줄이 또렷하게 맞는 담백한 편지지예요.',
+  },
+  {
+    value: 'ornament',
+    label: '장식 라인',
+    description: '가장자리에 작은 장식을 얹은 차분한 편지지예요.',
+  },
+  {
+    value: 'vintage',
+    label: '빈티지 스탬프',
+    description: '오래 간직한 편지처럼 스탬프와 별 장식을 더해요.',
+  },
+  {
+    value: 'botanical',
+    label: '작은 꽃잎',
+    description: '모서리에 잔꽃을 얹어 다정한 느낌을 살려요.',
+  },
+  {
+    value: 'postcard',
+    label: '우편 엽서',
+    description: '소인과 우표 칸을 더한 엽서식 편지지예요.',
+  },
+  {
+    value: 'moonlit',
+    label: '달빛 보관함',
+    description: '깊은 밤빛과 금빛 장식이 들어간 패스 편지지예요.',
   },
 ];
 
@@ -227,6 +271,7 @@ const CARD_COLOR_VALUES = CARD_COLOR_OPTIONS.map(option => option.value);
 const CARD_FRAME_VALUES = CARD_FRAME_OPTIONS.map(option => option.value);
 const FONT_STYLE_VALUES = FONT_STYLE_OPTIONS.map(option => option.value);
 const IMAGE_TEXTURE_VALUES = IMAGE_TEXTURE_OPTIONS.map(option => option.value);
+const LETTER_PAPER_VALUES = LETTER_PAPER_OPTIONS.map(option => option.value);
 const FONT_STYLE_FAMILIES: Record<DreamFontStyle, string> = {
   dahaeng: nanumHandwritingFonts.dahaeng,
   daegwangyuri: nanumHandwritingFonts.daegwangyuri,
@@ -303,14 +348,26 @@ export function normalizeDreamDesign(
   )
     ? (design?.imageTexture as DreamImageTexture)
     : DEFAULT_DREAM_DESIGN.imageTexture;
+  const letterPaper = LETTER_PAPER_VALUES.includes(
+    design?.letterPaper as DreamLetterPaper,
+  )
+    ? (design?.letterPaper as DreamLetterPaper)
+    : DEFAULT_DREAM_DESIGN.letterPaper;
 
-  return { cardColor, cardFrame, fontStyle, imageTexture };
+  return { cardColor, cardFrame, fontStyle, imageTexture, letterPaper };
 }
 
 export function getImageTextureLabel(texture: DreamImageTexture): string {
   return (
     IMAGE_TEXTURE_OPTIONS.find(option => option.value === texture)?.label ??
     IMAGE_TEXTURE_OPTIONS[0].label
+  );
+}
+
+export function getLetterPaperLabel(letterPaper: DreamLetterPaper): string {
+  return (
+    LETTER_PAPER_OPTIONS.find(option => option.value === letterPaper)?.label ??
+    LETTER_PAPER_OPTIONS[0].label
   );
 }
 

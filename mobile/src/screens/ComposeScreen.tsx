@@ -28,12 +28,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   Check,
-  Eye,
   Lock,
   Palette,
   PencilLine,
   Search,
   Share2,
+  Sparkles,
   X,
 } from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -74,8 +74,10 @@ import {
   DEFAULT_DREAM_DESIGN,
   FONT_STYLE_OPTIONS,
   IMAGE_TEXTURE_OPTIONS,
+  LETTER_PAPER_OPTIONS,
   getImageTextureLabel,
   getDreamFontStyle,
+  getLetterPaperLabel,
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
@@ -190,6 +192,7 @@ export function ComposeScreen({ navigation }: Props) {
     isColorLocked,
     isFrameLocked,
     isFontLocked,
+    isLetterPaperLocked,
     isToneLocked,
     isStoryLengthLocked,
     isPrivatePostscriptLocked,
@@ -553,6 +556,13 @@ export function ComposeScreen({ navigation }: Props) {
       item => item.value === selectedDesign.imageTexture,
     ) ?? IMAGE_TEXTURE_OPTIONS[0];
   const selectedTextureLabel = getImageTextureLabel(selectedDesign.imageTexture);
+  const selectedLetterPaperOption =
+    LETTER_PAPER_OPTIONS.find(
+      item => item.value === selectedDesign.letterPaper,
+    ) ?? LETTER_PAPER_OPTIONS[0];
+  const selectedLetterPaperLabel = getLetterPaperLabel(
+    selectedDesign.letterPaper,
+  );
   const trimmedLabel = externalLabel.trim();
   const trimmedPrivatePostscript = privatePostscript.trim();
   const recipientReady =
@@ -636,6 +646,14 @@ export function ComposeScreen({ navigation }: Props) {
 
   const updateImageTexture = (imageTexture: DreamDesign['imageTexture']) => {
     updateSelectedDesign({ ...selectedDesign, imageTexture });
+  };
+
+  const updateLetterPaper = (letterPaper: DreamDesign['letterPaper']) => {
+    if (isLetterPaperLocked(letterPaper)) {
+      openPassModal();
+      return;
+    }
+    updateSelectedDesign({ ...selectedDesign, letterPaper });
   };
 
   const handleComposeScroll = (
@@ -1070,6 +1088,47 @@ export function ComposeScreen({ navigation }: Props) {
           </View>
           <Text style={styles.toneHint}>{selectedTextureOption.description}</Text>
 
+          <Text style={styles.label}>편지지</Text>
+          <View style={styles.textureGrid}>
+            {LETTER_PAPER_OPTIONS.map(option => {
+              const isSelected = option.value === selectedDesign.letterPaper;
+              const isLocked = isLetterPaperLocked(option.value);
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  onPress={() => updateLetterPaper(option.value)}
+                  style={({ pressed }) => [
+                    styles.textureOption,
+                    isSelected && styles.textureOptionActive,
+                    pressed && interactionStyles.pressedSoft,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.textureOptionTitle,
+                      isSelected && styles.textureOptionTitleActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  <Text style={styles.textureOptionDescription}>
+                    {option.description}
+                  </Text>
+                  {isLocked ? (
+                    <View style={styles.designLockChip}>
+                      <Lock color={colors.primary} size={11} strokeWidth={2.5} />
+                    </View>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.toneHint}>
+            {selectedLetterPaperOption.description}
+          </Text>
+
           {draft ? (
             <View style={styles.designPanel}>
               <View style={styles.designHeader}>
@@ -1078,7 +1137,8 @@ export function ComposeScreen({ navigation }: Props) {
                   <Text style={styles.designTitle}>카드 디자인</Text>
                   <Text style={styles.designSummary}>
                     {selectedFrameOption.label} · {selectedColorOption.label} ·{' '}
-                    {selectedFontOption.label} · {selectedTextureLabel}
+                    {selectedFontOption.label} · {selectedTextureLabel} ·{' '}
+                    {selectedLetterPaperLabel}
                   </Text>
                 </View>
               </View>
@@ -1101,13 +1161,12 @@ export function ComposeScreen({ navigation }: Props) {
                     >
                       <View style={styles.framePreview}>
                         <DreamCardFrame
-                          compact
-                          backgroundColor={isSelected ? '#FFF8EC' : '#FFFDF6'}
-                          borderColor={isSelected ? colors.primary : '#A89473'}
+                          backgroundColor="#FFF8EC"
+                          borderColor={isSelected ? colors.primary : '#8D775B'}
                           frame={option.value}
-                          height={88}
+                          height={102}
                           style={styles.framePreviewCard}
-                          textureColor="#8A7A61"
+                          textureColor="#725F45"
                         >
                           <View style={styles.framePreviewImage} />
                           <View style={styles.framePreviewLine} />
@@ -1332,7 +1391,8 @@ export function ComposeScreen({ navigation }: Props) {
                 <Text style={styles.designTitle}>카드 디자인</Text>
                 <Text style={styles.designSummary}>
                   {selectedFrameOption.label} · {selectedColorOption.label} ·{' '}
-                  {selectedFontOption.label} · {selectedTextureLabel}
+                  {selectedFontOption.label} · {selectedTextureLabel} ·{' '}
+                  {selectedLetterPaperLabel}
                 </Text>
               </View>
             </View>
@@ -1355,13 +1415,12 @@ export function ComposeScreen({ navigation }: Props) {
                   >
                     <View style={styles.framePreview}>
                       <DreamCardFrame
-                        compact
-                        backgroundColor={isSelected ? '#FFF8EC' : '#FFFDF6'}
-                        borderColor={isSelected ? colors.primary : '#A89473'}
+                        backgroundColor="#FFF8EC"
+                        borderColor={isSelected ? colors.primary : '#8D775B'}
                         frame={option.value}
-                        height={88}
+                        height={102}
                         style={styles.framePreviewCard}
-                        textureColor="#8A7A61"
+                        textureColor="#725F45"
                       >
                         <View style={styles.framePreviewImage} />
                         <View style={styles.framePreviewLine} />
@@ -1492,6 +1551,51 @@ export function ComposeScreen({ navigation }: Props) {
               })}
             </View>
 
+            <Text style={styles.designLabel}>편지지</Text>
+            <View style={styles.textureGrid}>
+              {LETTER_PAPER_OPTIONS.map(option => {
+                const isSelected = option.value === selectedDesign.letterPaper;
+                const isLocked = isLetterPaperLocked(option.value);
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    onPress={() => updateLetterPaper(option.value)}
+                    style={({ pressed }) => [
+                      styles.textureOption,
+                      isSelected && styles.textureOptionActive,
+                      pressed && interactionStyles.pressedSoft,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.textureOptionTitle,
+                        isSelected && styles.textureOptionTitleActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text style={styles.textureOptionDescription}>
+                      {option.description}
+                    </Text>
+                    {isLocked ? (
+                      <View style={styles.designLockChip}>
+                        <Lock
+                          color={colors.primary}
+                          size={11}
+                          strokeWidth={2.5}
+                        />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={styles.designHint}>
+              {selectedLetterPaperOption.description}
+            </Text>
+
             <Text style={styles.designLabel}>뒷면 글씨체</Text>
             <View style={styles.fontGrid}>
               {FONT_STYLE_OPTIONS.map(option => {
@@ -1581,7 +1685,7 @@ export function ComposeScreen({ navigation }: Props) {
             pressed && interactionStyles.pressed,
           ]}
         >
-          <Eye color={colors.primaryDark} size={24} strokeWidth={2.4} />
+          <Sparkles color={colors.primaryDark} size={24} strokeWidth={2.4} />
         </Pressable>
       ) : null}
 
@@ -1864,7 +1968,8 @@ export function ComposeScreen({ navigation }: Props) {
                 <Text style={styles.sheetTitle}>카드 미리보기</Text>
                 <Text style={styles.sheetSubtitle}>
                   {selectedFrameOption.label} · {selectedColorOption.label} ·{' '}
-                  {selectedFontOption.label} · {selectedTextureLabel}
+                  {selectedFontOption.label} · {selectedTextureLabel} ·{' '}
+                  {selectedLetterPaperLabel}
                 </Text>
               </View>
               <Pressable
@@ -2035,6 +2140,7 @@ function getDraftDesignSyncKey(draftId: string, design: DreamDesign) {
     normalized.cardFrame,
     normalized.fontStyle,
     normalized.imageTexture,
+    normalized.letterPaper,
   ].join(':');
 }
 
@@ -2355,6 +2461,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     includeFontPadding: false,
   },
+  designHint: {
+    marginTop: -2,
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 17,
+  },
   designLabel: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
@@ -2369,7 +2483,7 @@ const styles = StyleSheet.create({
   },
   frameOption: {
     width: '48%',
-    minHeight: 154,
+    minHeight: 168,
     borderRadius: 16,
     padding: 11,
     gap: 6,
@@ -2382,7 +2496,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   framePreview: {
-    height: 92,
+    height: 106,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2416,7 +2530,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   framePreviewCard: {
-    width: 58,
+    width: 68,
   },
   framePreviewImage: {
     height: 42,
@@ -2535,6 +2649,7 @@ const styles = StyleSheet.create({
   textureOption: {
     width: '48%',
     minHeight: 82,
+    position: 'relative',
     borderRadius: 16,
     paddingHorizontal: 13,
     paddingVertical: 11,
