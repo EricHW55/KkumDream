@@ -64,7 +64,7 @@ const LETTER_CONTENT_PADDING_BY_PAPER: Record<
   butterfly: { top: 16, bottom: 72 },
   corner_flower: { top: 0, bottom: 18 },
   rose: { top: 16, bottom: 132 },
-  blossom: { top: 6, bottom: 20 },
+  blossom: { top: 0, bottom: 20 },
   wildflower: { top: 18, bottom: 148 },
 };
 const LETTER_TEXT_INSET_BY_PAPER: Record<
@@ -2262,9 +2262,9 @@ const styles = StyleSheet.create({
   },
   letterBlossomInline: {
     alignSelf: 'center',
-    width: 196,
-    height: 112,
-    marginBottom: 2,
+    width: 168,
+    height: 158,
+    marginBottom: 0,
     opacity: 0.56,
     transform: [{ rotate: '-2deg' }],
   },
@@ -2278,13 +2278,13 @@ const styles = StyleSheet.create({
   },
   letterWildflowerTape: {
     position: 'absolute',
-    right: 72,
-    bottom: 30,
+    right: 31,
+    bottom: 33,
     zIndex: 1,
-    width: 54,
+    width: 50,
     height: 15,
     opacity: 0.62,
-    transform: [{ rotate: '-26deg' }],
+    transform: [{ rotate: '-28deg' }],
   },
   letterContent: {
     zIndex: 1,
