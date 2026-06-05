@@ -51,6 +51,8 @@ const LETTER_EXTRA_LINE_COUNT = 3;
 const DEFAULT_LETTER_CONTENT_PADDING = { top: 16, bottom: 16 };
 // Height of the inline blossom flower (keep in sync with letterBlossomInline).
 const BLOSSOM_INLINE_HEIGHT = 158;
+// TEMP: outline the corner-flower box and text edge to check boundary fit.
+const DEBUG_CORNER_FLOWER = true;
 const DEFAULT_LETTER_TEXT_INSET = { top: 0, bottom: 0 };
 const LETTER_CONTENT_PADDING_BY_PAPER: Record<
   DreamLetterPaper,
@@ -1437,6 +1439,7 @@ export function DreamCard({
                           style={[
                             styles.letterDecorationImage,
                             styles.letterCornerFlower,
+                            DEBUG_CORNER_FLOWER && styles.debugFlowerBox,
                           ]}
                         />
                       ) : null}
@@ -2312,6 +2315,10 @@ const styles = StyleSheet.create({
     height: 208,
     opacity: 0.82,
     transform: [{ rotate: '-4deg' }],
+  },
+  debugFlowerBox: {
+    borderWidth: 1,
+    borderColor: 'rgba(220, 40, 40, 0.9)',
   },
   letterRoseDecoration: {
     left: -8,
