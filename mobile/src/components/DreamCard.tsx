@@ -49,6 +49,8 @@ const LETTER_LINE_MAX_COUNT = 72;
 const LETTER_LINE_CHAR_WIDTH = 18;
 const LETTER_EXTRA_LINE_COUNT = 3;
 const DEFAULT_LETTER_CONTENT_PADDING = { top: 16, bottom: 16 };
+// Height of the inline blossom flower (keep in sync with letterBlossomInline).
+const BLOSSOM_INLINE_HEIGHT = 158;
 const DEFAULT_LETTER_TEXT_INSET = { top: 0, bottom: 0 };
 const LETTER_CONTENT_PADDING_BY_PAPER: Record<
   DreamLetterPaper,
@@ -239,9 +241,14 @@ export function DreamCard({
   const backStory = dream.privatePostscript
     ? `${dream.story}\n\np.s. ${dream.privatePostscript}`
     : dream.story;
+  // Carve a top-right triangular gap so the corner flower stays text-free.
+  const displayBackStory =
+    design.letterPaper === 'corner_flower'
+      ? wrapTextForCornerFlower(backStory, LETTER_LINE_CHAR_WIDTH, 7, 11)
+      : backStory;
   const letterLineHeight =
     typeof dreamFontStyle.lineHeight === 'number' ? dreamFontStyle.lineHeight : 27;
-  const estimatedLetterLineCount = backStory
+  const estimatedLetterLineCount = displayBackStory
     .split('\n')
     .reduce(
       (sum, line) =>
@@ -253,10 +260,13 @@ export function DreamCard({
   );
   const measuredLetterLineCount =
     measuredBackTextLineCount ?? estimatedLetterLineCount;
-  const letterTextHeight = Math.max(
-    letterLineHeight,
-    measuredLetterLineCount * letterLineHeight,
-  );
+  // Inline decorations (e.g. the blossom flower) live inside the scroll
+  // content above the text, so their height has to count toward scrollability.
+  const letterInlineDecorationHeight =
+    design.letterPaper === 'blossom' ? BLOSSOM_INLINE_HEIGHT : 0;
+  const letterTextHeight =
+    Math.max(letterLineHeight, measuredLetterLineCount * letterLineHeight) +
+    letterInlineDecorationHeight;
   const letterContentPadding =
     LETTER_CONTENT_PADDING_BY_PAPER[design.letterPaper] ??
     DEFAULT_LETTER_CONTENT_PADDING;
@@ -271,10 +281,9 @@ export function DreamCard({
     backScrollViewportHeight > 0
       ? Math.max(0, backScrollViewportHeight - letterContentVerticalPadding)
       : visibleLetterLineCount * letterLineHeight;
-  const estimatedLetterTextHeight = Math.max(
-    letterLineHeight,
-    estimatedLetterLineCount * letterLineHeight,
-  );
+  const estimatedLetterTextHeight =
+    Math.max(letterLineHeight, estimatedLetterLineCount * letterLineHeight) +
+    letterInlineDecorationHeight;
   const isBackStoryScrollable =
     backScrollViewportHeight > 0
       ? letterTextHeight > letterViewportContentHeight + BACK_SCROLL_EDGE_EPS
@@ -1477,7 +1486,7 @@ export function DreamCard({
                           },
                         ]}
                       >
-                        {backStory}
+                        {displayBackStory}
                       </Text>
                     </View>
                   </ScrollView>
@@ -1520,6 +1529,58 @@ function PaperTape({ crease = 'center', style }: PaperTapeProps) {
       />
     </View>
   );
+}
+
+// Reflow text so the first `steps` lines are short and grow longer downward.
+// With left-aligned text this leaves the top-right corner empty, carving a
+// triangular gap for a top-right corner decoration (e.g. the corner flower).
+function wrapTextForCornerFlower(
+  text: string,
+  fullChars: number,
+  steps: number,
+  topExclude: number,
+): string {
+  const widthForLine = (index: number) =>
+    index >= steps
+      ? fullChars
+      : Math.max(
+          4,
+          fullChars -
+            Math.round((topExclude * (steps - 1 - index)) / (steps - 1)),
+        );
+  const lines: string[] = [];
+  let lineIndex = 0;
+  const pushLine = (value: string) => {
+    lines.push(value);
+    lineIndex += 1;
+  };
+  for (const paragraph of text.split('\n')) {
+    if (paragraph === '') {
+      pushLine('');
+      continue;
+    }
+    let current = '';
+    for (const word of paragraph.split(' ')) {
+      const tentative = current ? `${current} ${word}` : word;
+      if (tentative.length <= widthForLine(lineIndex)) {
+        current = tentative;
+        continue;
+      }
+      if (current) {
+        pushLine(current);
+        current = '';
+      }
+      let rest = word;
+      while (rest.length > widthForLine(lineIndex)) {
+        const cap = widthForLine(lineIndex);
+        pushLine(rest.slice(0, cap));
+        rest = rest.slice(cap);
+      }
+      current = rest;
+    }
+    pushLine(current);
+  }
+  return lines.join('\n');
 }
 
 function formatShortDate(value: string | null | undefined): string {
@@ -2249,7 +2310,7 @@ const styles = StyleSheet.create({
     right: -34,
     width: 208,
     height: 208,
-    opacity: 0.5,
+    opacity: 0.82,
     transform: [{ rotate: '-4deg' }],
   },
   letterRoseDecoration: {
@@ -2284,7 +2345,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 15,
     opacity: 0.62,
-    transform: [{ rotate: '-28deg' }],
+    transform: [{ rotate: '48deg' }],
   },
   letterContent: {
     zIndex: 1,
