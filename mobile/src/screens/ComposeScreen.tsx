@@ -562,10 +562,6 @@ export function ComposeScreen({ navigation }: Props) {
   const selectedFontOption =
     FONT_STYLE_OPTIONS.find(item => item.value === selectedDesign.fontStyle) ??
     FONT_STYLE_OPTIONS[0];
-  const selectedTextureOption =
-    IMAGE_TEXTURE_OPTIONS.find(
-      item => item.value === selectedDesign.imageTexture,
-    ) ?? IMAGE_TEXTURE_OPTIONS[0];
   const selectedTextureLabel = getImageTextureLabel(selectedDesign.imageTexture);
   const selectedLetterPaperOption =
     LETTER_PAPER_OPTIONS.find(
@@ -1065,94 +1061,6 @@ export function ComposeScreen({ navigation }: Props) {
             })}
           </View>
           <Text style={styles.toneHint}>{selectedLength.description}</Text>
-
-          <Text style={styles.label}>그림 질감</Text>
-          <View style={styles.textureGrid}>
-            {IMAGE_TEXTURE_OPTIONS.map(option => {
-              const isSelected = option.value === selectedDesign.imageTexture;
-              return (
-                <Pressable
-                  key={option.value}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => updateImageTexture(option.value)}
-                  style={({ pressed }) => [
-                    styles.textureOption,
-                    isSelected && styles.textureOptionActive,
-                    pressed && interactionStyles.pressedSoft,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.textureOptionTitle,
-                      isSelected && styles.textureOptionTitleActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  <Text style={styles.textureOptionDescription}>
-                    {option.description}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={styles.toneHint}>{selectedTextureOption.description}</Text>
-
-          <Text style={styles.label}>편지지</Text>
-          <View style={styles.textureGrid}>
-            {LETTER_PAPER_OPTIONS.map(option => {
-              const isSelected = option.value === selectedDesign.letterPaper;
-              const isLocked = isLetterPaperLocked(option.value);
-              return (
-                <Pressable
-                  key={option.value}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => updateLetterPaper(option.value)}
-                  style={({ pressed }) => [
-                    styles.textureOption,
-                    isSelected && styles.textureOptionActive,
-                    pressed && interactionStyles.pressedSoft,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.textureOptionTitle,
-                      isSelected && styles.textureOptionTitleActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  <Text style={styles.textureOptionDescription}>
-                    {option.description}
-                  </Text>
-                  {isLocked ? (
-                    <View style={styles.designLockChip}>
-                      <Lock color={colors.primary} size={11} strokeWidth={2.5} />
-                    </View>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={styles.toneHint}>
-            {selectedLetterPaperOption.description}
-          </Text>
-          {selectedDesign.letterPaper === 'postcard' ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setIsStampPreviewVisible(true)}
-              style={({ pressed }) => [
-                styles.stampPreviewButton,
-                pressed && interactionStyles.pressedSoft,
-              ]}
-            >
-              <Text style={styles.stampPreviewButtonText}>
-                우표 보기
-              </Text>
-            </Pressable>
-          ) : null}
 
           {draft ? (
             <View style={styles.designPanel}>
