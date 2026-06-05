@@ -138,21 +138,6 @@ export const LETTER_PAPER_OPTIONS: {
     description: '글줄이 또렷하게 맞는 담백한 편지지예요.',
   },
   {
-    value: 'ornament',
-    label: '장식 라인',
-    description: '가장자리에 작은 장식을 얹은 차분한 편지지예요.',
-  },
-  {
-    value: 'vintage',
-    label: '빈티지 스탬프',
-    description: '오래 간직한 편지처럼 스탬프와 별 장식을 더해요.',
-  },
-  {
-    value: 'botanical',
-    label: '작은 꽃잎',
-    description: '모서리에 잔꽃을 얹어 다정한 느낌을 살려요.',
-  },
-  {
     value: 'postcard',
     label: '우편 엽서',
     description: '소인과 우표 칸을 더한 엽서식 편지지예요.',
@@ -161,6 +146,31 @@ export const LETTER_PAPER_OPTIONS: {
     value: 'moonlit',
     label: '달빛 보관함',
     description: '깊은 밤빛과 금빛 장식이 들어간 패스 편지지예요.',
+  },
+  {
+    value: 'butterfly',
+    label: '나비 산책',
+    description: '분홍 나비가 위아래로 스친 여백 많은 편지지예요.',
+  },
+  {
+    value: 'corner_flower',
+    label: '꽃 모서리',
+    description: '윗모서리에 큰 꽃을 옅게 깔아 여백을 만들어요.',
+  },
+  {
+    value: 'rose',
+    label: '장미 한 송이',
+    description: '아래쪽에 수채 장미를 살짝 얹은 편지지예요.',
+  },
+  {
+    value: 'blossom',
+    label: '분홍 꽃그늘',
+    description: '윗여백에 옅은 꽃잎을 올려 부드럽게 보여요.',
+  },
+  {
+    value: 'wildflower',
+    label: '말린 꽃다발',
+    description: '테이프로 붙인 작은 꽃다발을 곁들여요.',
   },
 ];
 

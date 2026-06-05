@@ -21,6 +21,12 @@ import Animated, {
 import { captureRef } from 'react-native-view-shot';
 
 import paperTexture from '../assets/textures/paper_texture.webp';
+import letterButterfly from '../assets/letter-paper/decorations/butterfly.png';
+import letterButterfly2 from '../assets/letter-paper/decorations/butterfly2.png';
+import letterFlower1 from '../assets/letter-paper/decorations/flower1.png';
+import letterFlower2 from '../assets/letter-paper/decorations/flower2.png';
+import letterFlower3 from '../assets/letter-paper/decorations/flower3.png';
+import letterFlower4 from '../assets/letter-paper/decorations/flower4.png';
 import { colors } from '../theme/colors';
 import {
   CARD_COLOR_THEMES,
@@ -31,7 +37,7 @@ import {
 import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
 import { saveDreamImage, shareDreamImage } from '../native/dreamImageActions';
-import type { Dream } from '../types/dream';
+import type { Dream, DreamLetterPaper } from '../types/dream';
 import { getCachedRooms } from '../data/dreamRepository';
 import { getDisplayMember } from '../data/members';
 import { useSessionStore } from '../store/sessionStore';
@@ -42,6 +48,51 @@ const BACK_SCROLL_EDGE_EPS = 2;
 const LETTER_LINE_MAX_COUNT = 72;
 const LETTER_LINE_CHAR_WIDTH = 18;
 const LETTER_EXTRA_LINE_COUNT = 3;
+const DEFAULT_LETTER_CONTENT_PADDING = { top: 16, bottom: 16 };
+const DEFAULT_LETTER_TEXT_INSET = { top: 0, bottom: 0 };
+const LETTER_CONTENT_PADDING_BY_PAPER: Record<
+  DreamLetterPaper,
+  { top: number; bottom: number }
+> = {
+  plain: DEFAULT_LETTER_CONTENT_PADDING,
+  lined: DEFAULT_LETTER_CONTENT_PADDING,
+  ornament: DEFAULT_LETTER_CONTENT_PADDING,
+  vintage: DEFAULT_LETTER_CONTENT_PADDING,
+  botanical: DEFAULT_LETTER_CONTENT_PADDING,
+  moonlit: DEFAULT_LETTER_CONTENT_PADDING,
+  postcard: { top: 36, bottom: 16 },
+  butterfly: { top: 16, bottom: 72 },
+  corner_flower: { top: 0, bottom: 18 },
+  rose: { top: 16, bottom: 132 },
+  blossom: { top: 6, bottom: 20 },
+  wildflower: { top: 18, bottom: 148 },
+};
+const LETTER_TEXT_INSET_BY_PAPER: Record<
+  DreamLetterPaper,
+  { top: number; bottom: number }
+> = {
+  plain: DEFAULT_LETTER_TEXT_INSET,
+  lined: DEFAULT_LETTER_TEXT_INSET,
+  ornament: DEFAULT_LETTER_TEXT_INSET,
+  vintage: DEFAULT_LETTER_TEXT_INSET,
+  botanical: DEFAULT_LETTER_TEXT_INSET,
+  moonlit: DEFAULT_LETTER_TEXT_INSET,
+  postcard: DEFAULT_LETTER_TEXT_INSET,
+  butterfly: DEFAULT_LETTER_TEXT_INSET,
+  corner_flower: DEFAULT_LETTER_TEXT_INSET,
+  rose: DEFAULT_LETTER_TEXT_INSET,
+  blossom: DEFAULT_LETTER_TEXT_INSET,
+  wildflower: DEFAULT_LETTER_TEXT_INSET,
+};
+export const POSTCARD_STAMP_VARIANTS = [
+  { accent: '#A9815B', background: 'rgba(251, 233, 196, 0.76)', mark: '✦' },
+  { accent: '#8F755F', background: 'rgba(244, 226, 201, 0.78)', mark: '☾' },
+  { accent: '#9B7F4B', background: 'rgba(249, 235, 189, 0.76)', mark: '✿' },
+  { accent: '#7E875F', background: 'rgba(232, 238, 206, 0.76)', mark: '✾' },
+  { accent: '#8F6C8A', background: 'rgba(241, 224, 239, 0.72)', mark: '✧' },
+  { accent: '#7A7F9A', background: 'rgba(226, 231, 245, 0.72)', mark: '★' },
+  { accent: '#9A7053', background: 'rgba(248, 224, 203, 0.74)', mark: '⌁' },
+] as const;
 
 type Props = {
   dream: Dream;
@@ -56,6 +107,7 @@ type Props = {
   giverName?: string;
   receiverName?: string;
   variant?: 'full' | 'lite';
+  initialSide?: 'front' | 'back';
   onParentScrollEnabledChange?: (enabled: boolean) => void;
 };
 
@@ -72,6 +124,7 @@ export function DreamCard({
   giverName: giverNameOverride,
   receiverName: receiverNameOverride,
   variant = 'full',
+  initialSide = 'front',
   onParentScrollEnabledChange,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
@@ -79,9 +132,10 @@ export function DreamCard({
   const isLite = variant === 'lite';
   const isHidden = Boolean(dream.isHidden);
   const flipDisabled = disableFlip || isLite || isHidden;
+  const startsOnBack = initialSide === 'back' && !flipDisabled;
   const useThumbnail = preferThumbnail || isLite;
   const allowImageActions = showImageActions && !isLite;
-  const [isBackVisible, setIsBackVisible] = useState(false);
+  const [isBackVisible, setIsBackVisible] = useState(startsOnBack);
   const [isImageActionPending, setIsImageActionPending] = useState(false);
   const frontCardCaptureRef = useRef<View>(null);
   const backTouchStart = useRef<{ x: number; y: number } | null>(null);
@@ -95,7 +149,7 @@ export function DreamCard({
   const [measuredBackTextLineCount, setMeasuredBackTextLineCount] = useState<
     number | null
   >(null);
-  const rotation = useSharedValue(0);
+  const rotation = useSharedValue(startsOnBack ? 180 : 0);
   const horizontalMargin = size === 'full' ? 44 : 36;
   const requestedCardWidth =
     width ?? Math.min(windowWidth - horizontalMargin, 340);
@@ -162,6 +216,9 @@ export function DreamCard({
   const dreamFontStyle = getDreamFontStyle(design.fontStyle);
   const visibleTags = dream.tags.slice(0, 3);
   const frontDate = formatShortDate(dream.givenAt ?? dream.createdAt);
+  const postcardStampVariant = getPostcardStampVariant(
+    dream.givenAt ?? dream.createdAt,
+  );
   const serifTitleFamily = Platform.select({
     ios: 'Georgia',
     android: 'serif',
@@ -200,9 +257,19 @@ export function DreamCard({
     letterLineHeight,
     measuredLetterLineCount * letterLineHeight,
   );
+  const letterContentPadding =
+    LETTER_CONTENT_PADDING_BY_PAPER[design.letterPaper] ??
+    DEFAULT_LETTER_CONTENT_PADDING;
+  const letterTextInset =
+    LETTER_TEXT_INSET_BY_PAPER[design.letterPaper] ?? DEFAULT_LETTER_TEXT_INSET;
+  const letterContentVerticalPadding =
+    letterContentPadding.top +
+    letterContentPadding.bottom +
+    letterTextInset.top +
+    letterTextInset.bottom;
   const letterViewportContentHeight =
     backScrollViewportHeight > 0
-      ? Math.max(0, backScrollViewportHeight - 32)
+      ? Math.max(0, backScrollViewportHeight - letterContentVerticalPadding)
       : visibleLetterLineCount * letterLineHeight;
   const estimatedLetterTextHeight = Math.max(
     letterLineHeight,
@@ -213,7 +280,13 @@ export function DreamCard({
       ? letterTextHeight > letterViewportContentHeight + BACK_SCROLL_EDGE_EPS
       : estimatedLetterTextHeight > visibleLetterLineCount * letterLineHeight;
   const hasLetterRules =
-    design.letterPaper !== 'plain' && design.letterPaper !== 'postcard';
+    design.letterPaper !== 'plain' &&
+    design.letterPaper !== 'postcard' &&
+    design.letterPaper !== 'butterfly' &&
+    design.letterPaper !== 'corner_flower' &&
+    design.letterPaper !== 'rose' &&
+    design.letterPaper !== 'blossom' &&
+    design.letterPaper !== 'wildflower';
   const letterLineCount = Math.min(
     LETTER_LINE_MAX_COUNT,
     Math.max(1, measuredLetterLineCount + LETTER_EXTRA_LINE_COUNT),
@@ -1050,6 +1123,21 @@ export function DreamCard({
                     !isDarkTheme &&
                       design.letterPaper === 'postcard' &&
                       styles.postcardLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'butterfly' &&
+                      styles.butterflyLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'corner_flower' &&
+                      styles.cornerFlowerLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'rose' &&
+                      styles.roseLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'blossom' &&
+                      styles.blossomLetterPaper,
+                    !isDarkTheme &&
+                      design.letterPaper === 'wildflower' &&
+                      styles.wildflowerLetterPaper,
                     isMoonlitLetterPaper && styles.moonlitLetterPaper,
                     { borderColor: frameBorderColor },
                   ]}
@@ -1193,14 +1281,103 @@ export function DreamCard({
                       </Text>
                     </>
                   ) : null}
+                  {design.letterPaper === 'butterfly' ? (
+                    <>
+                      <Image
+                        resizeMode="contain"
+                        source={letterButterfly}
+                        style={[
+                          styles.letterDecorationImage,
+                          styles.letterButterflyTop,
+                        ]}
+                      />
+                      <Image
+                        resizeMode="contain"
+                        source={letterButterfly2}
+                        style={[
+                          styles.letterDecorationImage,
+                          styles.letterButterflyTopSmall,
+                        ]}
+                      />
+                      <Image
+                        resizeMode="contain"
+                        source={letterButterfly2}
+                        style={[
+                          styles.letterDecorationImage,
+                          styles.letterButterflyBottom,
+                        ]}
+                      />
+                      <Image
+                        resizeMode="contain"
+                        source={letterButterfly2}
+                        style={[
+                          styles.letterDecorationImage,
+                          styles.letterButterflyBottomSmall,
+                        ]}
+                      />
+                    </>
+                  ) : null}
+                  {design.letterPaper === 'rose' ? (
+                    <Image
+                      resizeMode="contain"
+                      source={letterFlower1}
+                      style={[
+                        styles.letterDecorationImage,
+                        styles.letterRoseDecoration,
+                      ]}
+                    />
+                  ) : null}
+                  {design.letterPaper === 'wildflower' ? (
+                    <>
+                      <Image
+                        resizeMode="contain"
+                        source={letterFlower4}
+                        style={[
+                          styles.letterDecorationImage,
+                          styles.letterWildflowerDecoration,
+                        ]}
+                      />
+                      <PaperTape
+                        crease="left"
+                        style={styles.letterWildflowerTape}
+                      />
+                    </>
+                  ) : null}
                   {design.letterPaper === 'postcard' ? (
                     <View
                       pointerEvents="none"
                       style={[
                         styles.letterPostcardStamp,
-                        { borderColor: letterRuleColor },
+                        {
+                          backgroundColor: postcardStampVariant.background,
+                          borderColor: letterRuleColor,
+                        },
                       ]}
-                    />
+                    >
+                      <View
+                        style={[
+                          styles.letterPostcardStampInner,
+                          { borderColor: postcardStampVariant.accent },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.letterPostcardStampMark,
+                            { color: postcardStampVariant.accent },
+                          ]}
+                        >
+                          {postcardStampVariant.mark}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.letterPostcardStampLabel,
+                            { color: postcardStampVariant.accent },
+                          ]}
+                        >
+                          DREAM
+                        </Text>
+                      </View>
+                    </View>
                   ) : null}
                   <ScrollView
                     bounces={false}
@@ -1230,7 +1407,13 @@ export function DreamCard({
                     persistentScrollbar={false}
                     showsVerticalScrollIndicator={false}
                     style={styles.backScroll}
-                    contentContainerStyle={styles.letterContent}
+                    contentContainerStyle={[
+                      styles.letterContent,
+                      {
+                        paddingTop: letterContentPadding.top,
+                        paddingBottom: letterContentPadding.bottom,
+                      },
+                    ]}
                   >
                     <View
                       style={[
@@ -1238,6 +1421,23 @@ export function DreamCard({
                         { minHeight: letterLineCount * letterLineHeight },
                       ]}
                     >
+                      {design.letterPaper === 'corner_flower' ? (
+                        <Image
+                          resizeMode="contain"
+                          source={letterFlower3}
+                          style={[
+                            styles.letterDecorationImage,
+                            styles.letterCornerFlower,
+                          ]}
+                        />
+                      ) : null}
+                      {design.letterPaper === 'blossom' ? (
+                        <Image
+                          resizeMode="contain"
+                          source={letterFlower2}
+                          style={styles.letterBlossomInline}
+                        />
+                      ) : null}
                       {hasLetterRules ? (
                         <View
                           pointerEvents="none"
@@ -1272,6 +1472,8 @@ export function DreamCard({
                           {
                             color: letterTextColor,
                             lineHeight: letterLineHeight,
+                            paddingTop: letterTextInset.top,
+                            paddingBottom: letterTextInset.bottom,
                           },
                         ]}
                       >
@@ -1332,6 +1534,12 @@ function formatShortDate(value: string | null | undefined): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}.${month}.${day}`;
+}
+
+function getPostcardStampVariant(value: string | null | undefined) {
+  const date = value ? new Date(value) : new Date();
+  const day = Number.isNaN(date.getTime()) ? 0 : date.getDay();
+  return POSTCARD_STAMP_VARIANTS[day] ?? POSTCARD_STAMP_VARIANTS[0];
 }
 
 const styles = StyleSheet.create({
@@ -1823,6 +2031,21 @@ const styles = StyleSheet.create({
   postcardLetterPaper: {
     backgroundColor: '#FFF6E4',
   },
+  butterflyLetterPaper: {
+    backgroundColor: '#FFFDFC',
+  },
+  cornerFlowerLetterPaper: {
+    backgroundColor: '#FFF9F2',
+  },
+  roseLetterPaper: {
+    backgroundColor: '#FFF7F0',
+  },
+  blossomLetterPaper: {
+    backgroundColor: '#FFF9F6',
+  },
+  wildflowerLetterPaper: {
+    backgroundColor: '#FFFCF5',
+  },
   moonlitLetterPaper: {
     backgroundColor: '#28243E',
   },
@@ -1937,13 +2160,34 @@ const styles = StyleSheet.create({
   },
   letterPostcardStamp: {
     position: 'absolute',
-    top: 24,
-    right: 20,
-    width: 38,
-    height: 30,
-    borderRadius: 5,
+    top: 22,
+    right: 19,
+    width: 48,
+    height: 40,
+    borderRadius: 7,
+    borderStyle: 'dashed',
+    borderWidth: 0.9,
+    opacity: 0.78,
+    padding: 4,
+  },
+  letterPostcardStampInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 4,
     borderWidth: StyleSheet.hairlineWidth,
-    opacity: 0.46,
+    gap: 1,
+  },
+  letterPostcardStampMark: {
+    fontSize: 13,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  letterPostcardStampLabel: {
+    fontSize: 4.8,
+    fontWeight: '800',
+    letterSpacing: 0,
+    includeFontPadding: false,
   },
   letterMoonMark: {
     position: 'absolute',
@@ -1964,9 +2208,86 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     opacity: 0.22,
   },
+  letterDecorationImage: {
+    position: 'absolute',
+    zIndex: 0,
+  },
+  letterButterflyTop: {
+    top: 38,
+    left: 8,
+    width: 92,
+    height: 76,
+    opacity: 0.5,
+    transform: [{ rotate: '23deg' }],
+  },
+  letterButterflyTopSmall: {
+    top: -1,
+    left: 64,
+    width: 64,
+    height: 64,
+    opacity: 0.5,
+    transform: [{ rotate: '13deg' }],
+  },
+  letterButterflyBottom: {
+    right: 22,
+    bottom: 48,
+    width: 64,
+    height: 64,
+    opacity: 0.52,
+    transform: [{ rotate: '-22deg' }],
+  },
+  letterButterflyBottomSmall: {
+    right: 52,
+    bottom: 10,
+    width: 50,
+    height: 50,
+    opacity: 0.45,
+    transform: [{ rotate: '12deg' }],
+  },
+  letterCornerFlower: {
+    top: -28,
+    right: -34,
+    width: 208,
+    height: 208,
+    opacity: 0.5,
+    transform: [{ rotate: '-4deg' }],
+  },
+  letterRoseDecoration: {
+    left: -8,
+    bottom: 4,
+    width: 132,
+    height: 120,
+    opacity: 0.66,
+    transform: [{ rotate: '4deg' }],
+  },
+  letterBlossomInline: {
+    alignSelf: 'center',
+    width: 196,
+    height: 112,
+    marginBottom: 2,
+    opacity: 0.56,
+    transform: [{ rotate: '-2deg' }],
+  },
+  letterWildflowerDecoration: {
+    right: -26,
+    bottom: -2,
+    width: 158,
+    height: 176,
+    opacity: 0.84,
+    transform: [{ rotate: '18deg' }],
+  },
+  letterWildflowerTape: {
+    position: 'absolute',
+    right: 72,
+    bottom: 30,
+    zIndex: 1,
+    width: 54,
+    height: 15,
+    opacity: 0.62,
+    transform: [{ rotate: '-26deg' }],
+  },
   letterContent: {
-    paddingTop: 16,
-    paddingBottom: 16,
+    zIndex: 1,
   },
   letterSheetBody: {
     position: 'relative',

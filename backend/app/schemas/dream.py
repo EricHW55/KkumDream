@@ -41,6 +41,11 @@ LetterPaper = Literal[
     "botanical",
     "postcard",
     "moonlit",
+    "butterfly",
+    "corner_flower",
+    "rose",
+    "blossom",
+    "wildflower",
 ]
 StoryLength = Literal["short", "standard", "long"]
 

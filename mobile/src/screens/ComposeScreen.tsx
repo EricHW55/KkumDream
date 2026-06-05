@@ -45,7 +45,7 @@ import {
   shareDream,
   updateDream,
 } from '../api/dreams';
-import { DreamCard } from '../components/DreamCard';
+import { DreamCard, POSTCARD_STAMP_VARIANTS } from '../components/DreamCard';
 import { DreamCardFrame } from '../components/DreamCardFrame';
 import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
@@ -142,6 +142,16 @@ const lengthOptions: readonly {
   },
 ];
 
+const STAMP_PREVIEW_WEEKDAYS = [
+  { label: '월', variantIndex: 1 },
+  { label: '화', variantIndex: 2 },
+  { label: '수', variantIndex: 3 },
+  { label: '목', variantIndex: 4 },
+  { label: '금', variantIndex: 5 },
+  { label: '토', variantIndex: 6 },
+  { label: '일', variantIndex: 0 },
+] as const;
+
 type RecipientMode = ComposeRecipientMode;
 type RecipientFriend = {
   id: string;
@@ -210,6 +220,7 @@ export function ComposeScreen({ navigation }: Props) {
   const [isFriendPickerVisible, setIsFriendPickerVisible] = useState(false);
   const [isCardPreviewModalVisible, setIsCardPreviewModalVisible] =
     useState(false);
+  const [isStampPreviewVisible, setIsStampPreviewVisible] = useState(false);
   const [showFloatingPreviewButton, setShowFloatingPreviewButton] =
     useState(false);
   const [friendSearch, setFriendSearch] = useState('');
@@ -1128,6 +1139,20 @@ export function ComposeScreen({ navigation }: Props) {
           <Text style={styles.toneHint}>
             {selectedLetterPaperOption.description}
           </Text>
+          {selectedDesign.letterPaper === 'postcard' ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setIsStampPreviewVisible(true)}
+              style={({ pressed }) => [
+                styles.stampPreviewButton,
+                pressed && interactionStyles.pressedSoft,
+              ]}
+            >
+              <Text style={styles.stampPreviewButtonText}>
+                우표 보기
+              </Text>
+            </Pressable>
+          ) : null}
 
           {draft ? (
             <View style={styles.designPanel}>
@@ -1161,10 +1186,13 @@ export function ComposeScreen({ navigation }: Props) {
                     >
                       <View style={styles.framePreview}>
                         <DreamCardFrame
+                          compact
                           backgroundColor="#FFF8EC"
                           borderColor={isSelected ? colors.primary : '#8D775B'}
+                          contentStyle={styles.framePreviewCardContent}
                           frame={option.value}
-                          height={102}
+                          height={104}
+                          shadowColor="rgba(66, 50, 30, 0.35)"
                           style={styles.framePreviewCard}
                           textureColor="#725F45"
                         >
@@ -1415,10 +1443,13 @@ export function ComposeScreen({ navigation }: Props) {
                   >
                     <View style={styles.framePreview}>
                       <DreamCardFrame
+                        compact
                         backgroundColor="#FFF8EC"
                         borderColor={isSelected ? colors.primary : '#8D775B'}
+                        contentStyle={styles.framePreviewCardContent}
                         frame={option.value}
-                        height={102}
+                        height={104}
+                        shadowColor="rgba(66, 50, 30, 0.35)"
                         style={styles.framePreviewCard}
                         textureColor="#725F45"
                       >
@@ -1595,6 +1626,20 @@ export function ComposeScreen({ navigation }: Props) {
             <Text style={styles.designHint}>
               {selectedLetterPaperOption.description}
             </Text>
+            {selectedDesign.letterPaper === 'postcard' ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setIsStampPreviewVisible(true)}
+                style={({ pressed }) => [
+                  styles.stampPreviewButton,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Text style={styles.stampPreviewButtonText}>
+                  우표 보기
+                </Text>
+              </Pressable>
+            ) : null}
 
             <Text style={styles.designLabel}>뒷면 글씨체</Text>
             <View style={styles.fontGrid}>
@@ -1698,6 +1743,86 @@ export function ComposeScreen({ navigation }: Props) {
             />
           </View>
         </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isStampPreviewVisible}
+        onRequestClose={() => setIsStampPreviewVisible(false)}
+      >
+        <Pressable
+          style={styles.stampPreviewBackdrop}
+          onPress={() => setIsStampPreviewVisible(false)}
+        >
+          <Pressable
+            style={styles.stampPreviewSheet}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.sheetHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.sheetTitle}>우표 보기</Text>
+                <Text style={styles.sheetSubtitle}>
+                  요일마다 달라지는 우표 문양과 색을 확인해요.
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                onPress={() => setIsStampPreviewVisible(false)}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <X color={colors.textSecondary} size={20} />
+              </Pressable>
+            </View>
+            <View style={styles.stampPreviewGrid}>
+              {STAMP_PREVIEW_WEEKDAYS.map(day => {
+                const variant = POSTCARD_STAMP_VARIANTS[day.variantIndex];
+                return (
+                  <View key={day.label} style={styles.stampDayItem}>
+                    <View
+                      style={[
+                        styles.stampDayStamp,
+                        {
+                          backgroundColor: variant.background,
+                          borderColor: variant.accent,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.stampDayStampInner,
+                          { borderColor: variant.accent },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.stampDayStampMark,
+                            { color: variant.accent },
+                          ]}
+                        >
+                          {variant.mark}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.stampDayStampLabel,
+                            { color: variant.accent },
+                          ]}
+                        >
+                          DREAM
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.stampDayLabel}>{day.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal
@@ -1987,7 +2112,11 @@ export function ComposeScreen({ navigation }: Props) {
             <View style={styles.cardPreviewWrap}>
               {previewDream ? (
                 <DreamCard
+                  key={`card-preview-${previewDream.id}-${
+                    isCardPreviewModalVisible ? 'back' : 'closed'
+                  }`}
                   dream={previewDream}
+                  initialSide="back"
                   showImageActions={false}
                   width={modalPreviewCardWidth}
                 />
@@ -2530,9 +2659,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   framePreviewCard: {
-    width: 68,
+    width: 64,
+    shadowColor: '#42321E',
+    shadowOpacity: 0.15,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  framePreviewCardContent: {
+    paddingHorizontal: 10,
+    paddingTop: 13,
+    paddingBottom: 12,
   },
   framePreviewImage: {
+    width: '100%',
     height: 42,
     borderRadius: 4,
     backgroundColor: 'rgba(168, 148, 115, 0.17)',
@@ -2679,6 +2819,95 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 12,
     lineHeight: 17,
+  },
+  stampPreviewButton: {
+    alignSelf: 'flex-start',
+    marginTop: -4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.lavenderTint,
+    backgroundColor: colors.background,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  stampPreviewButtonText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 12,
+    includeFontPadding: false,
+  },
+  stampPreviewBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(40, 35, 63, 0.32)',
+  },
+  stampPreviewSheet: {
+    width: '88%',
+    maxWidth: 360,
+    borderRadius: 22,
+    backgroundColor: colors.cardBase,
+    padding: 18,
+    gap: 16,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    shadowColor: '#2A233F',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 22,
+    elevation: 8,
+  },
+  stampPreviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  stampDayItem: {
+    width: '30%',
+    minWidth: 72,
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.background,
+    paddingVertical: 10,
+  },
+  stampDayStamp: {
+    width: 48,
+    height: 40,
+    borderRadius: 7,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    padding: 4,
+  },
+  stampDayStampInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 1,
+  },
+  stampDayStampMark: {
+    fontSize: 13,
+    fontWeight: '800',
+    includeFontPadding: false,
+  },
+  stampDayStampLabel: {
+    fontSize: 4.8,
+    fontWeight: '800',
+    letterSpacing: 0,
+    includeFontPadding: false,
+  },
+  stampDayLabel: {
+    color: colors.textSecondary,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 12,
+    includeFontPadding: false,
   },
   preview: {
     gap: 16,
