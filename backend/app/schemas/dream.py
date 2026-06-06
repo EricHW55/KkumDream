@@ -42,6 +42,7 @@ LetterPaper = Literal[
     "postcard",
     "moonlit",
     "butterfly",
+    # Kept for stored-card compatibility; the client no longer exposes these.
     "corner_flower",
     "rose",
     "blossom",

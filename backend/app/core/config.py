@@ -74,10 +74,7 @@ class Settings(BaseSettings):
         "postcard",
         "moonlit",
         "butterfly",
-        "corner_flower",
         "rose",
-        "blossom",
-        "wildflower",
     ]
     free_tones: list[str] = ["warm", "polite", "casual"]
     free_story_lengths: list[str] = ["short", "standard"]

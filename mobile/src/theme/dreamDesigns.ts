@@ -144,33 +144,18 @@ export const LETTER_PAPER_OPTIONS: {
   },
   {
     value: 'moonlit',
-    label: '달빛 보관함',
-    description: '깊은 밤빛과 금빛 장식이 들어간 패스 편지지예요.',
+    label: '달구름 잠결',
+    description: '수채 구름과 초승달, 작은 별이 조용히 떠 있는 편지지예요.',
   },
   {
     value: 'butterfly',
-    label: '나비 산책',
-    description: '분홍 나비가 위아래로 스친 여백 많은 편지지예요.',
-  },
-  {
-    value: 'corner_flower',
-    label: '꽃 모서리',
-    description: '윗모서리에 큰 꽃을 옅게 깔아 여백을 만들어요.',
+    label: '꽃비 정류장',
+    description: '분홍 꽃송이와 흩날리는 꽃잎을 카드 가장자리에 올려요.',
   },
   {
     value: 'rose',
-    label: '장미 한 송이',
-    description: '아래쪽에 수채 장미를 살짝 얹은 편지지예요.',
-  },
-  {
-    value: 'blossom',
-    label: '분홍 꽃그늘',
-    description: '윗여백에 옅은 꽃잎을 올려 부드럽게 보여요.',
-  },
-  {
-    value: 'wildflower',
-    label: '말린 꽃다발',
-    description: '테이프로 붙인 작은 꽃다발을 곁들여요.',
+    label: '나비 바람',
+    description: '분홍, 보라, 노란 나비가 여백을 따라 가볍게 날아요.',
   },
 ];
 

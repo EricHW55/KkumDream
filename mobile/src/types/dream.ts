@@ -45,10 +45,7 @@ export type DreamLetterPaper =
   | 'postcard'
   | 'moonlit'
   | 'butterfly'
-  | 'corner_flower'
-  | 'rose'
-  | 'blossom'
-  | 'wildflower';
+  | 'rose';
 export type DreamStoryLength = 'short' | 'standard' | 'long';
 
 export interface DreamDesign {

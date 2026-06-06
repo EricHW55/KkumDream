@@ -21,12 +21,20 @@ import Animated, {
 import { captureRef } from 'react-native-view-shot';
 
 import paperTexture from '../assets/textures/paper_texture.webp';
-import letterButterfly from '../assets/letter-paper/decorations/butterfly.png';
 import letterButterfly2 from '../assets/letter-paper/decorations/butterfly2.png';
+import letterButterfly3 from '../assets/letter-paper/decorations/butterfly3.png';
+import letterButterfly4 from '../assets/letter-paper/decorations/butterfly4.png';
+import letterButterfly5 from '../assets/letter-paper/decorations/butterfly5.png';
+import letterCloud2 from '../assets/letter-paper/decorations/cloud2.png';
+import letterCloud3 from '../assets/letter-paper/decorations/cloud3.png';
+import letterCloud4 from '../assets/letter-paper/decorations/cloud4.png';
 import letterFlower1 from '../assets/letter-paper/decorations/flower1.png';
 import letterFlower2 from '../assets/letter-paper/decorations/flower2.png';
 import letterFlower3 from '../assets/letter-paper/decorations/flower3.png';
 import letterFlower4 from '../assets/letter-paper/decorations/flower4.png';
+import letterMoon from '../assets/letter-paper/decorations/moon.png';
+import letterStar from '../assets/letter-paper/decorations/star.png';
+import letterStarViolet from '../assets/letter-paper/decorations/star_violet.png';
 import { colors } from '../theme/colors';
 import {
   CARD_COLOR_THEMES,
@@ -49,8 +57,6 @@ const LETTER_LINE_MAX_COUNT = 72;
 const LETTER_LINE_CHAR_WIDTH = 18;
 const LETTER_EXTRA_LINE_COUNT = 3;
 const DEFAULT_LETTER_CONTENT_PADDING = { top: 16, bottom: 16 };
-// Height of the inline blossom flower (keep in sync with letterBlossomInline).
-const BLOSSOM_INLINE_HEIGHT = 158;
 const DEFAULT_LETTER_TEXT_INSET = { top: 0, bottom: 0 };
 const LETTER_CONTENT_PADDING_BY_PAPER: Record<
   DreamLetterPaper,
@@ -61,13 +67,10 @@ const LETTER_CONTENT_PADDING_BY_PAPER: Record<
   ornament: DEFAULT_LETTER_CONTENT_PADDING,
   vintage: DEFAULT_LETTER_CONTENT_PADDING,
   botanical: DEFAULT_LETTER_CONTENT_PADDING,
-  moonlit: DEFAULT_LETTER_CONTENT_PADDING,
+  moonlit: { top: 34, bottom: 128 },
   postcard: { top: 36, bottom: 16 },
-  butterfly: { top: 16, bottom: 72 },
-  corner_flower: { top: 0, bottom: 18 },
-  rose: { top: 16, bottom: 132 },
-  blossom: { top: 0, bottom: 20 },
-  wildflower: { top: 18, bottom: 148 },
+  butterfly: { top: 42, bottom: 112 },
+  rose: { top: 22, bottom: 82 },
 };
 const LETTER_TEXT_INSET_BY_PAPER: Record<
   DreamLetterPaper,
@@ -81,10 +84,7 @@ const LETTER_TEXT_INSET_BY_PAPER: Record<
   moonlit: DEFAULT_LETTER_TEXT_INSET,
   postcard: DEFAULT_LETTER_TEXT_INSET,
   butterfly: DEFAULT_LETTER_TEXT_INSET,
-  corner_flower: DEFAULT_LETTER_TEXT_INSET,
   rose: DEFAULT_LETTER_TEXT_INSET,
-  blossom: DEFAULT_LETTER_TEXT_INSET,
-  wildflower: DEFAULT_LETTER_TEXT_INSET,
 };
 export const POSTCARD_STAMP_VARIANTS = [
   { accent: '#A9815B', background: 'rgba(251, 233, 196, 0.76)', mark: '✦' },
@@ -241,11 +241,7 @@ export function DreamCard({
   const backStory = dream.privatePostscript
     ? `${dream.story}\n\np.s. ${dream.privatePostscript}`
     : dream.story;
-  // Carve a top-right triangular gap so the corner flower stays text-free.
-  const displayBackStory =
-    design.letterPaper === 'corner_flower'
-      ? wrapTextForCornerFlower(backStory, LETTER_LINE_CHAR_WIDTH, 7, 11)
-      : backStory;
+  const displayBackStory = backStory;
   const letterLineHeight =
     typeof dreamFontStyle.lineHeight === 'number' ? dreamFontStyle.lineHeight : 27;
   const estimatedLetterLineCount = displayBackStory
@@ -260,13 +256,8 @@ export function DreamCard({
   );
   const measuredLetterLineCount =
     measuredBackTextLineCount ?? estimatedLetterLineCount;
-  // Inline decorations (e.g. the blossom flower) live inside the scroll
-  // content above the text, so their height has to count toward scrollability.
-  const letterInlineDecorationHeight =
-    design.letterPaper === 'blossom' ? BLOSSOM_INLINE_HEIGHT : 0;
   const letterTextHeight =
-    Math.max(letterLineHeight, measuredLetterLineCount * letterLineHeight) +
-    letterInlineDecorationHeight;
+    Math.max(letterLineHeight, measuredLetterLineCount * letterLineHeight);
   const letterContentPadding =
     LETTER_CONTENT_PADDING_BY_PAPER[design.letterPaper] ??
     DEFAULT_LETTER_CONTENT_PADDING;
@@ -282,8 +273,7 @@ export function DreamCard({
       ? Math.max(0, backScrollViewportHeight - letterContentVerticalPadding)
       : visibleLetterLineCount * letterLineHeight;
   const estimatedLetterTextHeight =
-    Math.max(letterLineHeight, estimatedLetterLineCount * letterLineHeight) +
-    letterInlineDecorationHeight;
+    Math.max(letterLineHeight, estimatedLetterLineCount * letterLineHeight);
   const isBackStoryScrollable =
     backScrollViewportHeight > 0
       ? letterTextHeight > letterViewportContentHeight + BACK_SCROLL_EDGE_EPS
@@ -291,28 +281,26 @@ export function DreamCard({
   const hasLetterRules =
     design.letterPaper !== 'plain' &&
     design.letterPaper !== 'postcard' &&
+    design.letterPaper !== 'moonlit' &&
     design.letterPaper !== 'butterfly' &&
-    design.letterPaper !== 'corner_flower' &&
-    design.letterPaper !== 'rose' &&
-    design.letterPaper !== 'blossom' &&
-    design.letterPaper !== 'wildflower';
+    design.letterPaper !== 'rose';
   const letterLineCount = Math.min(
     LETTER_LINE_MAX_COUNT,
     Math.max(1, measuredLetterLineCount + LETTER_EXTRA_LINE_COUNT),
   );
   const isMoonlitLetterPaper = design.letterPaper === 'moonlit';
-  const letterRuleColor = isMoonlitLetterPaper
-    ? 'rgba(245, 215, 147, 0.35)'
-    : isDarkTheme
+  const usesIllustratedLetterPaper =
+    design.letterPaper === 'moonlit' ||
+    design.letterPaper === 'butterfly' ||
+    design.letterPaper === 'rose';
+  const letterRuleColor = isDarkTheme
     ? 'rgba(217, 199, 147, 0.24)'
     : 'rgba(113, 91, 64, 0.26)';
-  const letterAccentColor = isMoonlitLetterPaper
-    ? 'rgba(255, 221, 154, 0.86)'
-    : isDarkTheme
+  const letterAccentColor = isDarkTheme
     ? 'rgba(217, 199, 147, 0.72)'
     : 'rgba(141, 119, 91, 0.72)';
-  const letterTextColor = isMoonlitLetterPaper
-    ? '#FFF7D6'
+  const letterTextColor = usesIllustratedLetterPaper
+    ? '#2D2923'
     : designTheme.text;
   const frontStyle = useAnimatedStyle(() => ({
     transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
@@ -1134,28 +1122,18 @@ export function DreamCard({
                     !isDarkTheme &&
                       design.letterPaper === 'postcard' &&
                       styles.postcardLetterPaper,
-                    !isDarkTheme &&
-                      design.letterPaper === 'butterfly' &&
+                    design.letterPaper === 'butterfly' &&
+                      styles.flowerLetterPaper,
+                    design.letterPaper === 'rose' &&
                       styles.butterflyLetterPaper,
-                    !isDarkTheme &&
-                      design.letterPaper === 'corner_flower' &&
-                      styles.cornerFlowerLetterPaper,
-                    !isDarkTheme &&
-                      design.letterPaper === 'rose' &&
-                      styles.roseLetterPaper,
-                    !isDarkTheme &&
-                      design.letterPaper === 'blossom' &&
-                      styles.blossomLetterPaper,
-                    !isDarkTheme &&
-                      design.letterPaper === 'wildflower' &&
-                      styles.wildflowerLetterPaper,
                     isMoonlitLetterPaper && styles.moonlitLetterPaper,
                     { borderColor: frameBorderColor },
                   ]}
                 >
-                  <PaperTape style={styles.letterTape} />
-                  {design.letterPaper === 'lined' ||
-                  design.letterPaper === 'moonlit' ? (
+                  {usesIllustratedLetterPaper ? null : (
+                    <PaperTape style={styles.letterTape} />
+                  )}
+                  {design.letterPaper === 'lined' ? (
                     <Text
                       pointerEvents="none"
                       style={[
@@ -1167,24 +1145,9 @@ export function DreamCard({
                     </Text>
                   ) : null}
                   {design.letterPaper === 'moonlit' ? (
-                    <>
-                      <Text
-                        pointerEvents="none"
-                        style={[
-                          styles.letterMoonMark,
-                          { color: letterAccentColor },
-                        ]}
-                      >
-                        ☾
-                      </Text>
-                      <View
-                        pointerEvents="none"
-                        style={[
-                          styles.letterMoonGlow,
-                          { borderColor: letterAccentColor },
-                        ]}
-                      />
-                    </>
+                    <View pointerEvents="none" style={styles.letterDecorationClip}>
+                      <MoonCloudLetterDecorations />
+                    </View>
                   ) : null}
                   {design.letterPaper === 'ornament' ? (
                     <>
@@ -1293,66 +1256,14 @@ export function DreamCard({
                     </>
                   ) : null}
                   {design.letterPaper === 'butterfly' ? (
-                    <>
-                      <Image
-                        resizeMode="contain"
-                        source={letterButterfly}
-                        style={[
-                          styles.letterDecorationImage,
-                          styles.letterButterflyTop,
-                        ]}
-                      />
-                      <Image
-                        resizeMode="contain"
-                        source={letterButterfly2}
-                        style={[
-                          styles.letterDecorationImage,
-                          styles.letterButterflyTopSmall,
-                        ]}
-                      />
-                      <Image
-                        resizeMode="contain"
-                        source={letterButterfly2}
-                        style={[
-                          styles.letterDecorationImage,
-                          styles.letterButterflyBottom,
-                        ]}
-                      />
-                      <Image
-                        resizeMode="contain"
-                        source={letterButterfly2}
-                        style={[
-                          styles.letterDecorationImage,
-                          styles.letterButterflyBottomSmall,
-                        ]}
-                      />
-                    </>
+                    <View pointerEvents="none" style={styles.letterDecorationClip}>
+                      <FlowerLetterDecorations />
+                    </View>
                   ) : null}
                   {design.letterPaper === 'rose' ? (
-                    <Image
-                      resizeMode="contain"
-                      source={letterFlower1}
-                      style={[
-                        styles.letterDecorationImage,
-                        styles.letterRoseDecoration,
-                      ]}
-                    />
-                  ) : null}
-                  {design.letterPaper === 'wildflower' ? (
-                    <>
-                      <Image
-                        resizeMode="contain"
-                        source={letterFlower4}
-                        style={[
-                          styles.letterDecorationImage,
-                          styles.letterWildflowerDecoration,
-                        ]}
-                      />
-                      <PaperTape
-                        crease="left"
-                        style={styles.letterWildflowerTape}
-                      />
-                    </>
+                    <View pointerEvents="none" style={styles.letterDecorationClip}>
+                      <ButterflyLetterDecorations />
+                    </View>
                   ) : null}
                   {design.letterPaper === 'postcard' ? (
                     <View
@@ -1432,23 +1343,6 @@ export function DreamCard({
                         { minHeight: letterLineCount * letterLineHeight },
                       ]}
                     >
-                      {design.letterPaper === 'corner_flower' ? (
-                        <Image
-                          resizeMode="contain"
-                          source={letterFlower3}
-                          style={[
-                            styles.letterDecorationImage,
-                            styles.letterCornerFlower,
-                          ]}
-                        />
-                      ) : null}
-                      {design.letterPaper === 'blossom' ? (
-                        <Image
-                          resizeMode="contain"
-                          source={letterFlower2}
-                          style={styles.letterBlossomInline}
-                        />
-                      ) : null}
                       {hasLetterRules ? (
                         <View
                           pointerEvents="none"
@@ -1504,6 +1398,119 @@ export function DreamCard({
   );
 }
 
+function FlowerLetterDecorations() {
+  return (
+    <>
+      <View style={styles.letterFlowerBottomCrop}>
+        <Image
+          resizeMode="contain"
+          source={letterFlower1}
+          style={styles.letterFlowerBottomImage}
+        />
+      </View>
+      <Image
+        resizeMode="contain"
+        source={letterFlower3}
+        style={[styles.letterDecorationImage, styles.letterFlowerTopCluster]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterFlower2}
+        style={[styles.letterDecorationImage, styles.letterFlowerTopSprig]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterFlower4}
+        style={[styles.letterDecorationImage, styles.letterFlowerPetals]}
+      />
+    </>
+  );
+}
+
+function ButterflyLetterDecorations() {
+  return (
+    <>
+      <Image
+        resizeMode="contain"
+        source={letterButterfly2}
+        style={[styles.letterDecorationImage, styles.letterButterflyLeftBottom]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterButterfly3}
+        style={[styles.letterDecorationImage, styles.letterButterflyLeftYellow]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterButterfly5}
+        style={[styles.letterDecorationImage, styles.letterButterflyRightPink]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterButterfly2}
+        style={[styles.letterDecorationImage, styles.letterButterflyRightBlue]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterButterfly4}
+        style={[styles.letterDecorationImage, styles.letterButterflyRightSmall]}
+      />
+    </>
+  );
+}
+
+function MoonCloudLetterDecorations() {
+  return (
+    <>
+      <Image
+        resizeMode="contain"
+        source={letterCloud4}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudBottom]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterStarViolet}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudBottomStarA]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterStarViolet}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudBottomStarB]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterCloud2}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudRight]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterCloud2}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudClusterBack]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterMoon}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudMoon]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterCloud3}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudClusterFront]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterStar}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudStar]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterStarViolet}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudVioletStar]}
+      />
+    </>
+  );
+}
+
 type PaperTapeProps = {
   crease?: 'center' | 'left' | 'right';
   style?: StyleProp<ViewStyle>;
@@ -1531,63 +1538,6 @@ function PaperTape({ crease = 'center', style }: PaperTapeProps) {
       />
     </View>
   );
-}
-
-// Reflow text so the first `steps` lines are short and grow longer downward.
-// With left-aligned text this leaves the top-right corner empty, carving a
-// triangular gap for a top-right corner decoration (e.g. the corner flower).
-// How far a word may cross the boundary before we still wrap after it, so the
-// text fills right up to (or just past) the diagonal instead of stopping short.
-const CORNER_WRAP_TOLERANCE = 2;
-function wrapTextForCornerFlower(
-  text: string,
-  fullChars: number,
-  steps: number,
-  topExclude: number,
-): string {
-  const widthForLine = (index: number) =>
-    index >= steps
-      ? fullChars
-      : Math.max(
-          4,
-          fullChars -
-            Math.round((topExclude * (steps - 1 - index)) / (steps - 1)),
-        );
-  const lines: string[] = [];
-  let lineIndex = 0;
-  const pushLine = (value: string) => {
-    lines.push(value);
-    lineIndex += 1;
-  };
-  for (const paragraph of text.split('\n')) {
-    if (paragraph === '') {
-      pushLine('');
-      continue;
-    }
-    let current = '';
-    for (const word of paragraph.split(' ')) {
-      const cap = widthForLine(lineIndex);
-      const tentative = current ? `${current} ${word}` : word;
-      if (!current) {
-        current = word;
-      } else if (tentative.length <= cap + CORNER_WRAP_TOLERANCE) {
-        // Reaches or only slightly crosses the boundary: keep it on this line.
-        current = tentative;
-      } else {
-        pushLine(current);
-        current = word;
-      }
-      // Once the line has reached the boundary, wrap before the next word.
-      if (current.length >= widthForLine(lineIndex)) {
-        pushLine(current);
-        current = '';
-      }
-    }
-    if (current) {
-      pushLine(current);
-    }
-  }
-  return lines.join('\n');
 }
 
 function formatShortDate(value: string | null | undefined): string {
@@ -2100,23 +2050,14 @@ const styles = StyleSheet.create({
   postcardLetterPaper: {
     backgroundColor: '#FFF6E4',
   },
-  butterflyLetterPaper: {
-    backgroundColor: '#FFFDFC',
-  },
-  cornerFlowerLetterPaper: {
+  flowerLetterPaper: {
     backgroundColor: '#FFF9F2',
   },
-  roseLetterPaper: {
-    backgroundColor: '#FFF7F0',
-  },
-  blossomLetterPaper: {
-    backgroundColor: '#FFF9F6',
-  },
-  wildflowerLetterPaper: {
-    backgroundColor: '#FFFCF5',
+  butterflyLetterPaper: {
+    backgroundColor: '#FFFDF8',
   },
   moonlitLetterPaper: {
-    backgroundColor: '#28243E',
+    backgroundColor: '#FFF9F1',
   },
   darkLetterPaper: {
     backgroundColor: '#2C2739',
@@ -2258,104 +2199,169 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     includeFontPadding: false,
   },
-  letterMoonMark: {
+  letterDecorationClip: {
     position: 'absolute',
-    top: 21,
-    right: 24,
-    fontSize: 23,
-    fontWeight: '700',
-    includeFontPadding: false,
-    opacity: 0.86,
-  },
-  letterMoonGlow: {
-    position: 'absolute',
-    right: 17,
-    bottom: 17,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    borderWidth: StyleSheet.hairlineWidth,
-    opacity: 0.22,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 0,
+    overflow: 'hidden',
+    borderRadius: 18,
   },
   letterDecorationImage: {
     position: 'absolute',
     zIndex: 0,
   },
-  letterButterflyTop: {
-    top: 38,
-    left: 8,
-    width: 92,
-    height: 76,
+  letterFlowerBottomCrop: {
+    position: 'absolute',
+    left: -2,
+    bottom: 2,
+    width: 116,
+    height: 190,
+    overflow: 'hidden',
+  },
+  letterFlowerBottomImage: {
+    position: 'absolute',
+    left: -28,
+    bottom: -18,
+    width: 210,
+    height: 315,
+    opacity: 0.84,
+  },
+  letterFlowerTopCluster: {
+    top: -86,
+    right: -36,
+    width: 204,
+    height: 340,
+    opacity: 0.9,
+    transform: [{ rotate: '-3deg' }],
+  },
+  letterFlowerTopSprig: {
+    top: -66,
+    right: -2,
+    width: 174,
+    height: 290,
+    opacity: 0.9,
+    transform: [{ rotate: '-3deg' }],
+  },
+  letterFlowerPetals: {
+    top: 60,
+    right: 30,
+    width: 184,
+    height: 306,
+    opacity: 0.8,
+    transform: [{ rotate: '2deg' }],
+  },
+  letterButterflyLeftBottom: {
+    left: -42,
+    bottom: -3,
+    width: 132,
+    height: 100,
     opacity: 0.62,
-    transform: [{ rotate: '23deg' }],
+    transform: [{ rotate: '2deg' }],
   },
-  letterButterflyTopSmall: {
-    top: -1,
-    left: 64,
-    width: 64,
-    height: 64,
-    opacity: 0.62,
-    transform: [{ rotate: '13deg' }],
+  letterButterflyLeftYellow: {
+    left: 26,
+    bottom: 118,
+    width: 56,
+    height: 66,
+    opacity: 0.78,
+    transform: [{ rotate: '-17deg' }],
   },
-  letterButterflyBottom: {
-    right: 18,
-    bottom: 44,
-    width: 78,
-    height: 78,
-    opacity: 0.64,
-    transform: [{ rotate: '-22deg' }],
+  letterButterflyRightPink: {
+    top: 112,
+    right: -5,
+    width: 134,
+    height: 101,
+    opacity: 0.48,
+    transform: [{ rotate: '-7deg' }],
   },
-  letterButterflyBottomSmall: {
-    right: 52,
-    bottom: 10,
-    width: 50,
-    height: 50,
-    opacity: 0.56,
-    transform: [{ rotate: '12deg' }],
-  },
-  letterCornerFlower: {
-    top: -28,
-    right: -34,
-    width: 208,
-    height: 208,
-    opacity: 0.82,
+  letterButterflyRightBlue: {
+    top: 56,
+    right: 82,
+    width: 88,
+    height: 66,
+    opacity: 0.5,
     transform: [{ rotate: '-4deg' }],
   },
-  letterRoseDecoration: {
-    left: -8,
-    bottom: 4,
-    width: 132,
-    height: 120,
-    opacity: 0.66,
-    transform: [{ rotate: '4deg' }],
+  letterButterflyRightSmall: {
+    top: 7,
+    right: -5,
+    width: 51,
+    height: 61,
+    opacity: 0.72,
+    transform: [{ rotate: '-12deg' }],
   },
-  letterBlossomInline: {
-    alignSelf: 'center',
-    width: 168,
-    height: 158,
-    marginBottom: 0,
-    opacity: 0.56,
-    transform: [{ rotate: '-2deg' }],
+  letterMoonCloudBottom: {
+    left: -64,
+    bottom: -54,
+    width: 246,
+    height: 246,
+    opacity: 0.72,
+    transform: [{ scaleX: -1 }],
   },
-  letterWildflowerDecoration: {
-    right: -26,
-    bottom: -2,
-    width: 158,
-    height: 176,
-    opacity: 0.84,
-    transform: [{ rotate: '18deg' }],
-  },
-  letterWildflowerTape: {
-    position: 'absolute',
-    right: 36,
-    bottom: 27,
-    zIndex: 1,
-    width: 50,
-    height: 15,
+  letterMoonCloudBottomStarA: {
+    left: 96,
+    bottom: 116,
+    width: 18,
+    height: 18,
     opacity: 0.62,
-    transform: [{ rotate: '42deg' }],
+  },
+  letterMoonCloudBottomStarB: {
+    left: 132,
+    bottom: 91,
+    width: 13,
+    height: 13,
+    opacity: 0.48,
+    transform: [{ rotate: '12deg' }],
+  },
+  letterMoonCloudRight: {
+    top: 230,
+    right: -72,
+    width: 146,
+    height: 146,
+    opacity: 0.62,
+  },
+  letterMoonCloudClusterBack: {
+    top: -15,
+    left: -58,
+    width: 166,
+    height: 166,
+    opacity: 0.76,
+    transform: [{ scaleX: -1 }],
+  },
+  letterMoonCloudMoon: {
+    top: 54,
+    left: 69,
+    width: 54,
+    height: 64,
+    opacity: 0.9,
+    transform: [{ rotate: '7deg' }],
+  },
+  letterMoonCloudClusterFront: {
+    top: 80,
+    left: 43,
+    width: 108,
+    height: 108,
+    opacity: 0.78,
+  },
+  letterMoonCloudStar: {
+    top: 132,
+    left: 79,
+    width: 26,
+    height: 28,
+    opacity: 0.76,
+  },
+  letterMoonCloudVioletStar: {
+    top: 164,
+    left: 111,
+    width: 15,
+    height: 15,
+    opacity: 0.5,
   },
   letterContent: {
+    position: 'relative',
     zIndex: 1,
   },
   letterSheetBody: {
