@@ -932,7 +932,9 @@ export function DreamCard({
                                 fontFamily: frontTitleFamily,
                               },
                             ]}
-                            numberOfLines={2}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.6}
                           >
                             {dream.title}
                           </Text>
@@ -1949,7 +1951,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flexShrink: 1,
     minWidth: 0,
-    maxWidth: '82%',
     fontSize: 19,
     fontWeight: '700',
     lineHeight: 24,
