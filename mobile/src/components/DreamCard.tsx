@@ -1948,6 +1948,8 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     flexShrink: 1,
+    minWidth: 0,
+    maxWidth: '82%',
     fontSize: 19,
     fontWeight: '700',
     lineHeight: 24,
