@@ -51,8 +51,6 @@ const LETTER_EXTRA_LINE_COUNT = 3;
 const DEFAULT_LETTER_CONTENT_PADDING = { top: 16, bottom: 16 };
 // Height of the inline blossom flower (keep in sync with letterBlossomInline).
 const BLOSSOM_INLINE_HEIGHT = 158;
-// TEMP: outline the corner-flower box and text edge to check boundary fit.
-const DEBUG_CORNER_FLOWER = true;
 const DEFAULT_LETTER_TEXT_INSET = { top: 0, bottom: 0 };
 const LETTER_CONTENT_PADDING_BY_PAPER: Record<
   DreamLetterPaper,
@@ -1439,7 +1437,6 @@ export function DreamCard({
                           style={[
                             styles.letterDecorationImage,
                             styles.letterCornerFlower,
-                            DEBUG_CORNER_FLOWER && styles.debugFlowerBox,
                           ]}
                         />
                       ) : null}
@@ -1537,6 +1534,9 @@ function PaperTape({ crease = 'center', style }: PaperTapeProps) {
 // Reflow text so the first `steps` lines are short and grow longer downward.
 // With left-aligned text this leaves the top-right corner empty, carving a
 // triangular gap for a top-right corner decoration (e.g. the corner flower).
+// How far a word may cross the boundary before we still wrap after it, so the
+// text fills right up to (or just past) the diagonal instead of stopping short.
+const CORNER_WRAP_TOLERANCE = 2;
 function wrapTextForCornerFlower(
   text: string,
   fullChars: number,
@@ -1564,24 +1564,26 @@ function wrapTextForCornerFlower(
     }
     let current = '';
     for (const word of paragraph.split(' ')) {
+      const cap = widthForLine(lineIndex);
       const tentative = current ? `${current} ${word}` : word;
-      if (tentative.length <= widthForLine(lineIndex)) {
+      if (!current) {
+        current = word;
+      } else if (tentative.length <= cap + CORNER_WRAP_TOLERANCE) {
+        // Reaches or only slightly crosses the boundary: keep it on this line.
         current = tentative;
-        continue;
+      } else {
+        pushLine(current);
+        current = word;
       }
-      if (current) {
+      // Once the line has reached the boundary, wrap before the next word.
+      if (current.length >= widthForLine(lineIndex)) {
         pushLine(current);
         current = '';
       }
-      let rest = word;
-      while (rest.length > widthForLine(lineIndex)) {
-        const cap = widthForLine(lineIndex);
-        pushLine(rest.slice(0, cap));
-        rest = rest.slice(cap);
-      }
-      current = rest;
     }
-    pushLine(current);
+    if (current) {
+      pushLine(current);
+    }
   }
   return lines.join('\n');
 }
@@ -2281,7 +2283,7 @@ const styles = StyleSheet.create({
     left: 8,
     width: 92,
     height: 76,
-    opacity: 0.5,
+    opacity: 0.62,
     transform: [{ rotate: '23deg' }],
   },
   letterButterflyTopSmall: {
@@ -2289,15 +2291,15 @@ const styles = StyleSheet.create({
     left: 64,
     width: 64,
     height: 64,
-    opacity: 0.5,
+    opacity: 0.62,
     transform: [{ rotate: '13deg' }],
   },
   letterButterflyBottom: {
-    right: 22,
-    bottom: 48,
-    width: 64,
-    height: 64,
-    opacity: 0.52,
+    right: 18,
+    bottom: 44,
+    width: 78,
+    height: 78,
+    opacity: 0.64,
     transform: [{ rotate: '-22deg' }],
   },
   letterButterflyBottomSmall: {
@@ -2305,7 +2307,7 @@ const styles = StyleSheet.create({
     bottom: 10,
     width: 50,
     height: 50,
-    opacity: 0.45,
+    opacity: 0.56,
     transform: [{ rotate: '12deg' }],
   },
   letterCornerFlower: {
@@ -2315,10 +2317,6 @@ const styles = StyleSheet.create({
     height: 208,
     opacity: 0.82,
     transform: [{ rotate: '-4deg' }],
-  },
-  debugFlowerBox: {
-    borderWidth: 1,
-    borderColor: 'rgba(220, 40, 40, 0.9)',
   },
   letterRoseDecoration: {
     left: -8,
@@ -2346,13 +2344,13 @@ const styles = StyleSheet.create({
   },
   letterWildflowerTape: {
     position: 'absolute',
-    right: 31,
-    bottom: 33,
+    right: 36,
+    bottom: 27,
     zIndex: 1,
     width: 50,
     height: 15,
     opacity: 0.62,
-    transform: [{ rotate: '48deg' }],
+    transform: [{ rotate: '42deg' }],
   },
   letterContent: {
     zIndex: 1,
