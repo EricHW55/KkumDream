@@ -1994,7 +1994,7 @@ export function ComposeScreen({ navigation }: Props) {
                       onPress={() => setPremiumBadgeHint('texture')}
                       style={styles.texturePremiumBadge}
                     >
-                      <PassBadge compact opacity={0.99} size={46} />
+                      <PassBadge compact opacity={1} size={46} />
                     </Pressable>
                   ) : null}
                   {premiumBadgeHint === 'texture' &&
@@ -2006,7 +2006,7 @@ export function ComposeScreen({ navigation }: Props) {
                     >
                       <View style={styles.premiumHintTail} />
                       <Text style={styles.premiumHintText}>
-                        패스를 구매하면 쓸수 있어요.
+                        패스를 구매하시면 사용할 수 있어요.
                       </Text>
                     </Pressable>
                   ) : null}
@@ -2120,7 +2120,7 @@ export function ComposeScreen({ navigation }: Props) {
                             onPress={() => setPremiumBadgeHint('letterPaper')}
                             style={styles.letterPaperPremiumBadge}
                           >
-                            <PassBadge compact opacity={0.99} size={46} />
+                            <PassBadge compact opacity={1} size={46} />
                           </Pressable>
                         ) : null}
                         {premiumBadgeHint === 'letterPaper' &&
@@ -2134,7 +2134,7 @@ export function ComposeScreen({ navigation }: Props) {
                           >
                             <View style={styles.premiumHintTailRight} />
                             <Text style={styles.premiumHintText}>
-                              패스를 구매하면 쓸수 있어요.
+                              패스를 구매하시면 사용할 수 있어요.
                             </Text>
                           </Pressable>
                         ) : null}
@@ -3570,12 +3570,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    padding: 2,
+    shadowColor: '#2A233F',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
   },
   texturePremiumHint: {
     position: 'absolute',
     top: 62,
     left: 10,
-    maxWidth: 210,
+    maxWidth: 300,
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -3630,14 +3638,22 @@ const styles = StyleSheet.create({
   },
   letterPaperPremiumBadge: {
     position: 'absolute',
-    top: 14,
-    left: 44,
+    top: 5,
+    left: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    padding: 2,
+    shadowColor: '#2A233F',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
   },
   letterPaperPremiumHint: {
     position: 'absolute',
-    top: 66,
-    left: 30,
-    maxWidth: 210,
+    top: 60,
+    left: 3,
+    maxWidth: 300,
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
