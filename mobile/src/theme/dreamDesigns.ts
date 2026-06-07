@@ -157,6 +157,16 @@ export const LETTER_PAPER_OPTIONS: {
     label: '나비 숨결',
     description: '분홍, 보라, 노란 나비가 여백을 따라 가볍게 날아요.',
   },
+  {
+    value: 'seashell_beach',
+    label: '조갯빛 해변',
+    description: '연한 모래 위로 조개와 산호, 잔잔한 파도가 스며들어요.',
+  },
+  {
+    value: 'cat_nap',
+    label: '고양이 낮잠',
+    description: '꽃잎과 발자국 사이로 포근한 고양이들이 조용히 쉬어요.',
+  },
 ];
 
 export const CARD_COLOR_THEMES: Record<

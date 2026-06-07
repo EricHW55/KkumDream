@@ -45,6 +45,8 @@ LetterPaper = Literal[
     # Kept for stored-card compatibility; the client no longer exposes these.
     "corner_flower",
     "rose",
+    "seashell_beach",
+    "cat_nap",
     "blossom",
     "wildflower",
 ]

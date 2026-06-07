@@ -28,6 +28,8 @@ import { captureRef } from 'react-native-view-shot';
 import letterPaperButterflyBreathTextured from '../assets/letter-paper/baked/butterfly-breath-paper-texture.webp';
 import letterPaperFlowerRainStopTextured from '../assets/letter-paper/baked/flower-rain-stop-paper-texture.webp';
 import letterPaperMoonlitSleepTextured from '../assets/letter-paper/baked/moonlit-sleep-paper-texture.webp';
+import letterPaperCatNap from '../assets/letter-paper/baked/cat.webp';
+import letterPaperSeashellBeach from '../assets/letter-paper/baked/seashell_beach.webp';
 import paperTexture from '../assets/textures/paper_texture.webp';
 import { colors } from '../theme/colors';
 import {
@@ -65,6 +67,8 @@ const LETTER_CONTENT_PADDING_BY_PAPER: Record<
   postcard: { top: 36, bottom: 16 },
   butterfly: { top: 42, bottom: 112 },
   rose: { top: 22, bottom: 82 },
+  seashell_beach: { top: 42, bottom: 130 },
+  cat_nap: { top: 38, bottom: 152 },
 };
 const LETTER_TEXT_INSET_BY_PAPER: Record<
   DreamLetterPaper,
@@ -79,6 +83,8 @@ const LETTER_TEXT_INSET_BY_PAPER: Record<
   postcard: DEFAULT_LETTER_TEXT_INSET,
   butterfly: DEFAULT_LETTER_TEXT_INSET,
   rose: DEFAULT_LETTER_TEXT_INSET,
+  seashell_beach: DEFAULT_LETTER_TEXT_INSET,
+  cat_nap: DEFAULT_LETTER_TEXT_INSET,
 };
 export const POSTCARD_STAMP_VARIANTS = [
   { accent: '#A9815B', background: 'rgba(251, 233, 196, 0.76)', mark: '✦' },
@@ -96,11 +102,15 @@ const ILLUSTRATED_LETTER_PAPER_BACKGROUNDS: Partial<
   moonlit: letterPaperMoonlitSleepTextured,
   butterfly: letterPaperFlowerRainStopTextured,
   rose: letterPaperButterflyBreathTextured,
+  seashell_beach: letterPaperSeashellBeach,
+  cat_nap: letterPaperCatNap,
 };
 const ILLUSTRATED_LETTER_PAPER_BACKGROUND_SOURCES = [
   letterPaperMoonlitSleepTextured,
   letterPaperFlowerRainStopTextured,
   letterPaperButterflyBreathTextured,
+  letterPaperSeashellBeach,
+  letterPaperCatNap,
 ] as const;
 
 type Props = {
@@ -295,7 +305,9 @@ export function DreamCard({
     design.letterPaper !== 'postcard' &&
     design.letterPaper !== 'moonlit' &&
     design.letterPaper !== 'butterfly' &&
-    design.letterPaper !== 'rose';
+    design.letterPaper !== 'rose' &&
+    design.letterPaper !== 'seashell_beach' &&
+    design.letterPaper !== 'cat_nap';
   const filledLetterRuleLineCount =
     fillLetterRules && design.letterPaper === 'lined'
       ? backScrollViewportHeight > 0
@@ -316,7 +328,9 @@ export function DreamCard({
   const usesIllustratedLetterPaper =
     design.letterPaper === 'moonlit' ||
     design.letterPaper === 'butterfly' ||
-    design.letterPaper === 'rose';
+    design.letterPaper === 'rose' ||
+    design.letterPaper === 'seashell_beach' ||
+    design.letterPaper === 'cat_nap';
   const illustratedLetterPaperBackground =
     ILLUSTRATED_LETTER_PAPER_BACKGROUNDS[design.letterPaper];
   const letterRuleColor = isDarkTheme
@@ -1153,6 +1167,10 @@ export function DreamCard({
                       styles.flowerLetterPaper,
                     design.letterPaper === 'rose' &&
                       styles.butterflyLetterPaper,
+                    design.letterPaper === 'seashell_beach' &&
+                      styles.seashellBeachLetterPaper,
+                    design.letterPaper === 'cat_nap' &&
+                      styles.catNapLetterPaper,
                     isMoonlitLetterPaper && styles.moonlitLetterPaper,
                     { borderColor: frameBorderColor },
                   ]}
@@ -1990,6 +2008,12 @@ const styles = StyleSheet.create({
   },
   moonlitLetterPaper: {
     backgroundColor: '#FFF9F1',
+  },
+  seashellBeachLetterPaper: {
+    backgroundColor: '#FBF1E3',
+  },
+  catNapLetterPaper: {
+    backgroundColor: '#F8F0E4',
   },
   darkLetterPaper: {
     backgroundColor: '#2C2739',
