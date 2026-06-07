@@ -25,9 +25,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 
-import letterPaperButterflyBreathTextured from '../assets/letter-paper/baked/butterfly-breath-paper-texture.png';
-import letterPaperFlowerRainStopTextured from '../assets/letter-paper/baked/flower-rain-stop-paper-texture.png';
-import letterPaperMoonlitSleepTextured from '../assets/letter-paper/baked/moonlit-sleep-paper-texture.png';
+import letterPaperButterflyBreathTextured from '../assets/letter-paper/baked/butterfly-breath-paper-texture.webp';
+import letterPaperFlowerRainStopTextured from '../assets/letter-paper/baked/flower-rain-stop-paper-texture.webp';
+import letterPaperMoonlitSleepTextured from '../assets/letter-paper/baked/moonlit-sleep-paper-texture.webp';
 import paperTexture from '../assets/textures/paper_texture.webp';
 import { colors } from '../theme/colors';
 import {
