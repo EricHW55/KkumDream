@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { GestureResponderEvent, StyleProp, ViewStyle } from 'react-native';
+import type {
+  GestureResponderEvent,
+  ImageSourcePropType,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 import {
   Alert,
   Image,
@@ -20,20 +25,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 
+import letterPaperButterflyBreathTextured from '../assets/letter-paper/baked/butterfly-breath-paper-texture.png';
+import letterPaperFlowerRainStopTextured from '../assets/letter-paper/baked/flower-rain-stop-paper-texture.png';
+import letterPaperMoonlitSleepTextured from '../assets/letter-paper/baked/moonlit-sleep-paper-texture.png';
 import paperTexture from '../assets/textures/paper_texture.webp';
-import letterButterfly1 from '../assets/letter-paper/decorations/butterfly1.png';
-import letterButterfly2 from '../assets/letter-paper/decorations/butterfly2.png';
-import letterButterfly3 from '../assets/letter-paper/decorations/butterfly3.png';
-import letterButterfly4 from '../assets/letter-paper/decorations/butterfly4.png';
-import letterButterfly5 from '../assets/letter-paper/decorations/butterfly5.png';
-import letterCloud2 from '../assets/letter-paper/decorations/cloud2.png';
-import letterCloud2_blur from '../assets/letter-paper/decorations/cloud2_blur.png';
-import letterCloud4 from '../assets/letter-paper/decorations/cloud4.png';
-import letterFlower1 from '../assets/letter-paper/decorations/flower1.png';
-import letterFlower2 from '../assets/letter-paper/decorations/flower2.png';
-import letterMoon from '../assets/letter-paper/decorations/moon.png';
-import letterStar from '../assets/letter-paper/decorations/star.png';
-import letterStarViolet from '../assets/letter-paper/decorations/star_violet.png';
 import { colors } from '../theme/colors';
 import {
   CARD_COLOR_THEMES,
@@ -95,6 +90,14 @@ export const POSTCARD_STAMP_VARIANTS = [
   { accent: '#9A7053', background: 'rgba(248, 224, 203, 0.74)', mark: '⌁' },
 ] as const;
 
+const ILLUSTRATED_LETTER_PAPER_BACKGROUNDS: Partial<
+  Record<DreamLetterPaper, ImageSourcePropType>
+> = {
+  moonlit: letterPaperMoonlitSleepTextured,
+  butterfly: letterPaperFlowerRainStopTextured,
+  rose: letterPaperButterflyBreathTextured,
+};
+
 type Props = {
   dream: Dream;
   size?: 'feed' | 'full';
@@ -110,6 +113,7 @@ type Props = {
   variant?: 'full' | 'lite';
   initialSide?: 'front' | 'back';
   disableLetterPaperShadow?: boolean;
+  fillLetterRules?: boolean;
   onParentScrollEnabledChange?: (enabled: boolean) => void;
 };
 
@@ -128,6 +132,7 @@ export function DreamCard({
   variant = 'full',
   initialSide = 'front',
   disableLetterPaperShadow = false,
+  fillLetterRules = false,
   onParentScrollEnabledChange,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
@@ -286,15 +291,29 @@ export function DreamCard({
     design.letterPaper !== 'moonlit' &&
     design.letterPaper !== 'butterfly' &&
     design.letterPaper !== 'rose';
+  const filledLetterRuleLineCount =
+    fillLetterRules && design.letterPaper === 'lined'
+      ? backScrollViewportHeight > 0
+        ? Math.ceil(
+            Math.max(letterLineHeight, letterViewportContentHeight) /
+              letterLineHeight,
+          )
+        : visibleLetterLineCount
+      : 1;
   const letterLineCount = Math.min(
     LETTER_LINE_MAX_COUNT,
-    Math.max(1, measuredLetterLineCount + LETTER_EXTRA_LINE_COUNT),
+    Math.max(
+      filledLetterRuleLineCount,
+      measuredLetterLineCount + LETTER_EXTRA_LINE_COUNT,
+    ),
   );
   const isMoonlitLetterPaper = design.letterPaper === 'moonlit';
   const usesIllustratedLetterPaper =
     design.letterPaper === 'moonlit' ||
     design.letterPaper === 'butterfly' ||
     design.letterPaper === 'rose';
+  const illustratedLetterPaperBackground =
+    ILLUSTRATED_LETTER_PAPER_BACKGROUNDS[design.letterPaper];
   const letterRuleColor = isDarkTheme
     ? 'rgba(217, 199, 147, 0.24)'
     : 'rgba(113, 91, 64, 0.26)';
@@ -1133,6 +1152,18 @@ export function DreamCard({
                     { borderColor: frameBorderColor },
                   ]}
                 >
+                  {illustratedLetterPaperBackground ? (
+                    <View
+                      pointerEvents="none"
+                      style={styles.letterPaperBakedBackgroundClip}
+                    >
+                      <Image
+                        resizeMode="stretch"
+                        source={illustratedLetterPaperBackground}
+                        style={styles.letterPaperBakedBackgroundImage}
+                      />
+                    </View>
+                  ) : null}
                   {usesIllustratedLetterPaper ? null : (
                     <PaperTape style={styles.letterTape} />
                   )}
@@ -1146,11 +1177,6 @@ export function DreamCard({
                     >
                       ✦  ✦  ✦
                     </Text>
-                  ) : null}
-                  {design.letterPaper === 'moonlit' ? (
-                    <View pointerEvents="none" style={styles.letterDecorationClip}>
-                      <MoonCloudLetterDecorations />
-                    </View>
                   ) : null}
                   {design.letterPaper === 'ornament' ? (
                     <>
@@ -1257,16 +1283,6 @@ export function DreamCard({
                         ✿
                       </Text>
                     </>
-                  ) : null}
-                  {design.letterPaper === 'butterfly' ? (
-                    <View pointerEvents="none" style={styles.letterDecorationClip}>
-                      <FlowerLetterDecorations />
-                    </View>
-                  ) : null}
-                  {design.letterPaper === 'rose' ? (
-                    <View pointerEvents="none" style={styles.letterDecorationClip}>
-                      <ButterflyLetterDecorations />
-                    </View>
                   ) : null}
                   {design.letterPaper === 'postcard' ? (
                     <View
@@ -1398,122 +1414,6 @@ export function DreamCard({
         </View>
       </View>
     </View>
-  );
-}
-
-function FlowerLetterDecorations() {
-  return (
-    <>
-      <View style={styles.letterFlowerBottomPlacement}>
-        <View style={styles.letterFlowerBottomCrop}>
-          <Image
-            resizeMode="contain"
-            source={letterFlower1}
-            style={styles.letterFlowerBottomImage}
-          />
-        </View>
-      </View>
-      <Image
-        resizeMode="contain"
-        source={letterFlower2}
-        style={[styles.letterDecorationImage, styles.letterFlowerTopCombined]}
-      />
-    </>
-  );
-}
-
-function ButterflyLetterDecorations() {
-  return (
-    <>
-      <Image
-        resizeMode="contain"
-        source={letterButterfly1}
-        style={[styles.letterDecorationImage, styles.letterButterflyLeftBottom]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterButterfly3}
-        style={[styles.letterDecorationImage, styles.letterButterflyLeftYellow]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterButterfly5}
-        style={[styles.letterDecorationImage, styles.letterButterflyRightPink]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterButterfly2}
-        style={[styles.letterDecorationImage, styles.letterButterflyRightBlue]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterButterfly4}
-        style={[styles.letterDecorationImage, styles.letterButterflyRightSmall]}
-      />
-    </>
-  );
-}
-
-function MoonCloudLetterDecorations() {
-  return (
-    <>
-      <Image
-        resizeMode="contain"
-        source={letterCloud4}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudBottom]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterStarViolet}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudBottomStarA]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterStarViolet}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudBottomStarB]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterCloud2}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudRight]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterCloud2}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudClusterBack]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterMoon}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudMoon]}
-      />
-      <View style={styles.letterMoonCloudClusterFront2Crop}>
-        <Image
-          resizeMode="contain"
-          source={letterCloud2_blur}
-          style={styles.letterMoonCloudClusterFront2}
-        />
-      </View>
-      <View style={styles.letterMoonCloudClusterFrontCrop}>
-        <View style={styles.letterMoonCloudClusterFrontFlip}>
-          <Image
-            resizeMode="contain"
-            source={letterCloud2_blur}
-            style={styles.letterMoonCloudClusterFront}
-          />
-        </View>
-      </View>
-      <Image
-        resizeMode="contain"
-        source={letterStar}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudStar]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterStarViolet}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudVioletStar]}
-      />
-    </>
   );
 }
 
@@ -2211,188 +2111,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     includeFontPadding: false,
   },
-  letterDecorationClip: {
+  letterPaperBakedBackgroundClip: {
     position: 'absolute',
     top: 0,
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 0,
-    overflow: 'hidden',
     borderRadius: 18,
-  },
-  letterDecorationImage: {
-    position: 'absolute',
+    overflow: 'hidden',
     zIndex: 0,
   },
-  letterFlowerBottomPlacement: {
-    position: 'absolute',
-    left: 5,
-    bottom: -30,
-    width: 96,
-    height: 286,
-    transform: [{ scaleX: -1 }, { rotate: '12deg' }],
-  },
-  letterFlowerBottomCrop: {
-    width: 110,
-    height: 286,
-    overflow: 'hidden',
-  },
-  letterFlowerBottomImage: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    width: 210,
-    height: 315,
-    opacity: 0.92,
-  },
-  letterFlowerTopCombined: {
-    top: -62,
-    right: -18,
-    width: 204,
-    height: 306,
-    opacity: 0.88,
-    // transform: [{ rotate: '-2deg' }],
-  },
-  letterButterflyLeftBottom: {
-    left: -35,
-    bottom: 20,
-    width: 132,
-    height: 100,
-    opacity: 0.7,
-    transform: [{ rotate: '7deg' }],
-  },
-  letterButterflyLeftYellow: {
-    left: 36,
-    bottom: 110,
-    width: 56,
-    height: 66,
-    opacity: 0.78,
-    transform: [{ rotate: '7deg' }],
-  },
-  letterButterflyRightPink: {
-    top: 110,
-    right: -22,
-    width: 134,
-    height: 101,
-    opacity: 0.90,
-    transform: [{ rotate: '-20deg' }],
-  },
-  letterButterflyRightBlue: {
-    top: 45,
-    right: 28,
-    width: 80,
-    height: 60,
-    opacity: 0.85,
-    transform: [{ rotate: '13deg' }],
-  },
-  letterButterflyRightSmall: {
-    top: 4,
-    right: 0,
-    width: 51,
-    height: 61,
-    opacity: 0.92,
-    transform: [{ rotate: '-17deg' }],
-  },
-  // 달구름 잠결 배치 조정 지점입니다.
-  // top/left/right/bottom은 베이지 바깥 프레임이 아니라 흰 편지지 안쪽
-  // 영역 기준이며, opacity를 낮추면 수채 장식이 더 연하게 보입니다.
-  letterMoonCloudBottom: {
-    left: -10,
-    bottom: -5,
-    width: 200,
-    height: 200,
-    opacity: 0.94,
-    transform: [{ scaleX: -1 }],
-  },
-  letterMoonCloudBottomStarA: {
-    left: 45,
-    bottom: 90,
-    width: 50,
-    height: 50,
-    opacity: 0.95,
-    transform: [{ rotate: '-3deg' }],
-  },
-  letterMoonCloudBottomStarB: {
-    left: 65,
-    bottom: 115,
-    width: 35,
-    height: 35,
-    opacity: 0.85,
-    // transform: [{ rotate: '3deg' }],
-  },
-  letterMoonCloudRight: {
-    top: 225,
-    right: -32,
-    width: 120,
-    height: 120,
-    opacity: 0.95,
-  },
-  letterMoonCloudClusterBack: {
-    top: 10,
-    left: -15,
-    width: 200,
-    height: 200,
-    opacity: 0.94,
-    transform: [{ scaleX: -1 }],
-  },
-  letterMoonCloudMoon: {
-    top: 75,
-    left: 42,
-    width: 58,
-    height: 68,
-    opacity: 1,
-    transform: [{ rotate: '-7deg' }],
-  },
-  letterMoonCloudClusterFront2Crop: {
-    position: 'absolute',
-    top: 99,
-    left: -57,
-    width: 95,
-    height: 100,
-    overflow: 'hidden',
-  },
-  letterMoonCloudClusterFrontCrop: {
-    position: 'absolute',
-    top: 100,
-    left: 22,
-    width: 80,
-    height: 100,
-    overflow: 'hidden',
-  },
-  letterMoonCloudClusterFrontFlip: {
-    position: 'absolute',
-    top: 0,
-    left: -12,
-    width: 100,
-    height: 100,
-    transform: [{ scaleX: -1 }],
-  },
-  letterMoonCloudClusterFront: {
-    width: 100,
-    height: 100,
-    opacity: 0.84,
-  },
-  letterMoonCloudClusterFront2: {
-    width: 100,
-    height: 100,
-    opacity: 0.84,
-  },
-  letterMoonCloudStar: {
-    top: 152,
-    left: 53,
-    width: 28,
-    height: 30,
-    opacity: 0.95,
-    transform: [{ rotate: '-7deg' }],
-  },
-  letterMoonCloudVioletStar: {
-    top: 170,
-    left: 75,
-    width: 35,
-    height: 35,
-    opacity: 0.85,
-    transform: [{ rotate: '4deg' }],
+  letterPaperBakedBackgroundImage: {
+    width: '100%',
+    height: '100%',
   },
   letterContent: {
     position: 'relative',

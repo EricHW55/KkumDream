@@ -1,0 +1,344 @@
+This file keeps the original React Native illustrated letter-paper layout for
+future design edits. It is intentionally saved with a .txt suffix so it is not
+compiled by TypeScript or bundled by Metro.
+
+Original decoration imports:
+
+```tsx
+import letterButterfly1 from '../assets/letter-paper/decorations/butterfly1.png';
+import letterButterfly2 from '../assets/letter-paper/decorations/butterfly2.png';
+import letterButterfly3 from '../assets/letter-paper/decorations/butterfly3.png';
+import letterButterfly4 from '../assets/letter-paper/decorations/butterfly4.png';
+import letterButterfly5 from '../assets/letter-paper/decorations/butterfly5.png';
+import letterCloud2 from '../assets/letter-paper/decorations/cloud2.png';
+import letterCloud2_blur from '../assets/letter-paper/decorations/cloud2_blur.png';
+import letterCloud4 from '../assets/letter-paper/decorations/cloud4.png';
+import letterFlower1 from '../assets/letter-paper/decorations/flower1.png';
+import letterFlower2 from '../assets/letter-paper/decorations/flower2.png';
+import letterMoon from '../assets/letter-paper/decorations/moon.png';
+import letterStar from '../assets/letter-paper/decorations/star.png';
+import letterStarViolet from '../assets/letter-paper/decorations/star_violet.png';
+```
+
+Original render branches:
+
+```tsx
+{design.letterPaper === 'moonlit' ? (
+  <View pointerEvents="none" style={styles.letterDecorationClip}>
+    <MoonCloudLetterDecorations />
+  </View>
+) : null}
+{design.letterPaper === 'butterfly' ? (
+  <View pointerEvents="none" style={styles.letterDecorationClip}>
+    <FlowerLetterDecorations />
+  </View>
+) : null}
+{design.letterPaper === 'rose' ? (
+  <View pointerEvents="none" style={styles.letterDecorationClip}>
+    <ButterflyLetterDecorations />
+  </View>
+) : null}
+```
+
+Original decoration components:
+
+```tsx
+function FlowerLetterDecorations() {
+  return (
+    <>
+      <View style={styles.letterFlowerBottomPlacement}>
+        <View style={styles.letterFlowerBottomCrop}>
+          <Image
+            resizeMode="contain"
+            source={letterFlower1}
+            style={styles.letterFlowerBottomImage}
+          />
+        </View>
+      </View>
+      <Image
+        resizeMode="contain"
+        source={letterFlower2}
+        style={[styles.letterDecorationImage, styles.letterFlowerTopCombined]}
+      />
+    </>
+  );
+}
+
+function ButterflyLetterDecorations() {
+  return (
+    <>
+      <Image
+        resizeMode="contain"
+        source={letterButterfly1}
+        style={[styles.letterDecorationImage, styles.letterButterflyLeftBottom]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterButterfly3}
+        style={[styles.letterDecorationImage, styles.letterButterflyLeftYellow]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterButterfly5}
+        style={[styles.letterDecorationImage, styles.letterButterflyRightPink]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterButterfly2}
+        style={[styles.letterDecorationImage, styles.letterButterflyRightBlue]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterButterfly4}
+        style={[styles.letterDecorationImage, styles.letterButterflyRightSmall]}
+      />
+    </>
+  );
+}
+
+function MoonCloudLetterDecorations() {
+  return (
+    <>
+      <Image
+        resizeMode="contain"
+        source={letterCloud4}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudBottom]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterStarViolet}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudBottomStarA]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterStarViolet}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudBottomStarB]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterCloud2}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudRight]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterCloud2}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudClusterBack]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterMoon}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudMoon]}
+      />
+      <View style={styles.letterMoonCloudClusterFront2Crop}>
+        <Image
+          resizeMode="contain"
+          source={letterCloud2_blur}
+          style={styles.letterMoonCloudClusterFront2}
+        />
+      </View>
+      <View style={styles.letterMoonCloudClusterFrontCrop}>
+        <View style={styles.letterMoonCloudClusterFrontFlip}>
+          <Image
+            resizeMode="contain"
+            source={letterCloud2_blur}
+            style={styles.letterMoonCloudClusterFront}
+          />
+        </View>
+      </View>
+      <Image
+        resizeMode="contain"
+        source={letterStar}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudStar]}
+      />
+      <Image
+        resizeMode="contain"
+        source={letterStarViolet}
+        style={[styles.letterDecorationImage, styles.letterMoonCloudVioletStar]}
+      />
+    </>
+  );
+}
+```
+
+Original style entries:
+
+```tsx
+letterDecorationClip: {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+  zIndex: 0,
+  overflow: 'hidden',
+  borderRadius: 18,
+},
+letterDecorationImage: {
+  position: 'absolute',
+  zIndex: 0,
+},
+letterFlowerBottomPlacement: {
+  position: 'absolute',
+  left: 5,
+  bottom: -30,
+  width: 96,
+  height: 286,
+  transform: [{ scaleX: -1 }, { rotate: '12deg' }],
+},
+letterFlowerBottomCrop: {
+  width: 110,
+  height: 286,
+  overflow: 'hidden',
+},
+letterFlowerBottomImage: {
+  position: 'absolute',
+  left: 0,
+  top: 0,
+  width: 210,
+  height: 315,
+  opacity: 0.92,
+},
+letterFlowerTopCombined: {
+  top: -62,
+  right: -18,
+  width: 204,
+  height: 306,
+  opacity: 0.88,
+},
+letterButterflyLeftBottom: {
+  left: -35,
+  bottom: 20,
+  width: 132,
+  height: 100,
+  opacity: 0.7,
+  transform: [{ rotate: '7deg' }],
+},
+letterButterflyLeftYellow: {
+  left: 36,
+  bottom: 110,
+  width: 56,
+  height: 66,
+  opacity: 0.78,
+  transform: [{ rotate: '7deg' }],
+},
+letterButterflyRightPink: {
+  top: 110,
+  right: -22,
+  width: 134,
+  height: 101,
+  opacity: 0.9,
+  transform: [{ rotate: '-20deg' }],
+},
+letterButterflyRightBlue: {
+  top: 45,
+  right: 28,
+  width: 80,
+  height: 60,
+  opacity: 0.85,
+  transform: [{ rotate: '13deg' }],
+},
+letterButterflyRightSmall: {
+  top: 4,
+  right: 0,
+  width: 51,
+  height: 61,
+  opacity: 0.92,
+  transform: [{ rotate: '-17deg' }],
+},
+letterMoonCloudBottom: {
+  left: -10,
+  bottom: -5,
+  width: 200,
+  height: 200,
+  opacity: 0.94,
+  transform: [{ scaleX: -1 }],
+},
+letterMoonCloudBottomStarA: {
+  left: 45,
+  bottom: 90,
+  width: 50,
+  height: 50,
+  opacity: 0.95,
+  transform: [{ rotate: '-3deg' }],
+},
+letterMoonCloudBottomStarB: {
+  left: 65,
+  bottom: 115,
+  width: 35,
+  height: 35,
+  opacity: 0.85,
+},
+letterMoonCloudRight: {
+  top: 225,
+  right: -32,
+  width: 120,
+  height: 120,
+  opacity: 0.95,
+},
+letterMoonCloudClusterBack: {
+  top: 10,
+  left: -15,
+  width: 200,
+  height: 200,
+  opacity: 0.94,
+  transform: [{ scaleX: -1 }],
+},
+letterMoonCloudMoon: {
+  top: 75,
+  left: 42,
+  width: 58,
+  height: 68,
+  opacity: 1,
+  transform: [{ rotate: '-7deg' }],
+},
+letterMoonCloudClusterFront2Crop: {
+  position: 'absolute',
+  top: 99,
+  left: -57,
+  width: 95,
+  height: 100,
+  overflow: 'hidden',
+},
+letterMoonCloudClusterFrontCrop: {
+  position: 'absolute',
+  top: 100,
+  left: 22,
+  width: 80,
+  height: 100,
+  overflow: 'hidden',
+},
+letterMoonCloudClusterFrontFlip: {
+  position: 'absolute',
+  top: 0,
+  left: -12,
+  width: 100,
+  height: 100,
+  transform: [{ scaleX: -1 }],
+},
+letterMoonCloudClusterFront: {
+  width: 100,
+  height: 100,
+  opacity: 0.84,
+},
+letterMoonCloudClusterFront2: {
+  width: 100,
+  height: 100,
+  opacity: 0.84,
+},
+letterMoonCloudStar: {
+  top: 152,
+  left: 53,
+  width: 28,
+  height: 30,
+  opacity: 0.95,
+  transform: [{ rotate: '-7deg' }],
+},
+letterMoonCloudVioletStar: {
+  top: 170,
+  left: 75,
+  width: 35,
+  height: 35,
+  opacity: 0.85,
+  transform: [{ rotate: '4deg' }],
+},
+```

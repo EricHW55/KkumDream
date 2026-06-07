@@ -1806,14 +1806,17 @@ export function ComposeScreen({ navigation }: Props) {
                     { width: letterPaperPreviewCardWidth },
                   ]}
                 >
-                  <DreamCard
-                    dream={previewItem}
-                    initialSide="back"
-                    disableFlip
-                    disableLetterPaperShadow
-                    showImageActions={false}
-                    width={letterPaperPreviewCardWidth}
-                  />
+                  <View style={styles.letterPaperPreviewStage}>
+                    <DreamCard
+                      dream={previewItem}
+                      initialSide="back"
+                      disableFlip
+                      disableLetterPaperShadow
+                      fillLetterRules
+                      showImageActions={false}
+                      width={letterPaperPreviewCardWidth}
+                    />
+                  </View>
                 </View>
               ))}
             </ScrollView>
@@ -3215,10 +3218,16 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
   },
   letterPaperPreviewPager: {
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   letterPaperPreviewPage: {
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  letterPaperPreviewStage: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   letterPaperPreviewDots: {
     flexDirection: 'row',
