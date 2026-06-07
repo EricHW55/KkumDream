@@ -28,6 +28,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   Check,
+  Eye,
   Lock,
   Palette,
   PencilLine,
@@ -82,7 +83,12 @@ import {
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
 import { fontFamily } from '../theme/typography';
-import type { Dream, DreamDesign, DreamStoryLength } from '../types/dream';
+import type {
+  Dream,
+  DreamDesign,
+  DreamLetterPaper,
+  DreamStoryLength,
+} from '../types/dream';
 
 const PRIVATE_POSTSCRIPT_MAX_LENGTH = 120;
 const VISIBLE_ROOM_PICKER_COUNT = 4;
@@ -220,9 +226,13 @@ export function ComposeScreen({ navigation }: Props) {
   const [isFriendPickerVisible, setIsFriendPickerVisible] = useState(false);
   const [isCardPreviewModalVisible, setIsCardPreviewModalVisible] =
     useState(false);
+  const [isLetterPaperPreviewVisible, setIsLetterPaperPreviewVisible] =
+    useState(false);
+  const [letterPaperPreviewIndex, setLetterPaperPreviewIndex] = useState(0);
   const [isStampPreviewVisible, setIsStampPreviewVisible] = useState(false);
   const [showFloatingPreviewButton, setShowFloatingPreviewButton] =
     useState(false);
+  const letterPaperPreviewScrollRef = useRef<ScrollView>(null);
   const [friendSearch, setFriendSearch] = useState('');
   const [recipientMode, setRecipientMode] = useState<RecipientMode>(() =>
     initialComposeSnapshot?.recipientMode === 'external'
@@ -582,6 +592,10 @@ export function ComposeScreen({ navigation }: Props) {
     Math.min(windowWidth - 56, 340),
     260,
   );
+  const letterPaperPreviewCardWidth = Math.max(
+    Math.min(windowWidth - 96, 300),
+    240,
+  );
   const selectedReceiver = selectedReceiverId
     ? friends.find(friend => friend.id === selectedReceiverId) ??
       {
@@ -616,6 +630,41 @@ export function ComposeScreen({ navigation }: Props) {
         design: selectedDesign,
       }
     : null;
+  const letterPaperPreviewDreams = useMemo(
+    () =>
+      LETTER_PAPER_OPTIONS.map(option =>
+        buildLetterPaperPreviewDream(
+          option.value,
+          selectedDesign,
+          currentUserId,
+        ),
+      ),
+    [currentUserId, selectedDesign],
+  );
+  const activeLetterPaperPreviewOption =
+    LETTER_PAPER_OPTIONS[letterPaperPreviewIndex] ?? LETTER_PAPER_OPTIONS[0];
+
+  useEffect(() => {
+    if (!isLetterPaperPreviewVisible) {
+      return undefined;
+    }
+    const nextIndex = LETTER_PAPER_OPTIONS.findIndex(
+      option => option.value === selectedDesign.letterPaper,
+    );
+    const boundedIndex = Math.max(0, nextIndex);
+    setLetterPaperPreviewIndex(boundedIndex);
+    const frameId = requestAnimationFrame(() => {
+      letterPaperPreviewScrollRef.current?.scrollTo({
+        x: boundedIndex * letterPaperPreviewCardWidth,
+        animated: false,
+      });
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [
+    isLetterPaperPreviewVisible,
+    letterPaperPreviewCardWidth,
+    selectedDesign.letterPaper,
+  ]);
 
   const updateSelectedDesign = (nextDesign: DreamDesign) => {
     const normalizedDesign = normalizeDreamDesign(nextDesign);
@@ -661,6 +710,39 @@ export function ComposeScreen({ navigation }: Props) {
       return;
     }
     updateSelectedDesign({ ...selectedDesign, letterPaper });
+  };
+
+  const openLetterPaperPreview = () => {
+    const nextIndex = LETTER_PAPER_OPTIONS.findIndex(
+      option => option.value === selectedDesign.letterPaper,
+    );
+    setLetterPaperPreviewIndex(Math.max(0, nextIndex));
+    setIsLetterPaperPreviewVisible(true);
+  };
+
+  const updateLetterPaperPreviewIndexFromOffset = (offsetX: number) => {
+    const nextIndex = Math.round(
+      offsetX / letterPaperPreviewCardWidth,
+    );
+    const boundedIndex = Math.max(
+      0,
+      Math.min(LETTER_PAPER_OPTIONS.length - 1, nextIndex),
+    );
+    setLetterPaperPreviewIndex(current =>
+      current === boundedIndex ? current : boundedIndex,
+    );
+  };
+
+  const handleLetterPaperPreviewScroll = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    updateLetterPaperPreviewIndexFromOffset(event.nativeEvent.contentOffset.x);
+  };
+
+  const handleLetterPaperPreviewScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    updateLetterPaperPreviewIndexFromOffset(event.nativeEvent.contentOffset.x);
   };
 
   const handleComposeScroll = (
@@ -1490,7 +1572,22 @@ export function ComposeScreen({ navigation }: Props) {
               })}
             </View>
 
-            <Text style={styles.designLabel}>편지지</Text>
+            <View style={styles.designLabelRow}>
+              <Text style={styles.designLabel}>편지지</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={openLetterPaperPreview}
+                style={({ pressed }) => [
+                  styles.letterPaperPreviewButton,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Eye color={colors.primaryDark} size={14} strokeWidth={2.4} />
+                <Text style={styles.letterPaperPreviewButtonText}>
+                  편지지 보기
+                </Text>
+              </Pressable>
+            </View>
             <View style={styles.textureGrid}>
               {LETTER_PAPER_OPTIONS.map(option => {
                 const isSelected = option.value === selectedDesign.letterPaper;
@@ -1651,6 +1748,88 @@ export function ComposeScreen({ navigation }: Props) {
             />
           </View>
         </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isLetterPaperPreviewVisible}
+        onRequestClose={() => setIsLetterPaperPreviewVisible(false)}
+      >
+        <Pressable
+          style={styles.cardPreviewBackdrop}
+          onPress={() => setIsLetterPaperPreviewVisible(false)}
+        >
+          <Pressable
+            style={styles.letterPaperPreviewSheet}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.sheetHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.sheetTitle}>편지지 보기</Text>
+                <Text style={styles.sheetSubtitle}>
+                  {activeLetterPaperPreviewOption.label} ·{' '}
+                  {activeLetterPaperPreviewOption.description}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                onPress={() => setIsLetterPaperPreviewVisible(false)}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <X color={colors.textSecondary} size={20} />
+              </Pressable>
+            </View>
+            <ScrollView
+              ref={letterPaperPreviewScrollRef}
+              horizontal
+              pagingEnabled
+              bounces={false}
+              onScroll={handleLetterPaperPreviewScroll}
+              onMomentumScrollEnd={handleLetterPaperPreviewScrollEnd}
+              scrollEventThrottle={16}
+              showsHorizontalScrollIndicator={false}
+              style={[
+                styles.letterPaperPreviewPager,
+                { width: letterPaperPreviewCardWidth },
+              ]}
+            >
+              {letterPaperPreviewDreams.map(previewItem => (
+                <View
+                  key={`letter-paper-preview-${previewItem.design?.letterPaper}`}
+                  style={[
+                    styles.letterPaperPreviewPage,
+                    { width: letterPaperPreviewCardWidth },
+                  ]}
+                >
+                  <DreamCard
+                    dream={previewItem}
+                    initialSide="back"
+                    disableFlip
+                    showImageActions={false}
+                    width={letterPaperPreviewCardWidth}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.letterPaperPreviewDots}>
+              {LETTER_PAPER_OPTIONS.map((option, index) => (
+                <View
+                  key={`letter-paper-dot-${option.value}`}
+                  style={[
+                    styles.letterPaperPreviewDot,
+                    index === letterPaperPreviewIndex &&
+                      styles.letterPaperPreviewDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal
@@ -2147,6 +2326,42 @@ function getSnapshotRawInput(
     : draft?.rawInput ?? '';
 }
 
+function buildLetterPaperPreviewDream(
+  letterPaper: DreamLetterPaper,
+  design: DreamDesign,
+  userId: string,
+): Dream {
+  return {
+    id: `letter-paper-preview-${letterPaper}`,
+    giverId: userId,
+    receiverId: null,
+    receiverLabel: null,
+    giverDisplayName: null,
+    receiverDisplayName: null,
+    privatePostscript: null,
+    groupIds: [],
+    rawInput: '',
+    title: '',
+    titleVisible: false,
+    shortMessage: '',
+    summary: '',
+    story: '',
+    imagePrompt: '',
+    imageUrl: null,
+    thumbnailUrl: null,
+    mainMood: '',
+    tags: [],
+    design: normalizeDreamDesign({ ...design, letterPaper }),
+    status: 'draft',
+    imageStatus: 'empty',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    givenAt: null,
+    readAt: null,
+    openedBackAt: null,
+    ownerMainCommentId: null,
+  };
+}
+
 function getSnapshotMood(snapshot: ComposeDraftSnapshot | null) {
   return typeof snapshot?.mood === 'string' ? snapshot.mood : moods[0];
 }
@@ -2511,6 +2726,31 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontWeight: '800',
     fontSize: 13,
+    includeFontPadding: false,
+  },
+  designLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  letterPaperPreviewButton: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.lavenderTint,
+    backgroundColor: colors.background,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  letterPaperPreviewButtonText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
+    fontSize: 12,
     includeFontPadding: false,
   },
   frameGrid: {
@@ -2961,6 +3201,38 @@ const styles = StyleSheet.create({
   },
   cardPreviewWrap: {
     alignItems: 'center',
+  },
+  letterPaperPreviewSheet: {
+    width: '100%',
+    maxWidth: 390,
+    alignItems: 'center',
+    borderRadius: 28,
+    padding: 16,
+    gap: 14,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  letterPaperPreviewPager: {
+    overflow: 'hidden',
+  },
+  letterPaperPreviewPage: {
+    alignItems: 'center',
+  },
+  letterPaperPreviewDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  letterPaperPreviewDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.divider,
+  },
+  letterPaperPreviewDotActive: {
+    width: 18,
+    backgroundColor: colors.primary,
   },
   modalBackdrop: {
     flex: 1,

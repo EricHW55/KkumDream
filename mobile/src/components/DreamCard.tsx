@@ -26,7 +26,7 @@ import letterButterfly3 from '../assets/letter-paper/decorations/butterfly3.png'
 import letterButterfly4 from '../assets/letter-paper/decorations/butterfly4.png';
 import letterButterfly5 from '../assets/letter-paper/decorations/butterfly5.png';
 import letterCloud2 from '../assets/letter-paper/decorations/cloud2.png';
-import letterCloud3 from '../assets/letter-paper/decorations/cloud3.png';
+import letterCloud2_blur from '../assets/letter-paper/decorations/cloud2_blur.png';
 import letterCloud4 from '../assets/letter-paper/decorations/cloud4.png';
 import letterFlower1 from '../assets/letter-paper/decorations/flower1.png';
 import letterFlower2 from '../assets/letter-paper/decorations/flower2.png';
@@ -133,8 +133,9 @@ export function DreamCard({
   const sessionUserId = useSessionStore(state => state.userId);
   const isLite = variant === 'lite';
   const isHidden = Boolean(dream.isHidden);
-  const flipDisabled = disableFlip || isLite || isHidden;
-  const startsOnBack = initialSide === 'back' && !flipDisabled;
+  const canRenderBack = !isLite && !isHidden;
+  const flipDisabled = disableFlip || !canRenderBack;
+  const startsOnBack = initialSide === 'back' && canRenderBack;
   const useThumbnail = preferThumbnail || isLite;
   const allowImageActions = showImageActions && !isLite;
   const [isBackVisible, setIsBackVisible] = useState(startsOnBack);
@@ -1082,18 +1083,18 @@ export function DreamCard({
             </View>
           </Animated.View>
 
-          {flipDisabled ? null : (
-          <Animated.View
-            pointerEvents={isBackVisible ? 'auto' : 'none'}
-            style={[
-              styles.card,
-              styles.face,
-              styles.backFace,
-              { width: layoutCardWidth, height: cardHeight },
-              isBackVisible ? styles.faceVisible : styles.faceHidden,
-              backStyle,
-            ]}
-          >
+          {canRenderBack ? (
+            <Animated.View
+              pointerEvents={isBackVisible ? 'auto' : 'none'}
+              style={[
+                styles.card,
+                styles.face,
+                styles.backFace,
+                { width: layoutCardWidth, height: cardHeight },
+                isBackVisible ? styles.faceVisible : styles.faceHidden,
+                backStyle,
+              ]}
+            >
             <DreamCardFrame
               backgroundColor={designTheme.back}
               borderColor={frameBorderColor}
@@ -1389,8 +1390,8 @@ export function DreamCard({
                 </View>
               </View>
             </DreamCardFrame>
-          </Animated.View>
-          )}
+            </Animated.View>
+          ) : null}
           {allowImageActions && !isBackVisible ? renderImageActions() : null}
         </View>
       </View>
@@ -1492,11 +1493,22 @@ function MoonCloudLetterDecorations() {
         source={letterMoon}
         style={[styles.letterDecorationImage, styles.letterMoonCloudMoon]}
       />
-      <Image
-        resizeMode="contain"
-        source={letterCloud3}
-        style={[styles.letterDecorationImage, styles.letterMoonCloudClusterFront]}
-      />
+      <View style={styles.letterMoonCloudClusterFront2Crop}>
+        <Image
+          resizeMode="contain"
+          source={letterCloud2_blur}
+          style={styles.letterMoonCloudClusterFront2}
+        />
+      </View>
+      <View style={styles.letterMoonCloudClusterFrontCrop}>
+        <View style={styles.letterMoonCloudClusterFrontFlip}>
+          <Image
+            resizeMode="contain"
+            source={letterCloud2_blur}
+            style={styles.letterMoonCloudClusterFront}
+          />
+        </View>
+      </View>
       <Image
         resizeMode="contain"
         source={letterStar}
@@ -2293,72 +2305,105 @@ const styles = StyleSheet.create({
     opacity: 0.72,
     transform: [{ rotate: '-12deg' }],
   },
+  // 달구름 잠결 배치 조정 지점입니다.
+  // top/left/right/bottom은 베이지 바깥 프레임이 아니라 흰 편지지 안쪽
+  // 영역 기준이며, opacity를 낮추면 수채 장식이 더 연하게 보입니다.
   letterMoonCloudBottom: {
-    left: -64,
-    bottom: -54,
-    width: 246,
-    height: 246,
-    opacity: 0.72,
+    left: -10,
+    bottom: -5,
+    width: 200,
+    height: 200,
+    opacity: 0.94,
     transform: [{ scaleX: -1 }],
   },
   letterMoonCloudBottomStarA: {
-    left: 96,
-    bottom: 116,
-    width: 18,
-    height: 18,
-    opacity: 0.62,
+    left: 45,
+    bottom: 90,
+    width: 50,
+    height: 50,
+    opacity: 0.95,
+    transform: [{ rotate: '-3deg' }],
   },
   letterMoonCloudBottomStarB: {
-    left: 132,
-    bottom: 91,
-    width: 13,
-    height: 13,
-    opacity: 0.48,
-    transform: [{ rotate: '12deg' }],
+    left: 65,
+    bottom: 115,
+    width: 35,
+    height: 35,
+    opacity: 0.85,
+    // transform: [{ rotate: '3deg' }],
   },
   letterMoonCloudRight: {
-    top: 230,
-    right: -72,
-    width: 146,
-    height: 146,
-    opacity: 0.62,
+    top: 225,
+    right: -32,
+    width: 120,
+    height: 120,
+    opacity: 0.95,
   },
   letterMoonCloudClusterBack: {
-    top: -15,
-    left: -58,
-    width: 166,
-    height: 166,
-    opacity: 0.76,
+    top: 10,
+    left: -15,
+    width: 200,
+    height: 200,
+    opacity: 0.94,
     transform: [{ scaleX: -1 }],
   },
   letterMoonCloudMoon: {
-    top: 54,
-    left: 69,
-    width: 54,
-    height: 64,
-    opacity: 0.9,
-    transform: [{ rotate: '7deg' }],
+    top: 75,
+    left: 42,
+    width: 58,
+    height: 68,
+    opacity: 1,
+    transform: [{ rotate: '-7deg' }],
+  },
+  letterMoonCloudClusterFront2Crop: {
+    position: 'absolute',
+    top: 99,
+    left: -57,
+    width: 95,
+    height: 100,
+    overflow: 'hidden',
+  },
+  letterMoonCloudClusterFrontCrop: {
+    position: 'absolute',
+    top: 100,
+    left: 22,
+    width: 80,
+    height: 100,
+    overflow: 'hidden',
+  },
+  letterMoonCloudClusterFrontFlip: {
+    position: 'absolute',
+    top: 0,
+    left: -12,
+    width: 100,
+    height: 100,
+    transform: [{ scaleX: -1 }],
   },
   letterMoonCloudClusterFront: {
-    top: 80,
-    left: 43,
-    width: 108,
-    height: 108,
-    opacity: 0.78,
+    width: 100,
+    height: 100,
+    opacity: 0.84,
+  },
+  letterMoonCloudClusterFront2: {
+    width: 100,
+    height: 100,
+    opacity: 0.84,
   },
   letterMoonCloudStar: {
-    top: 132,
-    left: 79,
-    width: 26,
-    height: 28,
-    opacity: 0.76,
+    top: 152,
+    left: 53,
+    width: 28,
+    height: 30,
+    opacity: 0.95,
+    transform: [{ rotate: '-7deg' }],
   },
   letterMoonCloudVioletStar: {
-    top: 164,
-    left: 111,
-    width: 15,
-    height: 15,
-    opacity: 0.5,
+    top: 170,
+    left: 75,
+    width: 35,
+    height: 35,
+    opacity: 0.85,
+    transform: [{ rotate: '4deg' }],
   },
   letterContent: {
     position: 'relative',
