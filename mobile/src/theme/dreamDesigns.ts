@@ -25,8 +25,8 @@ export const CARD_COLOR_OPTIONS: {
 }[] = [
   { value: 'beige', label: '베이지', swatch: '#EFE1C7' },
   { value: 'ivory', label: '아이보리', swatch: '#FFFDF7' },
-  { value: 'lilac', label: '라일락', swatch: '#F4F0FF' },
   { value: 'peach', label: '피치', swatch: '#FFF2E7' },
+  { value: 'lilac', label: '라일락', swatch: '#F4F0FF' },
   { value: 'mint', label: '민트', swatch: '#F1FAF5' },
   { value: 'midnight', label: '미드나잇', swatch: '#282438' },
 ];
