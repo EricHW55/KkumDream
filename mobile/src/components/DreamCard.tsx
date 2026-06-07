@@ -31,8 +31,6 @@ import letterCloud2_blur from '../assets/letter-paper/decorations/cloud2_blur.pn
 import letterCloud4 from '../assets/letter-paper/decorations/cloud4.png';
 import letterFlower1 from '../assets/letter-paper/decorations/flower1.png';
 import letterFlower2 from '../assets/letter-paper/decorations/flower2.png';
-import letterFlower3 from '../assets/letter-paper/decorations/flower3.png';
-import letterFlower4 from '../assets/letter-paper/decorations/flower4.png';
 import letterMoon from '../assets/letter-paper/decorations/moon.png';
 import letterStar from '../assets/letter-paper/decorations/star.png';
 import letterStarViolet from '../assets/letter-paper/decorations/star_violet.png';
@@ -111,6 +109,7 @@ type Props = {
   receiverName?: string;
   variant?: 'full' | 'lite';
   initialSide?: 'front' | 'back';
+  disableLetterPaperShadow?: boolean;
   onParentScrollEnabledChange?: (enabled: boolean) => void;
 };
 
@@ -128,6 +127,7 @@ export function DreamCard({
   receiverName: receiverNameOverride,
   variant = 'full',
   initialSide = 'front',
+  disableLetterPaperShadow = false,
   onParentScrollEnabledChange,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
@@ -1109,6 +1109,7 @@ export function DreamCard({
                 <View
                   style={[
                     styles.letterPaper,
+                    disableLetterPaperShadow && styles.letterPaperNoShadow,
                     isDarkTheme
                       ? styles.darkLetterPaper
                       : styles.lightLetterPaper,
@@ -1403,27 +1404,19 @@ export function DreamCard({
 function FlowerLetterDecorations() {
   return (
     <>
-      <View style={styles.letterFlowerBottomCrop}>
-        <Image
-          resizeMode="contain"
-          source={letterFlower1}
-          style={styles.letterFlowerBottomImage}
-        />
+      <View style={styles.letterFlowerBottomPlacement}>
+        <View style={styles.letterFlowerBottomCrop}>
+          <Image
+            resizeMode="contain"
+            source={letterFlower1}
+            style={styles.letterFlowerBottomImage}
+          />
+        </View>
       </View>
       <Image
         resizeMode="contain"
-        source={letterFlower3}
-        style={[styles.letterDecorationImage, styles.letterFlowerTopCluster]}
-      />
-      <Image
-        resizeMode="contain"
         source={letterFlower2}
-        style={[styles.letterDecorationImage, styles.letterFlowerTopSprig]}
-      />
-      <Image
-        resizeMode="contain"
-        source={letterFlower4}
-        style={[styles.letterDecorationImage, styles.letterFlowerPetals]}
+        style={[styles.letterDecorationImage, styles.letterFlowerTopCombined]}
       />
     </>
   );
@@ -2048,6 +2041,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 1,
   },
+  letterPaperNoShadow: {
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+  },
   lightLetterPaper: {
     backgroundColor: '#FFF8EA',
   },
@@ -2226,45 +2225,34 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 0,
   },
-  letterFlowerBottomCrop: {
+  letterFlowerBottomPlacement: {
     position: 'absolute',
-    left: -2,
-    bottom: 2,
-    width: 116,
-    height: 190,
+    left: 5,
+    bottom: -30,
+    width: 96,
+    height: 286,
+    transform: [{ scaleX: -1 }, { rotate: '12deg' }],
+  },
+  letterFlowerBottomCrop: {
+    width: 110,
+    height: 286,
     overflow: 'hidden',
   },
   letterFlowerBottomImage: {
     position: 'absolute',
-    left: -28,
-    bottom: -18,
+    left: 0,
+    top: 0,
     width: 210,
     height: 315,
-    opacity: 0.84,
+    opacity: 0.92,
   },
-  letterFlowerTopCluster: {
-    top: -86,
-    right: -36,
+  letterFlowerTopCombined: {
+    top: -62,
+    right: -18,
     width: 204,
-    height: 340,
-    opacity: 0.9,
-    transform: [{ rotate: '-3deg' }],
-  },
-  letterFlowerTopSprig: {
-    top: -66,
-    right: -2,
-    width: 174,
-    height: 290,
-    opacity: 0.9,
-    transform: [{ rotate: '-3deg' }],
-  },
-  letterFlowerPetals: {
-    top: 60,
-    right: 30,
-    width: 184,
     height: 306,
-    opacity: 0.8,
-    transform: [{ rotate: '2deg' }],
+    opacity: 0.88,
+    // transform: [{ rotate: '-2deg' }],
   },
   letterButterflyLeftBottom: {
     left: -35,

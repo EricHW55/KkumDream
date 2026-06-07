@@ -1810,6 +1810,7 @@ export function ComposeScreen({ navigation }: Props) {
                     dream={previewItem}
                     initialSide="back"
                     disableFlip
+                    disableLetterPaperShadow
                     showImageActions={false}
                     width={letterPaperPreviewCardWidth}
                   />
