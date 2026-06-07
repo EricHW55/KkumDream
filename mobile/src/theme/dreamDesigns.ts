@@ -154,7 +154,7 @@ export const LETTER_PAPER_OPTIONS: {
   },
   {
     value: 'rose',
-    label: '나비 바람',
+    label: '나비 숨결',
     description: '분홍, 보라, 노란 나비가 여백을 따라 가볍게 날아요.',
   },
 ];

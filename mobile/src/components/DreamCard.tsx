@@ -21,6 +21,7 @@ import Animated, {
 import { captureRef } from 'react-native-view-shot';
 
 import paperTexture from '../assets/textures/paper_texture.webp';
+import letterButterfly1 from '../assets/letter-paper/decorations/butterfly1.png';
 import letterButterfly2 from '../assets/letter-paper/decorations/butterfly2.png';
 import letterButterfly3 from '../assets/letter-paper/decorations/butterfly3.png';
 import letterButterfly4 from '../assets/letter-paper/decorations/butterfly4.png';
@@ -1433,7 +1434,7 @@ function ButterflyLetterDecorations() {
     <>
       <Image
         resizeMode="contain"
-        source={letterButterfly2}
+        source={letterButterfly1}
         style={[styles.letterDecorationImage, styles.letterButterflyLeftBottom]}
       />
       <Image
@@ -2266,44 +2267,44 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '2deg' }],
   },
   letterButterflyLeftBottom: {
-    left: -42,
-    bottom: -3,
+    left: -35,
+    bottom: 20,
     width: 132,
     height: 100,
-    opacity: 0.62,
-    transform: [{ rotate: '2deg' }],
+    opacity: 0.7,
+    transform: [{ rotate: '7deg' }],
   },
   letterButterflyLeftYellow: {
-    left: 26,
-    bottom: 118,
+    left: 36,
+    bottom: 110,
     width: 56,
     height: 66,
     opacity: 0.78,
-    transform: [{ rotate: '-17deg' }],
+    transform: [{ rotate: '7deg' }],
   },
   letterButterflyRightPink: {
-    top: 112,
-    right: -5,
+    top: 110,
+    right: -22,
     width: 134,
     height: 101,
-    opacity: 0.48,
-    transform: [{ rotate: '-7deg' }],
+    opacity: 0.90,
+    transform: [{ rotate: '-20deg' }],
   },
   letterButterflyRightBlue: {
-    top: 56,
-    right: 82,
-    width: 88,
-    height: 66,
-    opacity: 0.5,
-    transform: [{ rotate: '-4deg' }],
+    top: 45,
+    right: 28,
+    width: 80,
+    height: 60,
+    opacity: 0.85,
+    transform: [{ rotate: '13deg' }],
   },
   letterButterflyRightSmall: {
-    top: 7,
-    right: -5,
+    top: 4,
+    right: 0,
     width: 51,
     height: 61,
-    opacity: 0.72,
-    transform: [{ rotate: '-12deg' }],
+    opacity: 0.92,
+    transform: [{ rotate: '-17deg' }],
   },
   // 달구름 잠결 배치 조정 지점입니다.
   // top/left/right/bottom은 베이지 바깥 프레임이 아니라 흰 편지지 안쪽
