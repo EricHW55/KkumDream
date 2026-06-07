@@ -9,6 +9,7 @@ import {
 } from 'react';
 import {
   AppState,
+  InteractionManager,
   Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -46,7 +47,11 @@ import {
   shareDream,
   updateDream,
 } from '../api/dreams';
-import { DreamCard, POSTCARD_STAMP_VARIANTS } from '../components/DreamCard';
+import {
+  DreamCard,
+  DreamCardLetterPaperBackgroundPreloader,
+  POSTCARD_STAMP_VARIANTS,
+} from '../components/DreamCard';
 import { DreamCardFrame } from '../components/DreamCardFrame';
 import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
@@ -228,6 +233,10 @@ export function ComposeScreen({ navigation }: Props) {
     useState(false);
   const [isLetterPaperPreviewVisible, setIsLetterPaperPreviewVisible] =
     useState(false);
+  const [
+    shouldPreloadLetterPaperBackgrounds,
+    setShouldPreloadLetterPaperBackgrounds,
+  ] = useState(false);
   const [letterPaperPreviewIndex, setLetterPaperPreviewIndex] = useState(0);
   const [isStampPreviewVisible, setIsStampPreviewVisible] = useState(false);
   const [showFloatingPreviewButton, setShowFloatingPreviewButton] =
@@ -383,6 +392,16 @@ export function ComposeScreen({ navigation }: Props) {
       isCancelled = true;
     };
   }, [hydrateComposeSnapshot, sessionUserId, token]);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setShouldPreloadLetterPaperBackgrounds(true);
+    });
+
+    return () => {
+      task.cancel();
+    };
+  }, []);
 
   const flushComposeDraftCache = useCallback(() => {
     if (!hasHydratedComposeDraft) {
@@ -1004,6 +1023,9 @@ export function ComposeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.screenRoot}>
+      {shouldPreloadLetterPaperBackgrounds ? (
+        <DreamCardLetterPaperBackgroundPreloader />
+      ) : null}
       <ScrollView
         ref={composeScrollRef}
         style={styles.root}

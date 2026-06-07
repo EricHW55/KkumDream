@@ -97,6 +97,11 @@ const ILLUSTRATED_LETTER_PAPER_BACKGROUNDS: Partial<
   butterfly: letterPaperFlowerRainStopTextured,
   rose: letterPaperButterflyBreathTextured,
 };
+const ILLUSTRATED_LETTER_PAPER_BACKGROUND_SOURCES = [
+  letterPaperMoonlitSleepTextured,
+  letterPaperFlowerRainStopTextured,
+  letterPaperButterflyBreathTextured,
+] as const;
 
 type Props = {
   dream: Dream;
@@ -1417,6 +1422,21 @@ export function DreamCard({
   );
 }
 
+export function DreamCardLetterPaperBackgroundPreloader() {
+  return (
+    <View pointerEvents="none" style={styles.letterPaperBackgroundPreloader}>
+      {ILLUSTRATED_LETTER_PAPER_BACKGROUND_SOURCES.map((source, index) => (
+        <Image
+          key={`letter-paper-background-preload-${index}`}
+          resizeMode="stretch"
+          source={source}
+          style={styles.letterPaperBackgroundPreloadImage}
+        />
+      ))}
+    </View>
+  );
+}
+
 type PaperTapeProps = {
   crease?: 'center' | 'left' | 'right';
   style?: StyleProp<ViewStyle>;
@@ -2124,6 +2144,20 @@ const styles = StyleSheet.create({
   letterPaperBakedBackgroundImage: {
     width: '100%',
     height: '100%',
+  },
+  letterPaperBackgroundPreloader: {
+    position: 'absolute',
+    left: -10000,
+    top: -10000,
+    width: 286,
+    height: 500,
+    opacity: 0,
+    overflow: 'hidden',
+  },
+  letterPaperBackgroundPreloadImage: {
+    position: 'absolute',
+    width: 286,
+    height: 500,
   },
   letterContent: {
     position: 'relative',
