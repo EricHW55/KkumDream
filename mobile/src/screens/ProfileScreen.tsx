@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { deleteAccount, updateProfile, uploadProfileImage } from '../api/auth';
-import { getPlatformPassProductId } from '../api/billing';
+import { fetchEntitlement, getPlatformPassProductId } from '../api/billing';
 import { claimDream } from '../api/dreams';
 import { fetchBlockedUsers, unblockUser } from '../api/safety';
 import { signOutGoogle } from '../auth/googleSignIn';
@@ -469,8 +469,12 @@ export function ProfileScreen() {
     setIsRestoringPass(true);
     try {
       const restored = await recoverPassPurchases();
+      const nextEntitlement = token ? await fetchEntitlement(token) : null;
+      if (nextEntitlement) {
+        queryClient.setQueryData(['entitlement'], nextEntitlement);
+      }
       setPassStatus(
-        restored > 0
+        restored > 0 || nextEntitlement?.active
           ? '패스 구매 내역을 복원했어요.'
           : '복원할 활성 패스 구매 내역이 없어요.',
       );

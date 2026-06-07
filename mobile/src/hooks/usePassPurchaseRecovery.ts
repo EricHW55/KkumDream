@@ -26,9 +26,7 @@ export function usePassPurchaseRecovery() {
         token,
         userId,
       });
-      if (recovered > 0) {
-        await queryClient.invalidateQueries({ queryKey: ['entitlement'] });
-      }
+      await queryClient.invalidateQueries({ queryKey: ['entitlement'] });
       return recovered;
     } finally {
       isRecovering.current = false;

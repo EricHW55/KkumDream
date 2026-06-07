@@ -507,7 +507,15 @@ async def apply_verified_status(
         sub = Subscription(user_id=user_id)
         session.add(sub)
     _write_status(sub, purchase_token, status, notification_type)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        sub = await session.scalar(select(Subscription).where(Subscription.user_id == user_id))
+        if sub is None:
+            raise
+        _write_status(sub, purchase_token, status, notification_type)
+        await session.commit()
     await session.refresh(sub)
     return sub
 
