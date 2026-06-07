@@ -35,7 +35,6 @@ import {
   PencilLine,
   Search,
   Share2,
-  Sparkles,
   X,
 } from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -213,6 +212,7 @@ export function ComposeScreen({ navigation }: Props) {
     isColorLocked,
     isFrameLocked,
     isFontLocked,
+    isImageTextureLocked,
     isLetterPaperLocked,
     isToneLocked,
     isStoryLengthLocked,
@@ -720,6 +720,10 @@ export function ComposeScreen({ navigation }: Props) {
   };
 
   const updateImageTexture = (imageTexture: DreamDesign['imageTexture']) => {
+    if (isImageTextureLocked(imageTexture)) {
+      openPassModal();
+      return;
+    }
     updateSelectedDesign({ ...selectedDesign, imageTexture });
   };
 
@@ -1566,6 +1570,7 @@ export function ComposeScreen({ navigation }: Props) {
             <View style={styles.textureGrid}>
               {IMAGE_TEXTURE_OPTIONS.map(option => {
                 const isSelected = option.value === selectedDesign.imageTexture;
+                const isLocked = isImageTextureLocked(option.value);
                 return (
                   <Pressable
                     key={option.value}
@@ -1589,6 +1594,15 @@ export function ComposeScreen({ navigation }: Props) {
                     <Text style={styles.textureOptionDescription}>
                       {option.description}
                     </Text>
+                    {isLocked ? (
+                      <View style={styles.designLockChip}>
+                        <Lock
+                          color={colors.primary}
+                          size={11}
+                          strokeWidth={2.5}
+                        />
+                      </View>
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -1757,7 +1771,7 @@ export function ComposeScreen({ navigation }: Props) {
             pressed && interactionStyles.pressed,
           ]}
         >
-          <Sparkles color={colors.primaryDark} size={24} strokeWidth={2.4} />
+          <Search color={colors.primaryDark} size={24} strokeWidth={3.2} />
         </Pressable>
       ) : null}
 

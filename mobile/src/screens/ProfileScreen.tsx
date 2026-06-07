@@ -865,6 +865,18 @@ export function ProfileScreen() {
                       return (
                         <View key={item.type} style={styles.pushItemBlock}>
                           <View style={styles.pushItemRow}>
+                            <Switch
+                              value={isEnabled}
+                              onValueChange={next =>
+                                handleTogglePush(item.type, next)
+                              }
+                              style={styles.pushItemSwitch}
+                              thumbColor="#FFFFFF"
+                              trackColor={{
+                                false: colors.divider,
+                                true: colors.primary,
+                              }}
+                            />
                             <View style={styles.pushItemText}>
                               <Text style={styles.pushItemLabel}>
                                 {item.label}
@@ -875,17 +887,6 @@ export function ProfileScreen() {
                                 </Text>
                               ) : null}
                             </View>
-                            <Switch
-                              value={isEnabled}
-                              onValueChange={next =>
-                                handleTogglePush(item.type, next)
-                              }
-                              thumbColor="#FFFFFF"
-                              trackColor={{
-                                false: colors.divider,
-                                true: colors.primary,
-                              }}
-                            />
                           </View>
                           {isMorningReminder && isEnabled ? (
                             <View style={styles.wakeTimeRow}>
@@ -1447,55 +1448,59 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   settingsGroup: {
-    gap: 10,
+    gap: 9,
   },
   settingsItemTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
-    fontSize: 15,
+    fontWeight: '800',
+    fontSize: 18,
+    lineHeight: 25,
     includeFontPadding: false,
   },
   settingsItemDescription: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
     fontWeight: '600',
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 14.5,
+    lineHeight: 21,
   },
   pushItemList: {
-    gap: 6,
+    gap: 3,
   },
   pushItemBlock: {
-    gap: 6,
+    gap: 4,
   },
   pushItemRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    minHeight: 40,
+    alignItems: 'flex-start',
+    gap: 10,
+    minHeight: 41,
   },
   pushItemText: {
     flex: 1,
     gap: 2,
   },
+  pushItemSwitch: {
+    marginTop: 1,
+  },
   pushItemLabel: {
     color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 15,
+    lineHeight: 21,
   },
   pushItemDescription: {
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
     fontWeight: '600',
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13.5,
+    lineHeight: 19,
   },
   wakeTimeRow: {
-    marginLeft: 8,
+    marginTop: 4,
+    marginLeft: 48,
     paddingLeft: 12,
     borderLeftWidth: 1,
     borderLeftColor: colors.divider,
@@ -1505,12 +1510,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   wakeTimeLabel: {
-    width: 48,
+    width: 58,
     color: colors.textMuted,
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
     includeFontPadding: false,
     flexShrink: 0,
   },
@@ -1521,9 +1526,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   wakeTimeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.lavenderMist,
@@ -1534,7 +1539,7 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontFamily: fontFamily.handwritten,
     fontWeight: '800',
-    fontSize: 13.5,
+    fontSize: 15,
     includeFontPadding: false,
   },
   settingsDivider: {

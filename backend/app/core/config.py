@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     free_card_colors: list[str] = ["beige", "ivory", "peach"]
     free_card_frames: list[str] = ["classic", "ticket"]
     free_font_styles: list[str] = ["dahaeng", "daegwangyuri", "rounded", "clean"]
+    free_image_textures: list[str] = ["oil_pastel"]
     free_letter_papers: list[str] = [
         "plain",
         "lined",
@@ -72,9 +73,6 @@ class Settings(BaseSettings):
         "vintage",
         "botanical",
         "postcard",
-        "moonlit",
-        "butterfly",
-        "rose",
     ]
     free_tones: list[str] = ["warm", "polite", "casual"]
     free_story_lengths: list[str] = ["short", "standard"]

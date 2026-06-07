@@ -40,7 +40,12 @@ export function useDesignLock() {
   return useMemo(() => {
     const free = passInfo?.freeDesign;
     const locked = (
-      kind: 'cardColors' | 'cardFrames' | 'fontStyles' | 'letterPapers',
+      kind:
+        | 'cardColors'
+        | 'cardFrames'
+        | 'fontStyles'
+        | 'imageTextures'
+        | 'letterPapers',
       value: string,
     ): boolean => {
       if (hasPass || !free) {
@@ -65,11 +70,13 @@ export function useDesignLock() {
       isColorLocked: (value: string) => locked('cardColors', value),
       isFrameLocked: (value: string) => locked('cardFrames', value),
       isFontLocked: (value: string) => locked('fontStyles', value),
+      isImageTextureLocked: (value: string) => locked('imageTextures', value),
       isLetterPaperLocked: (value: string) => locked('letterPapers', value),
       isDesignLocked: (design: DreamDesign) =>
         locked('cardColors', design.cardColor) ||
         locked('cardFrames', design.cardFrame) ||
         locked('fontStyles', design.fontStyle) ||
+        locked('imageTextures', design.imageTexture) ||
         locked('letterPapers', design.letterPaper),
       isToneLocked: (value: string) => listLocked(passInfo?.freeTones, value),
       isStoryLengthLocked: (value: string) =>

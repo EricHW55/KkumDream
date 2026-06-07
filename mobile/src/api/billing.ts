@@ -13,6 +13,7 @@ export interface FreeDesign {
   cardColors: string[];
   cardFrames: string[];
   fontStyles: string[];
+  imageTextures: string[];
   letterPapers: string[];
 }
 

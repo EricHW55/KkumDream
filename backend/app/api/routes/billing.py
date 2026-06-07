@@ -54,6 +54,7 @@ async def get_pass_info() -> PassInfoOut:
             card_colors=settings.free_card_colors,
             card_frames=settings.free_card_frames,
             font_styles=settings.free_font_styles,
+            image_textures=settings.free_image_textures,
             letter_papers=settings.free_letter_papers,
         ),
         free_tones=settings.free_tones,
