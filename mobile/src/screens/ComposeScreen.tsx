@@ -9,6 +9,8 @@ import {
 } from 'react';
 import {
   AppState,
+  Image,
+  type ImageSourcePropType,
   InteractionManager,
   Modal,
   type NativeScrollEvent,
@@ -56,6 +58,11 @@ import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
+import textureSampleAcrylic from '../assets/image-texture-samples/acrylic.webp';
+import textureSampleColoredPencil from '../assets/image-texture-samples/colored_pencil.webp';
+import textureSampleCrayon from '../assets/image-texture-samples/crayon.webp';
+import textureSampleOilPastel from '../assets/image-texture-samples/oil_pastel.webp';
+import textureSampleWatercolor from '../assets/image-texture-samples/watercolor.webp';
 import {
   readComposeDraftSnapshot,
   removeComposeDraftSnapshot,
@@ -90,6 +97,7 @@ import { fontFamily } from '../theme/typography';
 import type {
   Dream,
   DreamDesign,
+  DreamImageTexture,
   DreamLetterPaper,
   DreamStoryLength,
 } from '../types/dream';
@@ -151,6 +159,17 @@ const lengthOptions: readonly {
     description: '꿈의 흐름을 더 천천히 풀어줘요.',
   },
 ];
+
+const IMAGE_TEXTURE_SAMPLE_SOURCES: Record<
+  DreamImageTexture,
+  ImageSourcePropType
+> = {
+  watercolor: textureSampleWatercolor,
+  acrylic: textureSampleAcrylic,
+  crayon: textureSampleCrayon,
+  colored_pencil: textureSampleColoredPencil,
+  oil_pastel: textureSampleOilPastel,
+};
 
 const STAMP_PREVIEW_WEEKDAYS = [
   { label: '월', variantIndex: 1 },
@@ -231,6 +250,7 @@ export function ComposeScreen({ navigation }: Props) {
   const [isFriendPickerVisible, setIsFriendPickerVisible] = useState(false);
   const [isCardPreviewModalVisible, setIsCardPreviewModalVisible] =
     useState(false);
+  const [isTexturePreviewVisible, setIsTexturePreviewVisible] = useState(false);
   const [isLetterPaperPreviewVisible, setIsLetterPaperPreviewVisible] =
     useState(false);
   const [
@@ -238,10 +258,12 @@ export function ComposeScreen({ navigation }: Props) {
     setShouldPreloadLetterPaperBackgrounds,
   ] = useState(false);
   const [letterPaperPreviewIndex, setLetterPaperPreviewIndex] = useState(0);
+  const [texturePreviewIndex, setTexturePreviewIndex] = useState(0);
   const [isStampPreviewVisible, setIsStampPreviewVisible] = useState(false);
   const [showFloatingPreviewButton, setShowFloatingPreviewButton] =
     useState(false);
   const letterPaperPreviewScrollRef = useRef<ScrollView>(null);
+  const texturePreviewScrollRef = useRef<ScrollView>(null);
   const [friendSearch, setFriendSearch] = useState('');
   const [recipientMode, setRecipientMode] = useState<RecipientMode>(() =>
     initialComposeSnapshot?.recipientMode === 'external'
@@ -615,6 +637,10 @@ export function ComposeScreen({ navigation }: Props) {
     Math.min(windowWidth - 96, 300),
     240,
   );
+  const texturePreviewImageWidth = Math.max(
+    Math.min(windowWidth - 64, 340),
+    260,
+  );
   const selectedReceiver = selectedReceiverId
     ? friends.find(friend => friend.id === selectedReceiverId) ??
       {
@@ -662,6 +688,30 @@ export function ComposeScreen({ navigation }: Props) {
   );
   const activeLetterPaperPreviewOption =
     LETTER_PAPER_OPTIONS[letterPaperPreviewIndex] ?? LETTER_PAPER_OPTIONS[0];
+  const activeTexturePreviewOption =
+    IMAGE_TEXTURE_OPTIONS[texturePreviewIndex] ?? IMAGE_TEXTURE_OPTIONS[0];
+
+  useEffect(() => {
+    if (!isTexturePreviewVisible) {
+      return undefined;
+    }
+    const nextIndex = IMAGE_TEXTURE_OPTIONS.findIndex(
+      option => option.value === selectedDesign.imageTexture,
+    );
+    const boundedIndex = Math.max(0, nextIndex);
+    setTexturePreviewIndex(boundedIndex);
+    const frameId = requestAnimationFrame(() => {
+      texturePreviewScrollRef.current?.scrollTo({
+        x: boundedIndex * texturePreviewImageWidth,
+        animated: false,
+      });
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [
+    isTexturePreviewVisible,
+    selectedDesign.imageTexture,
+    texturePreviewImageWidth,
+  ]);
 
   useEffect(() => {
     if (!isLetterPaperPreviewVisible) {
@@ -733,6 +783,37 @@ export function ComposeScreen({ navigation }: Props) {
       return;
     }
     updateSelectedDesign({ ...selectedDesign, letterPaper });
+  };
+
+  const openTexturePreview = () => {
+    const nextIndex = IMAGE_TEXTURE_OPTIONS.findIndex(
+      option => option.value === selectedDesign.imageTexture,
+    );
+    setTexturePreviewIndex(Math.max(0, nextIndex));
+    setIsTexturePreviewVisible(true);
+  };
+
+  const updateTexturePreviewIndexFromOffset = (offsetX: number) => {
+    const nextIndex = Math.round(offsetX / texturePreviewImageWidth);
+    const boundedIndex = Math.max(
+      0,
+      Math.min(IMAGE_TEXTURE_OPTIONS.length - 1, nextIndex),
+    );
+    setTexturePreviewIndex(current =>
+      current === boundedIndex ? current : boundedIndex,
+    );
+  };
+
+  const handleTexturePreviewScroll = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    updateTexturePreviewIndexFromOffset(event.nativeEvent.contentOffset.x);
+  };
+
+  const handleTexturePreviewScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    updateTexturePreviewIndexFromOffset(event.nativeEvent.contentOffset.x);
   };
 
   const openLetterPaperPreview = () => {
@@ -1566,7 +1647,22 @@ export function ComposeScreen({ navigation }: Props) {
               })}
             </FadingHorizontalScroll>
 
-            <Text style={styles.designLabel}>그림 질감</Text>
+            <View style={styles.designLabelRow}>
+              <Text style={styles.designLabel}>그림 질감</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={openTexturePreview}
+                style={({ pressed }) => [
+                  styles.letterPaperPreviewButton,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Eye color={colors.primaryDark} size={14} strokeWidth={2.4} />
+                <Text style={styles.letterPaperPreviewButtonText}>
+                  질감 보기
+                </Text>
+              </Pressable>
+            </View>
             <View style={styles.textureGrid}>
               {IMAGE_TEXTURE_OPTIONS.map(option => {
                 const isSelected = option.value === selectedDesign.imageTexture;
@@ -1784,6 +1880,92 @@ export function ComposeScreen({ navigation }: Props) {
             />
           </View>
         </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isTexturePreviewVisible}
+        onRequestClose={() => setIsTexturePreviewVisible(false)}
+      >
+        <Pressable
+          style={styles.cardPreviewBackdrop}
+          onPress={() => setIsTexturePreviewVisible(false)}
+        >
+          <Pressable
+            style={styles.texturePreviewSheet}
+            onPress={event => event.stopPropagation()}
+          >
+            <View style={styles.sheetHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.sheetTitle}>질감 보기</Text>
+                <Text style={styles.sheetSubtitle}>
+                  {activeTexturePreviewOption.label} ·{' '}
+                  {activeTexturePreviewOption.description}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel="닫기"
+                accessibilityRole="button"
+                onPress={() => setIsTexturePreviewVisible(false)}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  pressed && interactionStyles.pressed,
+                ]}
+              >
+                <X color={colors.textSecondary} size={20} />
+              </Pressable>
+            </View>
+            <ScrollView
+              ref={texturePreviewScrollRef}
+              horizontal
+              pagingEnabled
+              bounces={false}
+              onScroll={handleTexturePreviewScroll}
+              onMomentumScrollEnd={handleTexturePreviewScrollEnd}
+              scrollEventThrottle={16}
+              showsHorizontalScrollIndicator={false}
+              style={[
+                styles.texturePreviewPager,
+                { width: texturePreviewImageWidth },
+              ]}
+            >
+              {IMAGE_TEXTURE_OPTIONS.map(option => (
+                <View
+                  key={`texture-preview-${option.value}`}
+                  style={[
+                    styles.texturePreviewPage,
+                    { width: texturePreviewImageWidth },
+                  ]}
+                >
+                  <Image
+                    resizeMode="cover"
+                    source={IMAGE_TEXTURE_SAMPLE_SOURCES[option.value]}
+                    style={[
+                      styles.texturePreviewImage,
+                      {
+                        width: texturePreviewImageWidth,
+                        height: texturePreviewImageWidth,
+                      },
+                    ]}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.letterPaperPreviewDots}>
+              {IMAGE_TEXTURE_OPTIONS.map((option, index) => (
+                <View
+                  key={`texture-preview-dot-${option.value}`}
+                  style={[
+                    styles.letterPaperPreviewDot,
+                    index === texturePreviewIndex &&
+                      styles.letterPaperPreviewDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal
@@ -3241,6 +3423,30 @@ const styles = StyleSheet.create({
   },
   cardPreviewWrap: {
     alignItems: 'center',
+  },
+  texturePreviewSheet: {
+    width: '100%',
+    maxWidth: 390,
+    alignItems: 'center',
+    borderRadius: 28,
+    padding: 16,
+    gap: 14,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  texturePreviewPager: {
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  texturePreviewPage: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  texturePreviewImage: {
+    borderRadius: 20,
+    backgroundColor: colors.background,
   },
   letterPaperPreviewSheet: {
     width: '100%',
