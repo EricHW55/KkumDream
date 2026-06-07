@@ -47,3 +47,6 @@ mobile/ios/*.xcworkspace/
 # Claude local settings
 .claude/settings.local.json
 
+# Business documents (not part of the codebase)
+*.hwp
+

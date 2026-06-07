@@ -90,8 +90,11 @@ class Settings(BaseSettings):
         "https://play.google.com/store/apps/details?id=com.kkumdreammobile"
     )
     android_app_link_sha256_fingerprints: list[str] = []
-    ios_app_store_url: str = "https://apps.apple.com/app/kkumdream"
+    ios_app_store_url: str = "https://apps.apple.com/app/id6775655364"
     ios_app_id: str | None = None
+    ios_latest_version: str = "1.3.0"
+    ios_min_supported_version: str = "1.0.0"
+    ios_update_message: str = "더 안정적인 이용을 위해 최신 버전으로 업데이트해 주세요."
 
     @computed_field
     @property

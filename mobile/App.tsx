@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,10 +11,17 @@ import starImage from './src/assets/illustrations/dream_loading_star.png';
 import agedLetterPaperTexture from './src/assets/textures/aged_letter_paper.webp';
 import paperTexture from './src/assets/textures/paper_texture.webp';
 import { DreamCardFrame } from './src/components/DreamCardFrame';
+import { IosUpdateModal } from './src/components/IosUpdateModal';
 import { PassModal } from './src/components/PassModal';
 import { prehydrateComposeDraftCache } from './src/data/composeDraftCache';
 import { usePassPurchaseRecovery } from './src/hooks/usePassPurchaseRecovery';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import {
+  checkForIosUpdateNotice,
+  dismissIosUpdateNotice,
+  type IosUpdateNotice,
+  openUpdateUrl,
+} from './src/services/appUpdates';
 import {
   registerPushToken,
   stopWatchingTokenRefresh,
@@ -45,6 +52,7 @@ function App() {
           />
           <PushNotificationRegistrar />
           <AndroidInAppUpdateGate />
+          <IosUpdateGate />
           <PassPurchaseRecovery />
           <StartupPreloader />
           <RootNavigator />
@@ -61,6 +69,39 @@ function AndroidInAppUpdateGate() {
   }, []);
 
   return null;
+}
+
+function IosUpdateGate() {
+  const [notice, setNotice] = useState<IosUpdateNotice | null>(null);
+
+  useEffect(() => {
+    checkForIosUpdateNotice()
+      .then(setNotice)
+      .catch(() => undefined);
+  }, []);
+
+  if (!notice) {
+    return null;
+  }
+
+  const dismiss = () => {
+    if (!notice.required) {
+      dismissIosUpdateNotice(notice.latestVersion);
+      setNotice(null);
+    }
+  };
+
+  return (
+    <IosUpdateModal
+      message={notice.message}
+      required={notice.required}
+      visible
+      onDismiss={dismiss}
+      onUpdate={() => {
+        openUpdateUrl(notice.storeUrl).catch(() => undefined);
+      }}
+    />
+  );
 }
 
 function PassPurchaseRecovery() {
