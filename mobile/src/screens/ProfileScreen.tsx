@@ -31,6 +31,7 @@ import { claimDream } from '../api/dreams';
 import { fetchBlockedUsers, unblockUser } from '../api/safety';
 import { signOutGoogle } from '../auth/googleSignIn';
 import { useConfirmDialog } from '../components/ConfirmDialog';
+import { PassBadge } from '../components/PassBadge';
 import {
   DEFAULT_PROFILE_AVATAR,
   PROFILE_AVATAR_PRESETS,
@@ -570,9 +571,12 @@ export function ProfileScreen() {
               />
             </View>
             <View style={styles.profileText}>
-              <Text style={styles.name}>
-                {user?.nickname ?? '꿈드림 사용자'}
-              </Text>
+              <View style={styles.nameRow}>
+                <Text style={styles.name}>
+                  {user?.nickname ?? '꿈드림 사용자'}
+                </Text>
+                {entitlement?.active ? <PassBadge compact /> : null}
+              </View>
               <Text style={styles.meta}>
                 {user?.email ?? '구글 계정 이메일 없음'}
               </Text>
@@ -1244,6 +1248,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontWeight: '700',
     fontSize: 18,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    flexWrap: 'wrap',
   },
   meta: {
     marginTop: 6,

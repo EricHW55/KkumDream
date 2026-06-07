@@ -55,6 +55,7 @@ import {
 } from '../components/DreamCard';
 import { DreamCardFrame } from '../components/DreamCardFrame';
 import { DreamGenerationAnimation } from '../components/DreamGenerationAnimation';
+import { PassBadge } from '../components/PassBadge';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -76,7 +77,7 @@ import { LOCAL_MOCK_USER_ID } from '../data/currentUser';
 import { getDisplayMember, getSeedFriends } from '../data/members';
 import { buildMockDraft } from '../mocks/dreams';
 import type { RootStackParamList } from '../navigation/types';
-import { useDesignLock } from '../hooks/usePass';
+import { useDesignLock, usePassInfo } from '../hooks/usePass';
 import { usePassModalStore } from '../store/passModalStore';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
@@ -212,6 +213,7 @@ export function ComposeScreen({ navigation }: Props) {
     () => getSnapshotDraft(initialComposeSnapshot, initialComposeDesign),
     [initialComposeDesign, initialComposeSnapshot],
   );
+  const { data: passInfo } = usePassInfo();
   const [rawInput, setRawInput] = useState(() =>
     getSnapshotRawInput(initialComposeSnapshot, initialComposeDraft),
   );
@@ -259,6 +261,9 @@ export function ComposeScreen({ navigation }: Props) {
   ] = useState(false);
   const [letterPaperPreviewIndex, setLetterPaperPreviewIndex] = useState(0);
   const [texturePreviewIndex, setTexturePreviewIndex] = useState(0);
+  const [premiumBadgeHint, setPremiumBadgeHint] = useState<
+    'texture' | 'letterPaper' | null
+  >(null);
   const [isStampPreviewVisible, setIsStampPreviewVisible] = useState(false);
   const [showFloatingPreviewButton, setShowFloatingPreviewButton] =
     useState(false);
@@ -690,6 +695,14 @@ export function ComposeScreen({ navigation }: Props) {
     LETTER_PAPER_OPTIONS[letterPaperPreviewIndex] ?? LETTER_PAPER_OPTIONS[0];
   const activeTexturePreviewOption =
     IMAGE_TEXTURE_OPTIONS[texturePreviewIndex] ?? IMAGE_TEXTURE_OPTIONS[0];
+  const isPremiumImageTexture = (value: DreamImageTexture) =>
+    passInfo?.freeDesign.imageTextures
+      ? !passInfo.freeDesign.imageTextures.includes(value)
+      : false;
+  const isPremiumLetterPaper = (value: DreamLetterPaper) =>
+    passInfo?.freeDesign.letterPapers
+      ? !passInfo.freeDesign.letterPapers.includes(value)
+      : false;
 
   useEffect(() => {
     if (!isTexturePreviewVisible) {
@@ -790,6 +803,7 @@ export function ComposeScreen({ navigation }: Props) {
       option => option.value === selectedDesign.imageTexture,
     );
     setTexturePreviewIndex(Math.max(0, nextIndex));
+    setPremiumBadgeHint(null);
     setIsTexturePreviewVisible(true);
   };
 
@@ -799,9 +813,13 @@ export function ComposeScreen({ navigation }: Props) {
       0,
       Math.min(IMAGE_TEXTURE_OPTIONS.length - 1, nextIndex),
     );
-    setTexturePreviewIndex(current =>
-      current === boundedIndex ? current : boundedIndex,
-    );
+    setTexturePreviewIndex(current => {
+      if (current === boundedIndex) {
+        return current;
+      }
+      setPremiumBadgeHint(hint => (hint === 'texture' ? null : hint));
+      return boundedIndex;
+    });
   };
 
   const handleTexturePreviewScroll = (
@@ -821,20 +839,23 @@ export function ComposeScreen({ navigation }: Props) {
       option => option.value === selectedDesign.letterPaper,
     );
     setLetterPaperPreviewIndex(Math.max(0, nextIndex));
+    setPremiumBadgeHint(null);
     setIsLetterPaperPreviewVisible(true);
   };
 
   const updateLetterPaperPreviewIndexFromOffset = (offsetX: number) => {
-    const nextIndex = Math.round(
-      offsetX / letterPaperPreviewCardWidth,
-    );
+    const nextIndex = Math.round(offsetX / letterPaperPreviewCardWidth);
     const boundedIndex = Math.max(
       0,
       Math.min(LETTER_PAPER_OPTIONS.length - 1, nextIndex),
     );
-    setLetterPaperPreviewIndex(current =>
-      current === boundedIndex ? current : boundedIndex,
-    );
+    setLetterPaperPreviewIndex(current => {
+      if (current === boundedIndex) {
+        return current;
+      }
+      setPremiumBadgeHint(hint => (hint === 'letterPaper' ? null : hint));
+      return boundedIndex;
+    });
   };
 
   const handleLetterPaperPreviewScroll = (
@@ -1661,6 +1682,9 @@ export function ComposeScreen({ navigation }: Props) {
                 <Text style={styles.letterPaperPreviewButtonText}>
                   질감 보기
                 </Text>
+                {isPremiumImageTexture(selectedDesign.imageTexture) ? (
+                  <PassBadge compact />
+                ) : null}
               </Pressable>
             </View>
             <View style={styles.textureGrid}>
@@ -1718,6 +1742,9 @@ export function ComposeScreen({ navigation }: Props) {
                 <Text style={styles.letterPaperPreviewButtonText}>
                   편지지 보기
                 </Text>
+                {isPremiumLetterPaper(selectedDesign.letterPaper) ? (
+                  <PassBadge compact />
+                ) : null}
               </Pressable>
             </View>
             <View style={styles.textureGrid}>
@@ -1886,11 +1913,17 @@ export function ComposeScreen({ navigation }: Props) {
         animationType="fade"
         transparent
         visible={isTexturePreviewVisible}
-        onRequestClose={() => setIsTexturePreviewVisible(false)}
+        onRequestClose={() => {
+          setPremiumBadgeHint(null);
+          setIsTexturePreviewVisible(false);
+        }}
       >
         <Pressable
           style={styles.cardPreviewBackdrop}
-          onPress={() => setIsTexturePreviewVisible(false)}
+          onPress={() => {
+            setPremiumBadgeHint(null);
+            setIsTexturePreviewVisible(false);
+          }}
         >
           <Pressable
             style={styles.texturePreviewSheet}
@@ -1898,7 +1931,9 @@ export function ComposeScreen({ navigation }: Props) {
           >
             <View style={styles.sheetHeader}>
               <View style={styles.flex}>
-                <Text style={styles.sheetTitle}>질감 보기</Text>
+                <View style={styles.sheetTitleRow}>
+                  <Text style={styles.sheetTitle}>질감 보기</Text>
+                </View>
                 <Text style={styles.sheetSubtitle}>
                   {activeTexturePreviewOption.label} ·{' '}
                   {activeTexturePreviewOption.description}
@@ -1907,7 +1942,10 @@ export function ComposeScreen({ navigation }: Props) {
               <Pressable
                 accessibilityLabel="닫기"
                 accessibilityRole="button"
-                onPress={() => setIsTexturePreviewVisible(false)}
+                onPress={() => {
+                  setPremiumBadgeHint(null);
+                  setIsTexturePreviewVisible(false);
+                }}
                 style={({ pressed }) => [
                   styles.closeButton,
                   pressed && interactionStyles.pressed,
@@ -1949,6 +1987,29 @@ export function ComposeScreen({ navigation }: Props) {
                       },
                     ]}
                   />
+                  {isPremiumImageTexture(option.value) ? (
+                    <Pressable
+                      accessibilityLabel="패스 전용 질감"
+                      accessibilityRole="button"
+                      onPress={() => setPremiumBadgeHint('texture')}
+                      style={styles.texturePremiumBadge}
+                    >
+                      <PassBadge compact opacity={0.99} size={46} />
+                    </Pressable>
+                  ) : null}
+                  {premiumBadgeHint === 'texture' &&
+                  isPremiumImageTexture(option.value) ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => setPremiumBadgeHint(null)}
+                      style={styles.texturePremiumHint}
+                    >
+                      <View style={styles.premiumHintTail} />
+                      <Text style={styles.premiumHintText}>
+                        패스를 구매하면 쓸수 있어요.
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               ))}
             </ScrollView>
@@ -1972,11 +2033,17 @@ export function ComposeScreen({ navigation }: Props) {
         animationType="fade"
         transparent
         visible={isLetterPaperPreviewVisible}
-        onRequestClose={() => setIsLetterPaperPreviewVisible(false)}
+        onRequestClose={() => {
+          setPremiumBadgeHint(null);
+          setIsLetterPaperPreviewVisible(false);
+        }}
       >
         <Pressable
           style={styles.cardPreviewBackdrop}
-          onPress={() => setIsLetterPaperPreviewVisible(false)}
+          onPress={() => {
+            setPremiumBadgeHint(null);
+            setIsLetterPaperPreviewVisible(false);
+          }}
         >
           <Pressable
             style={styles.letterPaperPreviewSheet}
@@ -1984,7 +2051,9 @@ export function ComposeScreen({ navigation }: Props) {
           >
             <View style={styles.sheetHeader}>
               <View style={styles.flex}>
-                <Text style={styles.sheetTitle}>편지지 보기</Text>
+                <View style={styles.sheetTitleRow}>
+                  <Text style={styles.sheetTitle}>편지지 보기</Text>
+                </View>
                 <Text style={styles.sheetSubtitle}>
                   {activeLetterPaperPreviewOption.label} ·{' '}
                   {activeLetterPaperPreviewOption.description}
@@ -1993,7 +2062,10 @@ export function ComposeScreen({ navigation }: Props) {
               <Pressable
                 accessibilityLabel="닫기"
                 accessibilityRole="button"
-                onPress={() => setIsLetterPaperPreviewVisible(false)}
+                onPress={() => {
+                  setPremiumBadgeHint(null);
+                  setIsLetterPaperPreviewVisible(false);
+                }}
                 style={({ pressed }) => [
                   styles.closeButton,
                   pressed && interactionStyles.pressed,
@@ -2016,7 +2088,10 @@ export function ComposeScreen({ navigation }: Props) {
                 { width: letterPaperPreviewCardWidth },
               ]}
             >
-              {letterPaperPreviewDreams.map(previewItem => (
+              {letterPaperPreviewDreams.map((previewItem, index) => {
+                const shouldRenderPreview =
+                  Math.abs(index - letterPaperPreviewIndex) <= 1;
+                return (
                 <View
                   key={`letter-paper-preview-${previewItem.design?.letterPaper}`}
                   style={[
@@ -2025,18 +2100,60 @@ export function ComposeScreen({ navigation }: Props) {
                   ]}
                 >
                   <View style={styles.letterPaperPreviewStage}>
-                    <DreamCard
-                      dream={previewItem}
-                      initialSide="back"
-                      disableFlip
-                      disableLetterPaperShadow
-                      fillLetterRules
-                      showImageActions={false}
-                      width={letterPaperPreviewCardWidth}
-                    />
+                    {shouldRenderPreview ? (
+                      <>
+                        <DreamCard
+                          dream={previewItem}
+                          initialSide="back"
+                          disableFlip
+                          disableLetterPaperShadow
+                          fillLetterRules
+                          showImageActions={false}
+                          width={letterPaperPreviewCardWidth}
+                        />
+                        {isPremiumLetterPaper(
+                          previewItem.design?.letterPaper ?? 'plain',
+                        ) ? (
+                          <Pressable
+                            accessibilityLabel="패스 전용 편지지"
+                            accessibilityRole="button"
+                            onPress={() => setPremiumBadgeHint('letterPaper')}
+                            style={styles.letterPaperPremiumBadge}
+                          >
+                            <PassBadge compact opacity={0.99} size={46} />
+                          </Pressable>
+                        ) : null}
+                        {premiumBadgeHint === 'letterPaper' &&
+                        isPremiumLetterPaper(
+                          previewItem.design?.letterPaper ?? 'plain',
+                        ) ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            onPress={() => setPremiumBadgeHint(null)}
+                            style={styles.letterPaperPremiumHint}
+                          >
+                            <View style={styles.premiumHintTailRight} />
+                            <Text style={styles.premiumHintText}>
+                              패스를 구매하면 쓸수 있어요.
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </>
+                    ) : (
+                      <View
+                        style={[
+                          styles.letterPaperPreviewPlaceholder,
+                          {
+                            width: letterPaperPreviewCardWidth,
+                            height: letterPaperPreviewCardWidth * 1.45,
+                          },
+                        ]}
+                      />
+                    )}
                   </View>
                 </View>
-              ))}
+                );
+              })}
             </ScrollView>
             <View style={styles.letterPaperPreviewDots}>
               {LETTER_PAPER_OPTIONS.map((option, index) => (
@@ -3443,10 +3560,45 @@ const styles = StyleSheet.create({
   texturePreviewPage: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    position: 'relative',
   },
   texturePreviewImage: {
     borderRadius: 20,
     backgroundColor: colors.background,
+  },
+  texturePremiumBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+  },
+  texturePremiumHint: {
+    position: 'absolute',
+    top: 62,
+    left: 10,
+    maxWidth: 210,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 253, 247, 0.97)',
+    borderWidth: 1,
+    borderColor: colors.lavenderTint,
+    shadowColor: '#2A233F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  premiumHintTail: {
+    position: 'absolute',
+    top: -7,
+    left: 15,
+    width: 14,
+    height: 14,
+    transform: [{ rotate: '45deg' }],
+    backgroundColor: 'rgba(255, 253, 247, 0.97)',
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: colors.lavenderTint,
   },
   letterPaperPreviewSheet: {
     width: '100%',
@@ -3470,6 +3622,52 @@ const styles = StyleSheet.create({
   letterPaperPreviewStage: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    overflow: 'visible',
+    position: 'relative',
+  },
+  letterPaperPreviewPlaceholder: {
+    backgroundColor: '#FFFFFF',
+  },
+  letterPaperPremiumBadge: {
+    position: 'absolute',
+    top: 14,
+    left: 44,
+  },
+  letterPaperPremiumHint: {
+    position: 'absolute',
+    top: 66,
+    left: 30,
+    maxWidth: 210,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 253, 247, 0.97)',
+    borderWidth: 1,
+    borderColor: colors.lavenderTint,
+    shadowColor: '#2A233F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  premiumHintTailRight: {
+    position: 'absolute',
+    top: -7,
+    left: 18,
+    width: 14,
+    height: 14,
+    transform: [{ rotate: '45deg' }],
+    backgroundColor: 'rgba(255, 253, 247, 0.97)',
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: colors.lavenderTint,
+  },
+  premiumHintText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
   },
   letterPaperPreviewDots: {
     flexDirection: 'row',
@@ -3512,6 +3710,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     includeFontPadding: false,
+  },
+  sheetTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
   sheetSubtitle: {
     marginTop: 6,
