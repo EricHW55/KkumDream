@@ -41,9 +41,20 @@ async def store_profile_image(user_id: UUID, image_bytes: bytes) -> str:
     return f"{settings.r2_public_base_url}/{avatar_key}"
 
 
-def _to_webp(source: bytes, size: int, quality: int) -> bytes:
+async def store_front_preview(dream_id: UUID, version: int, image_bytes: bytes) -> str:
+    # The client uploads a flattened PNG of the card front (with a transparent
+    # margin so the baked shadow is preserved). Transcode to alpha-aware WebP at
+    # list resolution and store under a versioned, immutable key so the CDN can
+    # cache it forever while a version bump produces a fresh URL.
+    preview_bytes = await asyncio.to_thread(_to_webp, image_bytes, 600, 82, True)
+    key = f"dreams/{dream_id}/front-preview-v{version}.webp"
+    await asyncio.to_thread(_upload, key, preview_bytes)
+    return f"{settings.r2_public_base_url}/{key}"
+
+
+def _to_webp(source: bytes, size: int, quality: int, keep_alpha: bool = False) -> bytes:
     with Image.open(BytesIO(source)) as image:
-        image = image.convert("RGB")
+        image = image.convert("RGBA" if keep_alpha else "RGB")
         image.thumbnail((size, size))
         output = BytesIO()
         image.save(output, format="WEBP", quality=quality, method=6)

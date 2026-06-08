@@ -68,6 +68,14 @@ class Dream(Base):
 
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Flattened front-side card preview (thumbnail + frame + shadow baked in),
+    # rendered once on the client and stored on R2 so the archive/list can show
+    # a lightweight image feed instead of mounting the full card per item. The
+    # version/hash let the client invalidate the cached preview if the front
+    # design format changes; the URL is itself versioned for CDN cache busting.
+    front_preview_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    front_preview_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    front_preview_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     main_mood: Mapped[str] = mapped_column(String(20), nullable=False)
     tags: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")

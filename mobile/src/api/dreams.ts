@@ -90,6 +90,30 @@ export function markDreamBackOpened(dreamId: string, token?: string | null) {
   );
 }
 
+export function uploadDreamFrontPreview(
+  dreamId: string,
+  preview: { uri: string; version: number; hash: string },
+  token?: string | null,
+) {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: preview.uri,
+    name: `front-preview-${dreamId}.png`,
+    type: 'image/png',
+  } as unknown as Blob);
+  formData.append('version', String(preview.version));
+  formData.append('content_hash', preview.hash);
+
+  return requestJson<Dream>(
+    `/dreams/${encodeURIComponent(dreamId)}/front-preview`,
+    {
+      method: 'POST',
+      token,
+      body: formData,
+    },
+  );
+}
+
 export function fetchInbox(token?: string | null) {
   return requestJson<Dream[]>('/dreams/inbox', { token });
 }

@@ -76,6 +76,12 @@ export interface Dream {
   imagePrompt: string;
   imageUrl: string | null;
   thumbnailUrl: string | null;
+  // Flattened front-side preview (thumbnail + frame + shadow baked in), stored
+  // on R2 and used by the archive/list as a lightweight image feed. Generated
+  // lazily on the client; null until a preview has been produced for the card.
+  frontPreviewUrl?: string | null;
+  frontPreviewVersion?: number | null;
+  frontPreviewHash?: string | null;
   mainMood: Mood | string;
   tags: string[];
   design?: DreamDesign;

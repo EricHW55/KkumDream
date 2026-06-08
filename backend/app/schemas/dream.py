@@ -52,6 +52,10 @@ LetterPaper = Literal[
 ]
 StoryLength = Literal["short", "standard", "long"]
 
+# Current flattened front-preview format version. Bump this when the baked
+# front-side card design changes so clients regenerate and re-upload previews.
+FRONT_PREVIEW_VERSION = 1
+
 
 class DreamDesign(ApiModel):
     card_color: CardColor = "beige"
@@ -110,6 +114,9 @@ class DreamOut(ApiModel):
     image_prompt: str
     image_url: str | None = None
     thumbnail_url: str | None = None
+    front_preview_url: str | None = None
+    front_preview_version: int | None = None
+    front_preview_hash: str | None = None
     main_mood: str
     tags: list[str]
     design: DreamDesign
