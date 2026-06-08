@@ -65,6 +65,10 @@ type Props = {
   isLoading?: boolean;
   isRefreshing?: boolean;
   viewModeCacheKey?: string;
+  // When true, eagerly generate previews for the most-recent cards before they
+  // are scrolled into view (used by the giver's outbox so receivers/rooms see a
+  // ready preview without anyone having to browse to it first).
+  eagerPreviewGeneration?: boolean;
 };
 
 type DateGroup = {
@@ -86,6 +90,10 @@ const INITIAL_ARCHIVE_RENDER_COUNT = 12;
 const ARCHIVE_RENDER_BATCH_SIZE = 6;
 const ARCHIVE_RENDER_BATCH_DELAY_MS = 90;
 const THUMBNAIL_PREFETCH_LIMIT = 8;
+// How many of the most-recent cards may be generated eagerly (before they are
+// scrolled into view) when eager generation is enabled, e.g. the giver's
+// outbox. Kept small so we never bulk-generate the whole history.
+const EAGER_PREVIEW_LIMIT = 8;
 const DEFAULT_LIBRARY_MODE: LibraryMode = 'archive';
 
 export function DreamLibraryView({
@@ -97,6 +105,7 @@ export function DreamLibraryView({
   isLoading = false,
   isRefreshing = false,
   viewModeCacheKey,
+  eagerPreviewGeneration = false,
 }: Props) {
   const navigation = useNavigation<Navigation>();
   const isFocused = useIsFocused();
@@ -175,6 +184,7 @@ export function DreamLibraryView({
   const viewableArchiveIdsRef = useRef<string[]>([]);
   const attemptedPreviewIdsRef = useRef<Set<string>>(new Set());
   const archiveDreamMapRef = useRef<Map<string, Dream>>(new Map());
+  const eagerCandidateIdsRef = useRef<string[]>([]);
   const tickGenerationRef = useRef<() => void>(() => undefined);
   const previewPanResponder = useMemo(
     () =>
@@ -248,11 +258,15 @@ export function DreamLibraryView({
     archiveDreamMapRef.current = new Map(
       decoratedArchiveDreams.map(dream => [dream.id, dream]),
     );
+    eagerCandidateIdsRef.current = decoratedArchiveDreams
+      .slice(0, EAGER_PREVIEW_LIMIT)
+      .map(dream => dream.id);
   }, [decoratedArchiveDreams]);
 
-  // Single-flight preview generation: pick the first currently-visible card that
-  // is missing a current preview and hasn't been attempted, and never start
-  // while the list is actively scrolling.
+  // Single-flight preview generation: pick the first card that is missing a
+  // current preview and hasn't been attempted, preferring on-screen cards and
+  // (when eager generation is on) the most-recent cards. Never starts while the
+  // list is actively scrolling.
   const tickGeneration = useCallback(() => {
     if (!token || mode !== 'archive') {
       return;
@@ -261,19 +275,26 @@ export function DreamLibraryView({
       return;
     }
     const map = archiveDreamMapRef.current;
-    const next = viewableArchiveIdsRef.current
-      .map(id => map.get(id))
-      .find(
-        dream =>
-          Boolean(dream) &&
-          needsFrontPreview(dream as Dream) &&
-          !attemptedPreviewIdsRef.current.has((dream as Dream).id),
-      ) as Dream | undefined;
+    const orderedIds = eagerPreviewGeneration
+      ? [...viewableArchiveIdsRef.current, ...eagerCandidateIdsRef.current]
+      : viewableArchiveIdsRef.current;
+    let next: Dream | undefined;
+    for (const id of orderedIds) {
+      const dream = map.get(id);
+      if (
+        dream &&
+        needsFrontPreview(dream) &&
+        !attemptedPreviewIdsRef.current.has(dream.id)
+      ) {
+        next = dream;
+        break;
+      }
+    }
     if (next) {
       generatingIdRef.current = next.id;
       setGeneratingDream(next);
     }
-  }, [mode, token]);
+  }, [eagerPreviewGeneration, mode, token]);
 
   useEffect(() => {
     tickGenerationRef.current = tickGeneration;

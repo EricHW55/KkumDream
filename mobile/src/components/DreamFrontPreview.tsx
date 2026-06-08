@@ -209,11 +209,24 @@ export function DreamFrontPreviewGenerator({
 
     const run = async () => {
       try {
-        if (dream.thumbnailUrl) {
-          // Make sure the baked-in thumbnail is loaded before we snapshot.
-          await Image.prefetch(dream.thumbnailUrl).catch(() => undefined);
+        // Never bake a placeholder: only snapshot once the thumbnail is loaded.
+        // If it can't be loaded, bail (the card keeps its lightweight fallback)
+        // and let a later focus retry rather than uploading a broken preview.
+        if (!dream.thumbnailUrl) {
+          onError(dream.id);
+          return;
+        }
+        let prefetched = false;
+        try {
+          prefetched = await Image.prefetch(dream.thumbnailUrl);
+        } catch {
+          prefetched = false;
         }
         if (isCancelled) {
+          return;
+        }
+        if (!prefetched) {
+          onError(dream.id);
           return;
         }
         const uri = await captureRef(hostRef, {

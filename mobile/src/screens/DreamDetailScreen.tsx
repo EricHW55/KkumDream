@@ -28,6 +28,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CardFlipGuide } from '../components/CardFlipGuide';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { DreamCard } from '../components/DreamCard';
+import {
+  DreamFrontPreviewGenerator,
+  needsFrontPreview,
+} from '../components/DreamFrontPreview';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
 import { ReactionBar } from '../components/ReactionBar';
 import {
@@ -43,6 +47,7 @@ import {
 } from '../api/dreams';
 import { blockUser, reportContent } from '../api/safety';
 import { getCurrentUserId, isCurrentUserId } from '../data/currentUser';
+import { applyDreamPreviewToCaches } from '../data/dreamRepository';
 import { getDisplayMember } from '../data/members';
 import {
   hasSeenCardFlipGuide,
@@ -123,6 +128,10 @@ export function DreamDetailScreen({ route, navigation }: Props) {
   const [isPreparingShare, setIsPreparingShare] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  // Opportunistically flatten this card's front preview while it's open, if it
+  // doesn't have a current one yet (the full card is already mounted here).
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const previewAttemptedRef = useRef(false);
   // A dream sent to an external recipient stays unclaimed (no receiverId, just
   // the typed-in label) until someone opens the share link. While it is in that
   // state, let the sender re-surface the claim link to copy or resend it. (A
@@ -189,6 +198,40 @@ export function DreamDetailScreen({ route, navigation }: Props) {
       mergeDreamUpdate(refreshedDream);
     }
   }, [dream.id, mergeDreamUpdate, refreshedDream]);
+
+  const onPreviewGenerated = useCallback(
+    (updated: Dream) => {
+      previewAttemptedRef.current = true;
+      setIsGeneratingPreview(false);
+      mergeDreamUpdate(updated);
+      applyDreamPreviewToCaches(
+        updated.id,
+        {
+          frontPreviewUrl: updated.frontPreviewUrl ?? null,
+          frontPreviewVersion: updated.frontPreviewVersion ?? null,
+          frontPreviewHash: updated.frontPreviewHash ?? null,
+        },
+        sessionUserId,
+      );
+    },
+    [mergeDreamUpdate, sessionUserId],
+  );
+
+  const onPreviewError = useCallback(() => {
+    previewAttemptedRef.current = true;
+    setIsGeneratingPreview(false);
+  }, []);
+
+  useEffect(() => {
+    if (!token || previewAttemptedRef.current || isGeneratingPreview) {
+      return;
+    }
+    // Wait until the image is ready (thumbnail present); polling above keeps
+    // `dream` fresh, so this fires once generation finishes.
+    if (needsFrontPreview(dream)) {
+      setIsGeneratingPreview(true);
+    }
+  }, [dream, isGeneratingPreview, token]);
 
   useEffect(() => {
     if (!token || !isReceiver || dream.readAt) {
@@ -844,6 +887,15 @@ export function DreamDetailScreen({ route, navigation }: Props) {
             )}
           </Pressable>
         </View>
+      ) : null}
+
+      {isGeneratingPreview ? (
+        <DreamFrontPreviewGenerator
+          dream={dream}
+          token={token}
+          onGenerated={onPreviewGenerated}
+          onError={onPreviewError}
+        />
       ) : null}
     </KeyboardAvoidingView>
   );
