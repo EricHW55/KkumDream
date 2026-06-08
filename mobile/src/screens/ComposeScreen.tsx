@@ -822,12 +822,6 @@ export function ComposeScreen({ navigation }: Props) {
     });
   };
 
-  const handleTexturePreviewScroll = (
-    event: NativeSyntheticEvent<NativeScrollEvent>,
-  ) => {
-    updateTexturePreviewIndexFromOffset(event.nativeEvent.contentOffset.x);
-  };
-
   const handleTexturePreviewScrollEnd = (
     event: NativeSyntheticEvent<NativeScrollEvent>,
   ) => {
@@ -856,12 +850,6 @@ export function ComposeScreen({ navigation }: Props) {
       setPremiumBadgeHint(hint => (hint === 'letterPaper' ? null : hint));
       return boundedIndex;
     });
-  };
-
-  const handleLetterPaperPreviewScroll = (
-    event: NativeSyntheticEvent<NativeScrollEvent>,
-  ) => {
-    updateLetterPaperPreviewIndexFromOffset(event.nativeEvent.contentOffset.x);
   };
 
   const handleLetterPaperPreviewScrollEnd = (
@@ -1682,9 +1670,6 @@ export function ComposeScreen({ navigation }: Props) {
                 <Text style={styles.letterPaperPreviewButtonText}>
                   질감 보기
                 </Text>
-                {isPremiumImageTexture(selectedDesign.imageTexture) ? (
-                  <PassBadge compact />
-                ) : null}
               </Pressable>
             </View>
             <View style={styles.textureGrid}>
@@ -1742,9 +1727,6 @@ export function ComposeScreen({ navigation }: Props) {
                 <Text style={styles.letterPaperPreviewButtonText}>
                   편지지 보기
                 </Text>
-                {isPremiumLetterPaper(selectedDesign.letterPaper) ? (
-                  <PassBadge compact />
-                ) : null}
               </Pressable>
             </View>
             <View style={styles.textureGrid}>
@@ -1918,17 +1900,15 @@ export function ComposeScreen({ navigation }: Props) {
           setIsTexturePreviewVisible(false);
         }}
       >
-        <Pressable
-          style={styles.cardPreviewBackdrop}
-          onPress={() => {
-            setPremiumBadgeHint(null);
-            setIsTexturePreviewVisible(false);
-          }}
-        >
+        <View style={styles.cardPreviewBackdrop}>
           <Pressable
-            style={styles.texturePreviewSheet}
-            onPress={event => event.stopPropagation()}
-          >
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              setPremiumBadgeHint(null);
+              setIsTexturePreviewVisible(false);
+            }}
+          />
+          <View style={styles.texturePreviewSheet}>
             <View style={styles.sheetHeader}>
               <View style={styles.flex}>
                 <View style={styles.sheetTitleRow}>
@@ -1959,9 +1939,8 @@ export function ComposeScreen({ navigation }: Props) {
               horizontal
               pagingEnabled
               bounces={false}
-              onScroll={handleTexturePreviewScroll}
               onMomentumScrollEnd={handleTexturePreviewScrollEnd}
-              scrollEventThrottle={16}
+              onScrollEndDrag={handleTexturePreviewScrollEnd}
               showsHorizontalScrollIndicator={false}
               style={[
                 styles.texturePreviewPager,
@@ -2025,8 +2004,8 @@ export function ComposeScreen({ navigation }: Props) {
                 />
               ))}
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal
@@ -2038,17 +2017,15 @@ export function ComposeScreen({ navigation }: Props) {
           setIsLetterPaperPreviewVisible(false);
         }}
       >
-        <Pressable
-          style={styles.cardPreviewBackdrop}
-          onPress={() => {
-            setPremiumBadgeHint(null);
-            setIsLetterPaperPreviewVisible(false);
-          }}
-        >
+        <View style={styles.cardPreviewBackdrop}>
           <Pressable
-            style={styles.letterPaperPreviewSheet}
-            onPress={event => event.stopPropagation()}
-          >
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              setPremiumBadgeHint(null);
+              setIsLetterPaperPreviewVisible(false);
+            }}
+          />
+          <View style={styles.letterPaperPreviewSheet}>
             <View style={styles.sheetHeader}>
               <View style={styles.flex}>
                 <View style={styles.sheetTitleRow}>
@@ -2079,9 +2056,8 @@ export function ComposeScreen({ navigation }: Props) {
               horizontal
               pagingEnabled
               bounces={false}
-              onScroll={handleLetterPaperPreviewScroll}
               onMomentumScrollEnd={handleLetterPaperPreviewScrollEnd}
-              scrollEventThrottle={16}
+              onScrollEndDrag={handleLetterPaperPreviewScrollEnd}
               showsHorizontalScrollIndicator={false}
               style={[
                 styles.letterPaperPreviewPager,
@@ -2167,8 +2143,8 @@ export function ComposeScreen({ navigation }: Props) {
                 />
               ))}
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal
