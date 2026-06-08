@@ -35,7 +35,7 @@ class DreamImageActionsModule(private val reactContext: ReactApplicationContext)
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(
                         MediaStore.Images.Media.RELATIVE_PATH,
-                        "${Environment.DIRECTORY_PICTURES}/KkumDream",
+                        "${Environment.DIRECTORY_PICTURES}/꿈드림",
                     )
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                   }

@@ -1,17 +1,15 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
   InteractionManager,
-  type LayoutChangeEvent,
   Modal,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  type ViewToken,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -33,7 +31,12 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { readCache, writeCache } from '../data/cache';
+import {
+  applyDreamPreviewToCaches,
+  type DreamFrontPreviewFields,
+} from '../data/dreamRepository';
 import type { RootStackParamList } from '../navigation/types';
+import { useSessionStore } from '../store/sessionStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { colors } from '../theme/colors';
 import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
@@ -42,6 +45,12 @@ import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
 import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
+import {
+  DreamArchivePreview,
+  DreamFrontPreviewGenerator,
+  PREVIEW_ASPECT_RATIO,
+  needsFrontPreview,
+} from './DreamFrontPreview';
 import { HaloShadow } from './HaloShadow';
 
 type LibraryMode = 'archive' | 'calendar';
@@ -56,6 +65,10 @@ type Props = {
   isLoading?: boolean;
   isRefreshing?: boolean;
   viewModeCacheKey?: string;
+  // When true, eagerly generate previews for the most-recent cards before they
+  // are scrolled into view (used by the giver's outbox so receivers/rooms see a
+  // ready preview without anyone having to browse to it first).
+  eagerPreviewGeneration?: boolean;
 };
 
 type DateGroup = {
@@ -77,6 +90,10 @@ const INITIAL_ARCHIVE_RENDER_COUNT = 12;
 const ARCHIVE_RENDER_BATCH_SIZE = 6;
 const ARCHIVE_RENDER_BATCH_DELAY_MS = 90;
 const THUMBNAIL_PREFETCH_LIMIT = 8;
+// How many of the most-recent cards may be generated eagerly (before they are
+// scrolled into view) when eager generation is enabled, e.g. the giver's
+// outbox. Kept small so we never bulk-generate the whole history.
+const EAGER_PREVIEW_LIMIT = 8;
 const DEFAULT_LIBRARY_MODE: LibraryMode = 'archive';
 
 export function DreamLibraryView({
@@ -88,6 +105,7 @@ export function DreamLibraryView({
   isLoading = false,
   isRefreshing = false,
   viewModeCacheKey,
+  eagerPreviewGeneration = false,
 }: Props) {
   const navigation = useNavigation<Navigation>();
   const isFocused = useIsFocused();
@@ -150,19 +168,24 @@ export function DreamLibraryView({
   const [visibleArchiveCount, setVisibleArchiveCount] = useState(
     INITIAL_ARCHIVE_RENDER_COUNT,
   );
-  const [viewableArchiveIds, setViewableArchiveIds] = useState<string[]>([]);
-  const [upgradedArchiveIds, setUpgradedArchiveIds] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const archiveItemLayoutsRef = useRef(
-    new Map<string, { height: number; index: number; y: number }>(),
-  );
-  const archiveViewportHeightRef = useRef(0);
-  const archiveScrollOffsetRef = useRef(0);
-  const isArchiveInputActiveRef = useRef(false);
-  const archiveUpgradeResumeTimerRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  // The card currently being flattened into a preview (rendered off-screen). We
+  // generate one at a time so capture/upload work never competes with scrolling.
+  const [generatingDream, setGeneratingDream] = useState<Dream | null>(null);
+  // Previews produced this session, mirrored over the fetched dreams so the grid
+  // swaps from placeholder to flattened image immediately (also persisted to the
+  // local cache so it survives restarts).
+  const [previewOverrides, setPreviewOverrides] = useState<
+    Record<string, DreamFrontPreviewFields>
+  >({});
+  const token = useSessionStore(state => state.token);
+  const userId = useSessionStore(state => state.userId);
+  const generatingIdRef = useRef<string | null>(null);
+  const isArchiveScrollingRef = useRef(false);
+  const viewableArchiveIdsRef = useRef<string[]>([]);
+  const attemptedPreviewIdsRef = useRef<Set<string>>(new Set());
+  const archiveDreamMapRef = useRef<Map<string, Dream>>(new Map());
+  const eagerCandidateIdsRef = useRef<string[]>([]);
+  const tickGenerationRef = useRef<() => void>(() => undefined);
   const previewPanResponder = useMemo(
     () =>
       PanResponder.create({
@@ -210,142 +233,121 @@ export function DreamLibraryView({
   const archiveCardWidth = Math.floor(
     (width - 40 - archiveColumnGap * (archiveColumns - 1)) / archiveColumns,
   );
-  const archiveCardHeight = Math.round(
-    archiveCardWidth / DREAM_CARD_ASPECT_RATIO,
-  );
-  const archiveRowHeight = archiveCardHeight + 12;
+  // The flattened preview includes a shadow margin, so cells are sized by the
+  // preview's aspect ratio rather than the bare card's.
+  const previewCellHeight = Math.round(archiveCardWidth / PREVIEW_ASPECT_RATIO);
+  const archiveRowHeight = previewCellHeight + 12;
   const calendarCellSize = Math.max(
     40,
     Math.min(62, Math.floor((width - 72) / 7)),
   );
   const dayPreviewSize = Math.max(40, Math.min(56, calendarCellSize - 4));
 
-  const updateArchiveUpgradeQueue = useCallback(() => {
-    if (isArchiveInputActiveRef.current) {
-      return;
-    }
-    if (mode !== 'archive' || archiveDreams.length === 0) {
-      setViewableArchiveIds([]);
-      return;
-    }
-
-    const viewportHeight = archiveViewportHeightRef.current;
-    if (viewportHeight <= 0) {
-      setViewableArchiveIds(
-        archiveDreams
-          .slice(0, INITIAL_ARCHIVE_RENDER_COUNT)
-          .map(dream => dream.id),
-      );
-      return;
-    }
-
-    const viewportTop = archiveScrollOffsetRef.current;
-    const viewportBottom = viewportTop + viewportHeight;
-    const viewportCenter = (viewportTop + viewportBottom) / 2;
-    const visibleScores: Array<{ id: string; index: number; ratio: number }> = [];
-    const backgroundScores: Array<{
-      distance: number;
-      id: string;
-      index: number;
-    }> = [];
-
-    archiveDreams.forEach((dream, fallbackIndex) => {
-      const layout = archiveItemLayoutsRef.current.get(dream.id);
-      const index = layout?.index ?? fallbackIndex;
-      if (!layout || layout.height <= 0) {
-        backgroundScores.push({
-          distance: Math.abs(fallbackIndex - Math.floor(archiveScrollOffsetRef.current / archiveRowHeight) * archiveColumns),
-          id: dream.id,
-          index,
-        });
-        return;
-      }
-
-      const itemTop = layout.y;
-      const itemBottom = layout.y + layout.height;
-      const visibleHeight = Math.max(
-        0,
-        Math.min(itemBottom, viewportBottom) - Math.max(itemTop, viewportTop),
-      );
-      const ratio = visibleHeight / layout.height;
-      if (ratio > 0) {
-        visibleScores.push({ id: dream.id, index, ratio });
-        return;
-      }
-
-      const itemCenter = itemTop + layout.height / 2;
-      backgroundScores.push({
-        distance: Math.abs(itemCenter - viewportCenter),
-        id: dream.id,
-        index,
-      });
-    });
-
-    visibleScores.sort((left, right) => {
-      if (right.ratio !== left.ratio) {
-        return right.ratio - left.ratio;
-      }
-      return left.index - right.index;
-    });
-    backgroundScores.sort((left, right) => {
-      if (left.distance !== right.distance) {
-        return left.distance - right.distance;
-      }
-      return left.index - right.index;
-    });
-
-    setViewableArchiveIds([
-      ...visibleScores.map(score => score.id),
-      ...backgroundScores.map(score => score.id),
-    ]);
-  }, [archiveColumns, archiveDreams, archiveRowHeight, mode]);
-
-  const handleArchiveItemLayout = useCallback(
-    (dreamId: string, index: number, event: LayoutChangeEvent) => {
-      const { height } = event.nativeEvent.layout;
-      const y = Math.floor(index / archiveColumns) * archiveRowHeight;
-      archiveItemLayoutsRef.current.set(dreamId, { height, index, y });
-      updateArchiveUpgradeQueue();
-    },
-    [archiveColumns, archiveRowHeight, updateArchiveUpgradeQueue],
+  // Mirror previews generated this session over the fetched cards so an item
+  // swaps from placeholder to flattened image as soon as it is ready.
+  const decoratedArchiveDreams = useMemo(
+    () =>
+      archiveDreams.map(dream => {
+        const override = previewOverrides[dream.id];
+        return override ? { ...dream, ...override } : dream;
+      }),
+    [archiveDreams, previewOverrides],
   );
 
-  const handleArchiveLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      archiveViewportHeightRef.current = event.nativeEvent.layout.height;
-      updateArchiveUpgradeQueue();
-    },
-    [updateArchiveUpgradeQueue],
-  );
+  useEffect(() => {
+    archiveDreamMapRef.current = new Map(
+      decoratedArchiveDreams.map(dream => [dream.id, dream]),
+    );
+    eagerCandidateIdsRef.current = decoratedArchiveDreams
+      .slice(0, EAGER_PREVIEW_LIMIT)
+      .map(dream => dream.id);
+  }, [decoratedArchiveDreams]);
 
-  const handleArchiveScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      archiveScrollOffsetRef.current = event.nativeEvent.contentOffset.y;
-      updateArchiveUpgradeQueue();
-    },
-    [updateArchiveUpgradeQueue],
-  );
-
-  const clearArchiveUpgradeResumeTimer = useCallback(() => {
-    if (archiveUpgradeResumeTimerRef.current !== null) {
-      clearTimeout(archiveUpgradeResumeTimerRef.current);
-      archiveUpgradeResumeTimerRef.current = null;
+  // Single-flight preview generation: pick the first card that is missing a
+  // current preview and hasn't been attempted, preferring on-screen cards and
+  // (when eager generation is on) the most-recent cards. Never starts while the
+  // list is actively scrolling.
+  const tickGeneration = useCallback(() => {
+    if (!token || mode !== 'archive') {
+      return;
     }
+    if (generatingIdRef.current || isArchiveScrollingRef.current) {
+      return;
+    }
+    const map = archiveDreamMapRef.current;
+    const orderedIds = eagerPreviewGeneration
+      ? [...viewableArchiveIdsRef.current, ...eagerCandidateIdsRef.current]
+      : viewableArchiveIdsRef.current;
+    let next: Dream | undefined;
+    for (const id of orderedIds) {
+      const dream = map.get(id);
+      if (
+        dream &&
+        needsFrontPreview(dream) &&
+        !attemptedPreviewIdsRef.current.has(dream.id)
+      ) {
+        next = dream;
+        break;
+      }
+    }
+    if (next) {
+      generatingIdRef.current = next.id;
+      setGeneratingDream(next);
+    }
+  }, [eagerPreviewGeneration, mode, token]);
+
+  useEffect(() => {
+    tickGenerationRef.current = tickGeneration;
+  }, [tickGeneration]);
+
+  const handlePreviewGenerated = useCallback(
+    (updated: Dream) => {
+      attemptedPreviewIdsRef.current.add(updated.id);
+      const fields: DreamFrontPreviewFields = {
+        frontPreviewUrl: updated.frontPreviewUrl ?? null,
+        frontPreviewVersion: updated.frontPreviewVersion ?? null,
+        frontPreviewHash: updated.frontPreviewHash ?? null,
+      };
+      setPreviewOverrides(current => ({ ...current, [updated.id]: fields }));
+      applyDreamPreviewToCaches(updated.id, fields, userId);
+      generatingIdRef.current = null;
+      setGeneratingDream(null);
+      requestAnimationFrame(() => tickGenerationRef.current());
+    },
+    [userId],
+  );
+
+  const handlePreviewError = useCallback((dreamId: string) => {
+    attemptedPreviewIdsRef.current.add(dreamId);
+    generatingIdRef.current = null;
+    setGeneratingDream(null);
+    requestAnimationFrame(() => tickGenerationRef.current());
   }, []);
 
-  const pauseArchiveUpgradeWork = useCallback(() => {
-    isArchiveInputActiveRef.current = true;
-    clearArchiveUpgradeResumeTimer();
-  }, [clearArchiveUpgradeResumeTimer]);
+  const onArchiveViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      viewableArchiveIdsRef.current = viewableItems
+        .map(item => (item.item as Dream | undefined)?.id)
+        .filter((id): id is string => Boolean(id));
+      if (!isArchiveScrollingRef.current) {
+        tickGenerationRef.current();
+      }
+    },
+  ).current;
 
-  const resumeArchiveUpgradeWork = useCallback(() => {
-    clearArchiveUpgradeResumeTimer();
-    archiveUpgradeResumeTimerRef.current = setTimeout(() => {
-      isArchiveInputActiveRef.current = false;
-      archiveUpgradeResumeTimerRef.current = null;
-      updateArchiveUpgradeQueue();
-    }, 80);
-  }, [clearArchiveUpgradeResumeTimer, updateArchiveUpgradeQueue]);
+  const archiveViewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 120,
+  }).current;
+
+  const handleArchiveScrollBegin = useCallback(() => {
+    isArchiveScrollingRef.current = true;
+  }, []);
+
+  const handleArchiveScrollEnd = useCallback(() => {
+    isArchiveScrollingRef.current = false;
+    tickGenerationRef.current();
+  }, []);
 
   // Single entry point so the card always starts off-screen below before
   // sliding up into view, regardless of where the preview was opened from.
@@ -445,15 +447,17 @@ export function DreamLibraryView({
   }, [dreams]);
 
   useEffect(() => {
+    // A new dream list invalidates the in-flight generation and prunes overrides
+    // for cards that are no longer present.
     const dreamIds = new Set(dreams.map(dream => dream.id));
-    setViewableArchiveIds([]);
-    archiveItemLayoutsRef.current.clear();
-    archiveScrollOffsetRef.current = 0;
-    setUpgradedArchiveIds(current => {
-      const next = new Set<string>();
-      current.forEach(id => {
+    viewableArchiveIdsRef.current = [];
+    generatingIdRef.current = null;
+    setGeneratingDream(null);
+    setPreviewOverrides(current => {
+      const next: Record<string, DreamFrontPreviewFields> = {};
+      Object.keys(current).forEach(id => {
         if (dreamIds.has(id)) {
-          next.add(id);
+          next[id] = current[id];
         }
       });
       return next;
@@ -461,85 +465,14 @@ export function DreamLibraryView({
   }, [dreams]);
 
   useEffect(() => {
-    updateArchiveUpgradeQueue();
-  }, [updateArchiveUpgradeQueue]);
-
-  useEffect(() => {
     if (!isFocused) {
+      isArchiveScrollingRef.current = false;
       return;
     }
-    setViewableArchiveIds([]);
-    setUpgradedArchiveIds(new Set());
+    // Re-enable previews that failed earlier this session and resume the queue.
+    attemptedPreviewIdsRef.current.clear();
+    requestAnimationFrame(() => tickGenerationRef.current());
   }, [isFocused]);
-
-  useEffect(() => {
-    if (
-      !isFocused ||
-      mode !== 'archive' ||
-      viewableArchiveIds.length > 0 ||
-      archiveDreams.length === 0
-    ) {
-      return undefined;
-    }
-
-    let frameId: number | null = null;
-    let isCancelled = false;
-    const task = InteractionManager.runAfterInteractions(() => {
-      frameId = requestAnimationFrame(() => {
-        if (!isCancelled) {
-          setViewableArchiveIds(
-            archiveDreams
-              .slice(0, INITIAL_ARCHIVE_RENDER_COUNT)
-              .map(dream => dream.id),
-          );
-        }
-      });
-    });
-
-    return () => {
-      isCancelled = true;
-      task.cancel?.();
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId);
-      }
-    };
-  }, [archiveDreams, isFocused, mode, viewableArchiveIds.length]);
-
-  useEffect(() => {
-    if (mode !== 'archive' || viewableArchiveIds.length === 0) {
-      return undefined;
-    }
-    if (isArchiveInputActiveRef.current) {
-      return undefined;
-    }
-
-    const nextId = viewableArchiveIds.find(id => !upgradedArchiveIds.has(id));
-    if (!nextId) {
-      return undefined;
-    }
-
-    let isCancelled = false;
-    const frameId = requestAnimationFrame(() => {
-      if (isCancelled || isArchiveInputActiveRef.current) {
-        return;
-      }
-      setUpgradedArchiveIds(current => {
-        if (current.has(nextId)) {
-          return current;
-        }
-        const next = new Set(current);
-        next.add(nextId);
-        return next;
-      });
-    });
-
-    return () => {
-      isCancelled = true;
-      cancelAnimationFrame(frameId);
-    };
-  }, [mode, upgradedArchiveIds, viewableArchiveIds]);
-
-  useEffect(() => clearArchiveUpgradeResumeTimer, [clearArchiveUpgradeResumeTimer]);
 
   useEffect(() => {
     const thumbnailUrls = Array.from(
@@ -662,7 +595,7 @@ export function DreamLibraryView({
       ) : mode === 'archive' ? (
         <FlatList
           key={`archive-grid-${archiveColumns}`}
-          data={archiveDreams}
+          data={decoratedArchiveDreams}
           getItemLayout={(_, index) => ({
             length: archiveRowHeight,
             offset: archiveRowHeight * Math.floor(index / archiveColumns),
@@ -670,17 +603,14 @@ export function DreamLibraryView({
           })}
           initialNumToRender={12}
           keyExtractor={item => item.id}
-          maxToRenderPerBatch={6}
+          maxToRenderPerBatch={8}
           numColumns={archiveColumns}
-          onLayout={handleArchiveLayout}
-          onScroll={handleArchiveScroll}
-          onScrollBeginDrag={pauseArchiveUpgradeWork}
-          onScrollEndDrag={resumeArchiveUpgradeWork}
-          onMomentumScrollBegin={pauseArchiveUpgradeWork}
-          onMomentumScrollEnd={resumeArchiveUpgradeWork}
-          onTouchStart={pauseArchiveUpgradeWork}
-          onTouchEnd={resumeArchiveUpgradeWork}
-          onTouchCancel={resumeArchiveUpgradeWork}
+          onViewableItemsChanged={onArchiveViewableItemsChanged}
+          viewabilityConfig={archiveViewabilityConfig}
+          onScrollBeginDrag={handleArchiveScrollBegin}
+          onMomentumScrollBegin={handleArchiveScrollBegin}
+          onScrollEndDrag={handleArchiveScrollEnd}
+          onMomentumScrollEnd={handleArchiveScrollEnd}
           refreshing={isRefreshing && dreams.length === 0}
           removeClippedSubviews
           showsVerticalScrollIndicator={false}
@@ -694,18 +624,16 @@ export function DreamLibraryView({
           ]}
           ListEmptyComponent={<EmptyDreamState message={emptyMessage} />}
           ListFooterComponent={
-            dreams.length > archiveDreams.length ? (
+            dreams.length > decoratedArchiveDreams.length ? (
               <Text style={styles.archiveLoadingMoreText}>
                 꿈카드를 더 불러오는 중이에요.
               </Text>
             ) : null
           }
           renderItem={({ item, index }) => (
-            <MiniDreamCard
+            <DreamArchivePreview
               dream={item}
               index={index}
-              isUpgraded={upgradedArchiveIds.has(item.id)}
-              onLayout={handleArchiveItemLayout}
               width={archiveCardWidth}
               onPress={handleSelectDream}
             />
@@ -1068,6 +996,15 @@ export function DreamLibraryView({
           ) : null}
         </Pressable>
       </Modal>
+
+      {generatingDream ? (
+        <DreamFrontPreviewGenerator
+          dream={generatingDream}
+          token={token}
+          onGenerated={handlePreviewGenerated}
+          onError={handlePreviewError}
+        />
+      ) : null}
     </View>
   );
 }
@@ -1109,55 +1046,6 @@ function DreamLibraryLoadingState({ cardWidth }: { cardWidth: number }) {
     </View>
   );
 }
-
-const MiniDreamCard = memo(function MiniDreamCard({
-  dream,
-  index,
-  isUpgraded,
-  onLayout,
-  width,
-  onPress,
-}: {
-  dream: Dream;
-  index: number;
-  isUpgraded: boolean;
-  onLayout: (dreamId: string, index: number, event: LayoutChangeEvent) => void;
-  width: number;
-  onPress: (dream: Dream) => void;
-}) {
-  const handleLayout = useCallback(
-    (event: LayoutChangeEvent) => onLayout(dream.id, index, event),
-    [onLayout, dream.id, index],
-  );
-  const handlePress = useCallback(() => onPress(dream), [onPress, dream]);
-
-  if (isUpgraded) {
-    return (
-      <View onLayout={handleLayout}>
-        <DreamCard
-          disableFlip
-          dream={dream}
-          onPress={handlePress}
-          preferThumbnail
-          showImageActions={false}
-          width={width}
-        />
-      </View>
-    );
-  }
-
-  return (
-    <View onLayout={handleLayout}>
-      <DreamCard
-        variant="lite"
-        dream={dream}
-        onPress={handlePress}
-        width={width}
-      />
-    </View>
-  );
-});
-
 function groupDreamsByDate(
   dreams: Dream[],
   calendarLabel: string,

@@ -79,6 +79,7 @@ export function OutboxScreen() {
         emptyMessage="보낸 꿈 카드가 없습니다."
         dreams={displayedOutbox}
         viewModeCacheKey={viewModeCacheKey}
+        eagerPreviewGeneration
         isLoading={
           !isLibraryHydrated &&
           !hasLoadedCache &&

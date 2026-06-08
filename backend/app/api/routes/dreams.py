@@ -1,6 +1,16 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
@@ -33,12 +43,15 @@ from app.services.dream_service import (
     list_outbox,
     mark_opened_back,
     mark_read,
+    set_front_preview,
     to_dream_out,
     toggle_dream_reaction,
     update_dream_text,
 )
 
 router = APIRouter()
+
+MAX_FRONT_PREVIEW_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
 @router.post("/draft", response_model=DreamOut)
@@ -102,6 +115,42 @@ async def outbox(
 ) -> list[DreamOut]:
     dreams = await list_outbox(session, user_id, limit)
     return [to_dream_out(dream, user_id) for dream in dreams]
+
+
+@router.post("/{dream_id}/front-preview", response_model=DreamOut)
+async def upload_front_preview(
+    dream_id: UUID,
+    file: UploadFile = File(...),
+    version: int = Form(...),
+    content_hash: str | None = Form(default=None),
+    user_id: UUID = Depends(current_user_id),
+    session: AsyncSession = Depends(db_session),
+) -> DreamOut:
+    if version < 1 or version > 1000:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid preview version",
+        )
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미지 파일만 업로드할 수 있어요.",
+        )
+    image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="업로드할 미리보기 이미지가 비어 있어요.",
+        )
+    if len(image_bytes) > MAX_FRONT_PREVIEW_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="미리보기 이미지는 5MB 이하로 업로드해주세요.",
+        )
+    dream = await set_front_preview(
+        session, user_id, dream_id, version, image_bytes, content_hash
+    )
+    return to_dream_out(dream, user_id)
 
 
 @router.get("/{dream_id}/comments", response_model=list[DreamCommentOut])

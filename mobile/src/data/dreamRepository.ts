@@ -188,6 +188,43 @@ export async function loadRoomDreamPage(
   }
 }
 
+export type DreamFrontPreviewFields = Pick<
+  Dream,
+  'frontPreviewUrl' | 'frontPreviewVersion' | 'frontPreviewHash'
+>;
+
+// Persist a freshly generated front preview into every cache that may hold the
+// card, so the lightweight image feed survives app restarts without another
+// round trip. The backend is the source of truth; this just mirrors it locally.
+export function applyDreamPreviewToCaches(
+  dreamId: string,
+  preview: DreamFrontPreviewFields,
+  userId?: string | null,
+) {
+  const keys = [
+    CACHE_KEYS.inbox(userId),
+    CACHE_KEYS.outbox(userId),
+    CACHE_KEYS.allDreams(userId),
+  ];
+  keys.forEach(key => {
+    const dreams = readCache<Dream[]>(key);
+    if (!dreams) {
+      return;
+    }
+    let changed = false;
+    const next = dreams.map(dream => {
+      if (dream.id !== dreamId) {
+        return dream;
+      }
+      changed = true;
+      return { ...dream, ...preview };
+    });
+    if (changed) {
+      writeCache(key, next);
+    }
+  });
+}
+
 export function getCachedDream(dreamId: string, userId?: string | null) {
   const cachedDreams = readCache<Dream[]>(CACHE_KEYS.allDreams(userId)) ?? [];
   return (

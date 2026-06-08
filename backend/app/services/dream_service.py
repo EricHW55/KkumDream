@@ -32,6 +32,7 @@ from app.schemas.dream import (
 )
 from app.services.ai_text_service import generate_dream_text
 from app.services.billing_service import has_active_pass
+from app.services.storage_service import store_front_preview
 from app.services.push_service import (
     send_dream_claimed_push,
     send_dream_comment_push,
@@ -300,6 +301,37 @@ async def give_dream(
     return await _attach_group_ids(session, dream)
 
 
+async def set_front_preview(
+    session: AsyncSession,
+    user_id: UUID,
+    dream_id: UUID,
+    version: int,
+    image_bytes: bytes,
+    content_hash: str | None,
+) -> Dream:
+    # Reuse the standard access/block checks (giver, receiver, or room member);
+    # also attaches group_ids for the response.
+    dream = await get_dream_for_user(session, user_id, dream_id)
+    if dream.status == "draft":
+        raise BadRequestError("Cannot create a preview for a draft dream")
+    if dream.hidden_at is not None:
+        raise BadRequestError("Cannot create a preview for a hidden dream")
+
+    # Cards are immutable, so the first valid preview for a given version wins:
+    # skip the R2 write entirely if one already exists. A version bump is the
+    # only thing that overwrites it.
+    if dream.front_preview_url and dream.front_preview_version == version:
+        return dream
+
+    url = await store_front_preview(dream.id, version, image_bytes)
+    dream.front_preview_url = url
+    dream.front_preview_version = version
+    dream.front_preview_hash = content_hash
+    await session.commit()
+    await session.refresh(dream)
+    return await _attach_group_ids(session, dream)
+
+
 def to_dream_out(dream: Dream, user_id: UUID) -> DreamOut:
     result = DreamOut.model_validate(dream)
     if dream.giver_id != user_id and dream.receiver_id != user_id:
@@ -323,6 +355,9 @@ def _mask_hidden_dream(result: DreamOut) -> None:
     result.image_prompt = ""
     result.image_url = None
     result.thumbnail_url = None
+    result.front_preview_url = None
+    result.front_preview_version = None
+    result.front_preview_hash = None
     result.tags = []
     result.private_postscript = None
 
