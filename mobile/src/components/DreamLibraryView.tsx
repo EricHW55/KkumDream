@@ -617,6 +617,7 @@ export function DreamLibraryView({
           updateCellsBatchingPeriod={60}
           windowSize={5}
           columnWrapperStyle={styles.gridRow}
+          style={styles.archiveList}
           contentContainerStyle={[
             styles.archiveGrid,
             dreams.length === 0 && styles.emptyArchiveGrid,
@@ -1221,9 +1222,16 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     color: colors.textPrimary,
   },
+  // Span the full device width (cancelling the Screen's 20px horizontal
+  // padding) so the scroll container doesn't clip the edge cards' shadow halo;
+  // the content padding below puts the cards back in their original position.
+  archiveList: {
+    marginHorizontal: -20,
+  },
   archiveGrid: {
     paddingTop: 14,
     paddingBottom: 28,
+    paddingHorizontal: 20,
   },
   emptyArchiveGrid: {
     flexGrow: 1,
