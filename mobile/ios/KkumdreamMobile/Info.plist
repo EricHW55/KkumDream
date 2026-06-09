@@ -32,6 +32,16 @@
 				<string>kkumdream</string>
 			</array>
 		</dict>
+		<dict>
+			<!-- Reversed GOOGLE_IOS_CLIENT_ID. Required by GoogleSignin (GIDSignIn);
+			     without it signIn() raises an NSException and the app aborts. -->
+			<key>CFBundleURLName</key>
+			<string>com.googleusercontent.apps</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.833051002058-mrs2t31t5a83ric27or0udmq0hern6l9</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
