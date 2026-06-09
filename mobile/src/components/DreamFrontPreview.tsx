@@ -1,27 +1,25 @@
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   type LayoutChangeEvent,
   Image,
-  InteractionManager,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
 import { uploadDreamFrontPreview } from '../api/dreams';
-import { colors } from '../theme/colors';
-import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
+import { normalizeDreamDesign } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
 import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
 
 // Bump this (and the backend FRONT_PREVIEW_VERSION) whenever the baked front
-// design changes so old previews are treated as outdated and regenerated.
-export const FRONT_PREVIEW_VERSION = 1;
+// design changes — or when a generation bug produced bad previews — so old
+// previews are treated as outdated and regenerated under a new R2 key.
+// v2: fixed a blank-image-region bug in the off-screen capture.
+export const FRONT_PREVIEW_VERSION = 2;
 
 // Geometry of the off-screen capture host. The card is rendered at a fixed
 // resolution and wrapped in a transparent margin wide enough to contain the
@@ -97,9 +95,10 @@ type ArchivePreviewProps = {
   onLayout?: (dreamId: string, index: number, event: LayoutChangeEvent) => void;
 };
 
-// Lightweight archive/list item. Renders the pre-rendered flattened preview as a
-// single image when available, otherwise a cheap thumbnail placeholder. It never
-// mounts the full DreamCard, so the list scrolls like an image feed.
+// Lightweight archive/list item. When the flattened preview exists it renders a
+// single image (image feed). Until then it falls back to a lite DreamCard — a
+// simple frame + thumbnail, no shadow/flip — so the cell still reads as a card
+// while its preview is being baked in the background.
 export const DreamArchivePreview = memo(function DreamArchivePreview({
   dream,
   index,
@@ -107,7 +106,13 @@ export const DreamArchivePreview = memo(function DreamArchivePreview({
   onPress,
   onLayout,
 }: ArchivePreviewProps) {
-  const cellHeight = Math.round(width / PREVIEW_ASPECT_RATIO);
+  // The cell footprint is the card itself (like the old grid). The flattened
+  // preview image also contains a shadow halo, so it is rendered larger than the
+  // cell and centered, letting the halo bleed into the grid gaps exactly as the
+  // live card's drop shadow used to — so the card is the same size as before.
+  const cellHeight = Math.round(width / DREAM_CARD_ASPECT_RATIO);
+  const previewWidth = Math.round(width / CARD_WIDTH_FRACTION);
+  const previewHeight = Math.round(previewWidth / PREVIEW_ASPECT_RATIO);
   const handlePress = useCallback(() => onPress(dream), [onPress, dream]);
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => onLayout?.(dream.id, index, event),
@@ -116,74 +121,42 @@ export const DreamArchivePreview = memo(function DreamArchivePreview({
   const hasPreview = hasValidFrontPreview(dream);
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onLayout={handleLayout}
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.cell,
-        { width, height: cellHeight },
-        pressed && interactionStyles.pressedSoft,
-      ]}
-    >
+    <View onLayout={handleLayout} style={[styles.cell, { width, height: cellHeight }]}>
       {hasPreview ? (
-        <Image
-          resizeMode="contain"
-          source={{ uri: dream.frontPreviewUrl ?? undefined }}
-          style={styles.previewImage}
-        />
-      ) : (
-        <FrontPreviewFallback dream={dream} cellWidth={width} />
-      )}
-    </Pressable>
-  );
-});
-
-// Cheap placeholder shown until the flattened preview exists (or for cards whose
-// image is still being generated). Matches the card footprint of the real
-// preview so the cell does not jump when the image swaps in.
-function FrontPreviewFallback({
-  dream,
-  cellWidth,
-}: {
-  dream: Dream;
-  cellWidth: number;
-}) {
-  const design = normalizeDreamDesign(dream.design);
-  const theme = CARD_COLOR_THEMES[design.cardColor];
-  const cardWidth = Math.round(cellWidth * CARD_WIDTH_FRACTION);
-  const cardHeight = Math.round(cardWidth / DREAM_CARD_ASPECT_RATIO);
-  const isPending =
-    dream.imageStatus === 'queued' || dream.imageStatus === 'generating';
-
-  return (
-    <View
-      style={[
-        styles.fallbackCard,
-        { width: cardWidth, height: cardHeight, backgroundColor: theme.card },
-      ]}
-    >
-      {dream.thumbnailUrl ? (
-        <Image
-          resizeMode="cover"
-          source={{ uri: dream.thumbnailUrl }}
-          style={styles.fallbackImage}
-        />
-      ) : (
-        <View
-          style={[
-            styles.fallbackPlaceholder,
-            { backgroundColor: theme.placeholder },
+        <Pressable
+          accessibilityRole="button"
+          onPress={handlePress}
+          style={({ pressed }) => [
+            styles.previewFill,
+            pressed && interactionStyles.pressedSoft,
           ]}
         >
-          <Text style={[styles.fallbackMood, { color: theme.accent }]}>
-            {isPending ? '생성중' : String(dream.mainMood).slice(0, 2)}
-          </Text>
-        </View>
+          <Image
+            resizeMode="stretch"
+            source={{ uri: dream.frontPreviewUrl ?? undefined }}
+            style={{
+              position: 'absolute',
+              width: previewWidth,
+              height: previewHeight,
+              left: Math.round((width - previewWidth) / 2),
+              top: Math.round((cellHeight - previewHeight) / 2),
+            }}
+          />
+        </Pressable>
+      ) : (
+        <DreamCard
+          disableFlip
+          dream={dream}
+          onPress={handlePress}
+          preferThumbnail
+          showImageActions={false}
+          variant="lite"
+          width={width}
+        />
       )}
     </View>
   );
-}
+});
 
 type GeneratorProps = {
   dream: Dream;
@@ -202,33 +175,31 @@ export function DreamFrontPreviewGenerator({
   onError,
 }: GeneratorProps) {
   const hostRef = useRef<View>(null);
+  // Gate the capture on the thumbnail actually decoding (onLoad), not a guessed
+  // delay. A blank image region happens when the snapshot runs before the
+  // thumbnail has painted, so we wait for a real load signal first.
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   useEffect(() => {
-    let isCancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (!dream.thumbnailUrl) {
+      onError(dream.id);
+    }
+  }, [dream.id, dream.thumbnailUrl, onError]);
 
-    const run = async () => {
+  useEffect(() => {
+    if (!isImageLoaded) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+
+    const capture = async () => {
+      if (isCancelled) {
+        return;
+      }
       try {
-        // Never bake a placeholder: only snapshot once the thumbnail is loaded.
-        // If it can't be loaded, bail (the card keeps its lightweight fallback)
-        // and let a later focus retry rather than uploading a broken preview.
-        if (!dream.thumbnailUrl) {
-          onError(dream.id);
-          return;
-        }
-        let prefetched = false;
-        try {
-          prefetched = await Image.prefetch(dream.thumbnailUrl);
-        } catch {
-          prefetched = false;
-        }
-        if (isCancelled) {
-          return;
-        }
-        if (!prefetched) {
-          onError(dream.id);
-          return;
-        }
         const uri = await captureRef(hostRef, {
           format: 'png',
           quality: 1,
@@ -239,7 +210,11 @@ export function DreamFrontPreviewGenerator({
         }
         const updated = await uploadDreamFrontPreview(
           dream.id,
-          { uri, version: FRONT_PREVIEW_VERSION, hash: computeFrontPreviewHash(dream) },
+          {
+            uri,
+            version: FRONT_PREVIEW_VERSION,
+            hash: computeFrontPreviewHash(dream),
+          },
           token,
         );
         if (!isCancelled) {
@@ -252,20 +227,18 @@ export function DreamFrontPreviewGenerator({
       }
     };
 
-    const task = InteractionManager.runAfterInteractions(() => {
-      // Give the off-screen card a moment to lay out and paint the (prefetched)
-      // thumbnail before capture, so we never snapshot the placeholder.
-      timer = setTimeout(run, 400);
+    // The thumbnail has decoded; wait two frames so the card has actually
+    // painted it into the layer before snapshotting.
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(capture);
     });
 
     return () => {
       isCancelled = true;
-      task.cancel?.();
-      if (timer !== null) {
-        clearTimeout(timer);
-      }
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
     };
-  }, [dream, onError, onGenerated, token]);
+  }, [dream, isImageLoaded, onError, onGenerated, token]);
 
   return (
     <View pointerEvents="none" style={styles.generatorLayer}>
@@ -278,6 +251,16 @@ export function DreamFrontPreviewGenerator({
           width={GEN_CARD_WIDTH}
         />
       </View>
+      {/* Invisible probe that fires onLoad once the thumbnail is decoded; the
+          card above renders the same URI from cache, so it is painted by then. */}
+      {dream.thumbnailUrl ? (
+        <Image
+          onError={() => onError(dream.id)}
+          onLoad={() => setIsImageLoaded(true)}
+          source={{ uri: dream.thumbnailUrl }}
+          style={styles.loadProbe}
+        />
+      ) : null}
     </View>
   );
 }
@@ -286,43 +269,24 @@ const styles = StyleSheet.create({
   cell: {
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
-  previewImage: {
+  previewFill: {
     width: '100%',
     height: '100%',
-  },
-  fallbackCard: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: colors.primaryDark,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  fallbackImage: {
-    width: '100%',
-    height: '100%',
-  },
-  fallbackPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fallbackMood: {
-    fontFamily: fontFamily.handwritten,
-    fontSize: 16,
-    fontWeight: '700',
-    includeFontPadding: false,
   },
   generatorLayer: {
-    // Fully off-screen rather than transparent: a parent opacity of 0 can make
-    // the capture come back blank on Android.
+    // Kept on-screen (top-left) but at ~0 opacity instead of far off-screen: a
+    // view fully outside the window may not composite its image layer, which is
+    // what left a blank image region in the snapshot. The captured host below
+    // keeps full opacity, so the PNG is unaffected by this wrapper's opacity.
     position: 'absolute',
-    left: -10000,
     top: 0,
+    left: 0,
     width: GEN_HOST_WIDTH,
     height: GEN_HOST_HEIGHT,
+    opacity: 0.01,
+    zIndex: -1,
   },
   generatorHost: {
     width: GEN_HOST_WIDTH,
@@ -330,5 +294,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
+  },
+  loadProbe: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
   },
 });

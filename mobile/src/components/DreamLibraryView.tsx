@@ -48,7 +48,6 @@ import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
 import {
   DreamArchivePreview,
   DreamFrontPreviewGenerator,
-  PREVIEW_ASPECT_RATIO,
   needsFrontPreview,
 } from './DreamFrontPreview';
 import { HaloShadow } from './HaloShadow';
@@ -233,10 +232,10 @@ export function DreamLibraryView({
   const archiveCardWidth = Math.floor(
     (width - 40 - archiveColumnGap * (archiveColumns - 1)) / archiveColumns,
   );
-  // The flattened preview includes a shadow margin, so cells are sized by the
-  // preview's aspect ratio rather than the bare card's.
-  const previewCellHeight = Math.round(archiveCardWidth / PREVIEW_ASPECT_RATIO);
-  const archiveRowHeight = previewCellHeight + 12;
+  // Cells are sized to the card footprint (the preview's shadow halo bleeds into
+  // the gaps), matching the previous live-card grid.
+  const archiveCardHeight = Math.round(archiveCardWidth / DREAM_CARD_ASPECT_RATIO);
+  const archiveRowHeight = archiveCardHeight + 12;
   const calendarCellSize = Math.max(
     40,
     Math.min(62, Math.floor((width - 72) / 7)),

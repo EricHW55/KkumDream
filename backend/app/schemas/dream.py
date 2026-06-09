@@ -53,8 +53,10 @@ LetterPaper = Literal[
 StoryLength = Literal["short", "standard", "long"]
 
 # Current flattened front-preview format version. Bump this when the baked
-# front-side card design changes so clients regenerate and re-upload previews.
-FRONT_PREVIEW_VERSION = 1
+# front-side card design changes (or a generation bug shipped) so clients
+# regenerate and re-upload previews under a new R2 key.
+# v2: fixed a blank-image-region bug in the client off-screen capture.
+FRONT_PREVIEW_VERSION = 2
 
 
 class DreamDesign(ApiModel):
