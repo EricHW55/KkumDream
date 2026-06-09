@@ -241,6 +241,7 @@ export function HomeScreen() {
         data={rooms}
         keyExtractor={item => item.id}
         showsVerticalScrollIndicator={false}
+        style={styles.roomList}
         contentContainerStyle={[
           styles.list,
           rooms.length === 0 && styles.emptyList,
@@ -689,9 +690,16 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: colors.lavenderTint,
   },
+  // Span the full device width (cancelling the Screen's 20px horizontal
+  // padding) so the scroll container doesn't clip each room card's shadow halo;
+  // the content padding below keeps the cards in their original position.
+  roomList: {
+    marginHorizontal: -20,
+  },
   list: {
     gap: 14,
     paddingBottom: 120,
+    paddingHorizontal: 20,
   },
   emptyList: {
     flexGrow: 1,
