@@ -56,7 +56,8 @@ StoryLength = Literal["short", "standard", "long"]
 # front-side card design changes (or a generation bug shipped) so clients
 # regenerate and re-upload previews under a new R2 key.
 # v2: fixed a blank-image-region bug in the client off-screen capture.
-FRONT_PREVIEW_VERSION = 2
+# v3: raised baked preview resolution/quality (600/82 -> 800/88) for sharper text.
+FRONT_PREVIEW_VERSION = 3
 
 
 class DreamDesign(ApiModel):

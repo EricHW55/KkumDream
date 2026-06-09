@@ -4,6 +4,7 @@ from uuid import UUID
 
 import boto3
 import httpx
+from botocore.exceptions import BotoCoreError, ClientError
 from PIL import Image
 
 from app.core.config import settings
@@ -46,9 +47,14 @@ async def store_front_preview(dream_id: UUID, version: int, image_bytes: bytes) 
     # margin so the baked shadow is preserved). Transcode to alpha-aware WebP at
     # list resolution and store under a versioned, immutable key so the CDN can
     # cache it forever while a version bump produces a fresh URL.
-    preview_bytes = await asyncio.to_thread(_to_webp, image_bytes, 600, 82, True)
+    preview_bytes = await asyncio.to_thread(_to_webp, image_bytes, 800, 88, True)
     key = f"dreams/{dream_id}/front-preview-v{version}.webp"
     await asyncio.to_thread(_upload, key, preview_bytes)
+    # Best-effort: now that this dream's current preview is stored, drop any
+    # older versioned previews for the same dream so a FRONT_PREVIEW_VERSION
+    # bump doesn't leave orphaned files accumulating in R2. Each card cleans up
+    # its own stale previews the moment it is re-baked — no batch job needed.
+    await asyncio.to_thread(_delete_other_front_previews, dream_id, key)
     return f"{settings.r2_public_base_url}/{key}"
 
 
@@ -61,7 +67,7 @@ def _to_webp(source: bytes, size: int, quality: int, keep_alpha: bool = False) -
         return output.getvalue()
 
 
-def _upload(key: str, body: bytes) -> None:
+def _r2_client():
     if not all(
         [
             settings.r2_endpoint_url,
@@ -72,12 +78,16 @@ def _upload(key: str, body: bytes) -> None:
     ):
         raise RuntimeError("Cloudflare R2 is not configured")
 
-    client = boto3.client(
+    return boto3.client(
         "s3",
         endpoint_url=settings.r2_endpoint_url,
         aws_access_key_id=settings.r2_access_key_id,
         aws_secret_access_key=settings.r2_secret_access_key,
     )
+
+
+def _upload(key: str, body: bytes) -> None:
+    client = _r2_client()
     client.put_object(
         Bucket=settings.r2_bucket,
         Key=key,
@@ -85,3 +95,30 @@ def _upload(key: str, body: bytes) -> None:
         ContentType="image/webp",
         CacheControl="public, max-age=31536000, immutable",
     )
+
+
+def _delete_other_front_previews(dream_id: UUID, keep_key: str) -> None:
+    """Delete every front-preview-v*.webp for this dream except ``keep_key``.
+
+    Lazy, per-dream cleanup so previous preview versions don't pile up after a
+    FRONT_PREVIEW_VERSION bump. This is best-effort: the new preview is already
+    stored by the time we get here, so a cleanup failure must never surface to
+    the caller (the worst case is a tiny orphaned WebP that costs ~nothing).
+    """
+    try:
+        client = _r2_client()
+        prefix = f"dreams/{dream_id}/front-preview-v"
+        response = client.list_objects_v2(Bucket=settings.r2_bucket, Prefix=prefix)
+        stale = [
+            {"Key": obj["Key"]}
+            for obj in response.get("Contents", [])
+            if obj["Key"] != keep_key
+        ]
+        if stale:
+            client.delete_objects(
+                Bucket=settings.r2_bucket,
+                Delete={"Objects": stale, "Quiet": True},
+            )
+    except (BotoCoreError, ClientError, RuntimeError):
+        # Cleanup is optional; never fail an otherwise-successful preview upload.
+        pass
