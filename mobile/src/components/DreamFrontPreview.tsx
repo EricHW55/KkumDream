@@ -22,7 +22,10 @@ import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
 // v3: raised baked preview resolution/quality (600/82 -> 800/88) for sharper text.
 // v4: re-bake — early v3 uploads landed on the old backend (still 600/82) before
 //     the 800/88 deploy, so bump again to regenerate them at the new quality.
-export const FRONT_PREVIEW_VERSION = 4;
+// v5: widened the capture margin (the soft shadow was within ~1-2px of the host
+//     edge) and the backend now preserves the alpha shadow (near-lossless alpha).
+//     The host aspect ratio changed, so old previews must be re-baked.
+export const FRONT_PREVIEW_VERSION = 5;
 
 // Geometry of the off-screen capture host. The card is rendered at a fixed
 // resolution and wrapped in a transparent margin wide enough to contain the
@@ -30,8 +33,11 @@ export const FRONT_PREVIEW_VERSION = 4;
 // these fixed makes the stored preview's aspect ratio deterministic.
 const GEN_CARD_WIDTH = 320;
 const GEN_CARD_HEIGHT = Math.round(GEN_CARD_WIDTH / DREAM_CARD_ASPECT_RATIO);
-const GEN_PAD_X = 54;
-const GEN_PAD_Y = 60;
+// The frame's drop shadow extends ~53px (x) / ~58px (y) beyond the scaled card.
+// Keep a comfortable margin so the soft shadow falloff is never nipped at the
+// capture edge (previously only ~1-2px of slack remained).
+const GEN_PAD_X = 66;
+const GEN_PAD_Y = 72;
 const GEN_HOST_WIDTH = GEN_CARD_WIDTH + GEN_PAD_X * 2;
 const GEN_HOST_HEIGHT = GEN_CARD_HEIGHT + GEN_PAD_Y * 2;
 

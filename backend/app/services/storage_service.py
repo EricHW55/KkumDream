@@ -63,7 +63,20 @@ def _to_webp(source: bytes, size: int, quality: int, keep_alpha: bool = False) -
         image = image.convert("RGBA" if keep_alpha else "RGB")
         image.thumbnail((size, size))
         output = BytesIO()
-        image.save(output, format="WEBP", quality=quality, method=6)
+        save_kwargs: dict[str, object] = {
+            "format": "WEBP",
+            "quality": quality,
+            "method": 6,
+        }
+        if keep_alpha:
+            # The card front preview is RGB illustration + a soft drop shadow in
+            # the alpha channel. Lossy WebP crushes that faint alpha gradient, so
+            # the shadow halo gets eaten. Keep RGB lossy (the illustration stays
+            # small) but make the alpha near-lossless and preserve transparent
+            # pixels so the soft shadow survives, at a small size cost.
+            save_kwargs["alpha_quality"] = 100
+            save_kwargs["exact"] = True
+        image.save(output, **save_kwargs)
         return output.getvalue()
 
 
