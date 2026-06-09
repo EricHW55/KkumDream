@@ -39,7 +39,11 @@ import {
   normalizeProfileAvatarValue,
 } from '../components/ProfileAvatar';
 import { Screen } from '../components/Screen';
-import { ANDROID_PACKAGE_NAME } from '../config/env';
+import {
+  ANDROID_PACKAGE_NAME,
+  PRIVACY_POLICY_URL,
+  TERMS_OF_SERVICE_URL,
+} from '../config/env';
 import { useEntitlement, usePassInfo } from '../hooks/usePass';
 import { usePassPurchaseRecovery } from '../hooks/usePassPurchaseRecovery';
 import { useSessionStore } from '../store/sessionStore';
@@ -1151,9 +1155,31 @@ export function ProfileScreen() {
             </Pressable>
           </View>
           <Text style={styles.sectionDescription}>
-            환불이나 취소는 스토어 구독 관리 화면에서 처리됩니다. 환불이 승인되면
-            서버가 알림을 받아 패스 권한을 회수합니다.
+            꿈드림 패스는 자동 갱신 구독입니다. 환불이나 취소는 스토어 구독 관리
+            화면에서 처리되며, 환불이 승인되면 서버가 알림을 받아 패스 권한을
+            회수합니다.
           </Text>
+          <View style={styles.legalLinks}>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => {
+                Linking.openURL(TERMS_OF_SERVICE_URL).catch(() => undefined);
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.legalLinkText}>이용약관</Text>
+            </Pressable>
+            <Text style={styles.legalLinkDivider}>·</Text>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => {
+                Linking.openURL(PRIVACY_POLICY_URL).catch(() => undefined);
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.legalLinkText}>개인정보 처리방침</Text>
+            </Pressable>
+          </View>
         </View>
 
         <Pressable
@@ -1391,6 +1417,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 13,
     includeFontPadding: false,
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+  },
+  legalLinkText: {
+    color: colors.primaryDark,
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 13,
+    textDecorationLine: 'underline',
+    includeFontPadding: false,
+  },
+  legalLinkDivider: {
+    color: colors.textMuted,
+    fontFamily: fontFamily.handwritten,
+    fontSize: 13,
   },
   settingsHeader: {
     flexDirection: 'row',
