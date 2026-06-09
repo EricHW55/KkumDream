@@ -1,12 +1,5 @@
 import { useState } from 'react';
-import {
-  Linking,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -15,12 +8,7 @@ import { getGoogleIdToken } from '../auth/googleSignIn';
 import { LoginSky } from '../components/LoginSky';
 import { MoonAvatar } from '../components/MoonAvatar';
 import { PaperTextureOverlay } from '../components/PaperTextureOverlay';
-import {
-  GOOGLE_IOS_CLIENT_ID,
-  GOOGLE_WEB_CLIENT_ID,
-  PRIVACY_POLICY_URL,
-  TERMS_OF_SERVICE_URL,
-} from '../config/env';
+import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '../config/env';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
@@ -108,28 +96,6 @@ export function LoginScreen() {
         <Text style={styles.subtitle}>함께 꿈을 주고받는 방</Text>
         <Text style={styles.tagline}>
           하루에 하나, 내가 꾼 꿈을 친구에게 선물해보세요.
-        </Text>
-
-        <Text style={styles.consentText}>
-          계속하면{' '}
-          <Text
-            style={styles.consentLink}
-            onPress={() => {
-              Linking.openURL(TERMS_OF_SERVICE_URL).catch(() => undefined);
-            }}
-          >
-            이용약관
-          </Text>
-          {' 및 '}
-          <Text
-            style={styles.consentLink}
-            onPress={() => {
-              Linking.openURL(PRIVACY_POLICY_URL).catch(() => undefined);
-            }}
-          >
-            개인정보 처리방침
-          </Text>
-          에 동의하게 됩니다.
         </Text>
 
         {!isGoogleConfigured ? (
@@ -262,21 +228,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.handwritten,
     fontSize: 13,
     lineHeight: 19,
-  },
-  consentText: {
-    color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 18,
-    textAlign: 'center',
-    opacity: 0.85,
-    marginTop: 2,
-  },
-  consentLink: {
-    color: colors.textGoogleLogin,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
   errorText: {
     color: colors.error,
