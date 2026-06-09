@@ -188,9 +188,9 @@ Use the create_dream_card tool exactly once.
 # Single unified art style for every card. Lead the final prompt with the medium
 # so flux locks onto "hand-drawn" instead of drifting toward a photo. Moods only
 # tint palette/atmosphere; they must never change the medium or rendering style.
-IMAGE_STYLE_PREFIX = "A hand-drawn pastel storybook illustration"
+IMAGE_STYLE_PREFIX = "A hand-drawn storybook illustration"
 IMAGE_STYLE_GUIDE = """
-drawn by hand on grainy textured art paper, gentle muted pastel color palette, naive
+drawn by hand on grainy textured art paper, gentle muted color palette, naive
 children's picture-book art, rounded hand-painted shapes, imperfect hand-made
 linework, flat soft matte lighting, cozy and emotionally warm, clear focal subject,
 mobile card thumbnail friendly, absolutely not a photograph, not photorealistic,
