@@ -20,7 +20,9 @@ import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
 // previews are treated as outdated and regenerated under a new R2 key.
 // v2: fixed a blank-image-region bug in the off-screen capture.
 // v3: raised baked preview resolution/quality (600/82 -> 800/88) for sharper text.
-export const FRONT_PREVIEW_VERSION = 3;
+// v4: re-bake — early v3 uploads landed on the old backend (still 600/82) before
+//     the 800/88 deploy, so bump again to regenerate them at the new quality.
+export const FRONT_PREVIEW_VERSION = 4;
 
 // Geometry of the off-screen capture host. The card is rendered at a fixed
 // resolution and wrapped in a transparent margin wide enough to contain the

@@ -57,7 +57,9 @@ StoryLength = Literal["short", "standard", "long"]
 # regenerate and re-upload previews under a new R2 key.
 # v2: fixed a blank-image-region bug in the client off-screen capture.
 # v3: raised baked preview resolution/quality (600/82 -> 800/88) for sharper text.
-FRONT_PREVIEW_VERSION = 3
+# v4: re-bake — early v3 uploads landed on the old backend (still 600/82) before
+#     the 800/88 deploy, so bump again to regenerate them at the new quality.
+FRONT_PREVIEW_VERSION = 4
 
 
 class DreamDesign(ApiModel):
