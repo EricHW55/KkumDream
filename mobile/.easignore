@@ -1,5 +1,7 @@
 # Local dependencies and build output
 node_modules/
+android/.gradle/
+.gradle/
 android/app/build/
 android/build/
 ios/Pods/
