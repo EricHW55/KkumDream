@@ -317,13 +317,18 @@ async def set_front_preview(
     if dream.hidden_at is not None:
         raise BadRequestError("Cannot create a preview for a hidden dream")
 
-    # Cards are immutable, so the first valid preview for a given version wins:
-    # skip the R2 write entirely if one already exists. A version bump is the
-    # only thing that overwrites it.
-    if dream.front_preview_url and dream.front_preview_version == version:
+    # Skip the R2 write only when an identical preview already exists — same
+    # version AND same content hash. A version bump (format change) or a hash
+    # change (the card's front-relevant data changed, e.g. an external recipient
+    # claimed it and the name updated) re-bakes and overwrites the stored URL.
+    if (
+        dream.front_preview_url
+        and dream.front_preview_version == version
+        and dream.front_preview_hash == content_hash
+    ):
         return dream
 
-    url = await store_front_preview(dream.id, version, image_bytes)
+    url = await store_front_preview(dream.id, version, image_bytes, content_hash)
     dream.front_preview_url = url
     dream.front_preview_version = version
     dream.front_preview_hash = content_hash

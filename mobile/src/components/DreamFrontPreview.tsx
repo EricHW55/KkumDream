@@ -51,6 +51,12 @@ const GEN_HOST_HEIGHT = GEN_CARD_HEIGHT + GEN_PAD_Y * 2;
 // quality, but a fraction of the bytes to upload.
 const PREVIEW_CAPTURE_LONG_SIDE = 900;
 
+// Cap how long we wait for the thumbnail to decode before giving up on this card
+// and letting the queue move to the next one. Without it, a thumbnail that never
+// fires onLoad (slow/stalled network, no error event) would block all further
+// baking indefinitely. The card stays unbaked and is retried later.
+const PREVIEW_IMAGE_LOAD_TIMEOUT_MS = 8000;
+
 // Aspect ratio (width / height) of the flattened preview, including the shadow
 // margin. The archive grid sizes its cells with this so the preview image fills
 // the cell exactly with no cropping.
@@ -61,7 +67,12 @@ const CARD_WIDTH_FRACTION = GEN_CARD_WIDTH / GEN_HOST_WIDTH;
 export function hasValidFrontPreview(dream: Dream): boolean {
   return Boolean(
     dream.frontPreviewUrl &&
-      dream.frontPreviewVersion === FRONT_PREVIEW_VERSION,
+      dream.frontPreviewVersion === FRONT_PREVIEW_VERSION &&
+      // Also key on the content hash so a card whose front-relevant data changed
+      // after it was baked (e.g. an external recipient claimed it and "오빠"
+      // became their real name, or the title/design was edited) is treated as
+      // stale and re-baked, instead of showing the outdated preview forever.
+      dream.frontPreviewHash === computeFrontPreviewHash(dream),
   );
 }
 
@@ -204,6 +215,18 @@ export function DreamFrontPreviewGenerator({
       onError(dream.id);
     }
   }, [dream.id, dream.thumbnailUrl, onError]);
+
+  // Bail out (releasing the queue to the next card) if the thumbnail hasn't
+  // decoded within the timeout, so a stalled image never blocks baking forever.
+  useEffect(() => {
+    if (isImageLoaded || !dream.thumbnailUrl) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      onError(dream.id);
+    }, PREVIEW_IMAGE_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [dream.id, dream.thumbnailUrl, isImageLoaded, onError]);
 
   useEffect(() => {
     if (!isImageLoaded) {

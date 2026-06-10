@@ -42,7 +42,9 @@ async def store_profile_image(user_id: UUID, image_bytes: bytes) -> str:
     return f"{settings.r2_public_base_url}/{avatar_key}"
 
 
-async def store_front_preview(dream_id: UUID, version: int, image_bytes: bytes) -> str:
+async def store_front_preview(
+    dream_id: UUID, version: int, image_bytes: bytes, content_hash: str | None = None
+) -> str:
     # The client uploads a flattened PNG of the card front (with a transparent
     # margin so the baked shadow is preserved). Transcode to alpha-aware WebP at
     # list resolution and store under a versioned, immutable key so the CDN can
@@ -55,7 +57,14 @@ async def store_front_preview(dream_id: UUID, version: int, image_bytes: bytes) 
     # bump doesn't leave orphaned files accumulating in R2. Each card cleans up
     # its own stale previews the moment it is re-baked — no batch job needed.
     await asyncio.to_thread(_delete_other_front_previews, dream_id, key)
-    return f"{settings.r2_public_base_url}/{key}"
+    # The object is served with an immutable, year-long cache, and a re-bake
+    # overwrites the same versioned key — so append the content hash as a cache
+    # key. When the card's data changes the hash changes, yielding a fresh URL
+    # the CDN/clients refetch, while identical content keeps a stable URL.
+    url = f"{settings.r2_public_base_url}/{key}"
+    if content_hash:
+        url = f"{url}?h={content_hash}"
+    return url
 
 
 def _to_webp(source: bytes, size: int, quality: int, keep_alpha: bool = False) -> bytes:
