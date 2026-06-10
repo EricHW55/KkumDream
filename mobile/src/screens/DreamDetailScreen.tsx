@@ -143,8 +143,12 @@ export function DreamDetailScreen({ route, navigation }: Props) {
     !dream.receiverId &&
     Boolean(dream.receiverLabel);
   const counterpartUserId = isSender ? dream.receiverId : dream.giverId;
+  // Block is a user-level action that belongs to the recipient's side: you block
+  // the giver of a card you received. The sender blocking their own recipient
+  // from the card they chose to send makes no sense (and is still possible via
+  // that user's comment if ever needed), so don't offer it on your own card.
   const canBlockCounterpart = Boolean(
-    token && counterpartUserId && counterpartUserId !== currentUserId,
+    token && counterpartUserId && counterpartUserId !== currentUserId && !isSender,
   );
   // The card's text/image is authored by the giver, so the sender has nothing to
   // report on their own card. The receiver or a room member viewing it still can.
