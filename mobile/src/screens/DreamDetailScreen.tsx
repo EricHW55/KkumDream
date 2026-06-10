@@ -46,6 +46,7 @@ import {
   toggleDreamReaction,
 } from '../api/dreams';
 import { blockUser, reportContent } from '../api/safety';
+import { getCacheUpdatedAt, readCache, writeCache } from '../data/cache';
 import { getCurrentUserId, isCurrentUserId } from '../data/currentUser';
 import { applyDreamPreviewToCaches } from '../data/dreamRepository';
 import { getDisplayMember } from '../data/members';
@@ -150,13 +151,28 @@ export function DreamDetailScreen({ route, navigation }: Props) {
   const canReport = Boolean(token) && !isSender;
   const showSafetyMenu = canReport || canBlockCounterpart;
   const commentsQueryKey = ['dreams', dream.id, 'comments', token] as const;
+  const commentsCacheKey = `comments:${dream.id}`;
   const reactionsQueryKey = ['dreams', dream.id, 'reactions', token] as const;
   const { data: remoteComments = [] } = useQuery({
     queryKey: commentsQueryKey,
-    queryFn: () => fetchDreamComments(dream.id, token).catch(() => []),
+    queryFn: () =>
+      fetchDreamComments(dream.id, token).catch(
+        () => readCache<DreamComment[]>(commentsCacheKey) ?? [],
+      ),
     enabled: Boolean(token),
+    // Seed from the local cache so comments paint instantly on open, then
+    // refetch in the background (initialDataUpdatedAt marks the cache age so a
+    // stale cache still triggers an immediate refresh).
+    initialData: () => readCache<DreamComment[]>(commentsCacheKey) ?? undefined,
+    initialDataUpdatedAt: () => getCacheUpdatedAt(commentsCacheKey),
     staleTime: 30 * 1000,
   });
+
+  useEffect(() => {
+    if (token) {
+      writeCache(commentsCacheKey, remoteComments);
+    }
+  }, [commentsCacheKey, remoteComments, token]);
   const { data: reactionSummary = emptyReactionSummary } = useQuery({
     queryKey: reactionsQueryKey,
     queryFn: () =>
@@ -689,6 +705,7 @@ export function DreamDetailScreen({ route, navigation }: Props) {
         <View style={styles.cardSlot}>
           <DreamCard
             dream={dream}
+            canViewOriginal={isSender}
             loadFullImageProgressively
             onBackOpen={onBackOpen}
             onParentScrollEnabledChange={setIsPageScrollEnabled}
@@ -931,10 +948,18 @@ function CommentItem({
   onBlock?: () => void;
 }) {
   const author = getDisplayMember(comment.authorId);
-  const hasActions = canReport || canBlock || canDelete;
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const hasMenu = canReport || canBlock;
+  const hasActions = hasMenu || canDelete;
 
   return (
-    <View style={[styles.commentItem, isOwner && styles.ownerCommentItem]}>
+    <View
+      style={[
+        styles.commentItem,
+        isOwner && styles.ownerCommentItem,
+        isMenuOpen && styles.commentItemElevated,
+      ]}
+    >
       <View style={styles.commentAuthorRow}>
         <Text style={styles.commentAuthor}>
           {comment.authorNickname || author.name}
@@ -942,30 +967,6 @@ function CommentItem({
         {isOwner ? <Text style={styles.ownerBadge}>꿈주인</Text> : null}
         {hasActions ? (
           <View style={styles.commentAuthorActions}>
-            {canReport && onReport ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={onReport}
-                style={({ pressed }) => [
-                  styles.commentActionButton,
-                  pressed && interactionStyles.pressedSoft,
-                ]}
-              >
-                <Text style={styles.commentActionText}>신고</Text>
-              </Pressable>
-            ) : null}
-            {canBlock && onBlock ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={onBlock}
-                style={({ pressed }) => [
-                  styles.commentActionButton,
-                  pressed && interactionStyles.pressedSoft,
-                ]}
-              >
-                <Text style={styles.commentDangerActionText}>차단</Text>
-              </Pressable>
-            ) : null}
             {canDelete && onDelete ? (
               <Pressable
                 accessibilityLabel="댓글 삭제"
@@ -979,6 +980,20 @@ function CommentItem({
                 <XIcon color={colors.textMuted} size={14} />
               </Pressable>
             ) : null}
+            {hasMenu ? (
+              <Pressable
+                accessibilityLabel="댓글 메뉴"
+                accessibilityRole="button"
+                hitSlop={6}
+                onPress={() => setIsMenuOpen(open => !open)}
+                style={({ pressed }) => [
+                  styles.commentMenuButton,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <MoreVertical color={colors.textMuted} size={18} />
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -990,6 +1005,50 @@ function CommentItem({
       >
         {comment.content}
       </Text>
+      {isMenuOpen ? (
+        <>
+          <Pressable
+            accessibilityLabel="메뉴 닫기"
+            style={styles.commentMenuBackdrop}
+            onPress={() => setIsMenuOpen(false)}
+          />
+          <View style={styles.commentMenu}>
+            {canReport && onReport ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setIsMenuOpen(false);
+                  onReport();
+                }}
+                style={({ pressed }) => [
+                  styles.commentMenuItem,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Text style={styles.commentMenuItemText}>신고</Text>
+              </Pressable>
+            ) : null}
+            {canReport && canBlock ? (
+              <View style={styles.commentMenuDivider} />
+            ) : null}
+            {canBlock && onBlock ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setIsMenuOpen(false);
+                  onBlock();
+                }}
+                style={({ pressed }) => [
+                  styles.commentMenuItem,
+                  pressed && interactionStyles.pressedSoft,
+                ]}
+              >
+                <Text style={styles.commentMenuDangerText}>차단</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -1195,28 +1254,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  commentActionButton: {
-    minHeight: 26,
+  commentItemElevated: {
+    zIndex: 20,
+  },
+  commentMenuButton: {
+    width: 26,
+    height: 26,
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+  },
+  commentMenuBackdrop: {
+    position: 'absolute',
+    top: -1000,
+    bottom: -1000,
+    left: -1000,
+    right: -1000,
+  },
+  commentMenu: {
+    position: 'absolute',
+    top: 40,
+    right: 10,
+    minWidth: 112,
+    borderRadius: 14,
     backgroundColor: colors.cardBase,
     borderWidth: 1,
     borderColor: colors.divider,
+    paddingVertical: 4,
+    zIndex: 30,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  commentActionText: {
-    color: colors.textMuted,
+  commentMenuItem: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  commentMenuDivider: {
+    height: 1,
+    marginHorizontal: 12,
+    backgroundColor: colors.divider,
+  },
+  commentMenuItemText: {
+    color: colors.textSecondary,
     fontFamily: fontFamily.handwritten,
     fontWeight: '800',
-    fontSize: 11,
+    fontSize: 15,
     includeFontPadding: false,
   },
-  commentDangerActionText: {
+  commentMenuDangerText: {
     color: colors.error,
     fontFamily: fontFamily.handwritten,
     fontWeight: '800',
-    fontSize: 11,
+    fontSize: 15,
     includeFontPadding: false,
   },
   ownerBadge: {

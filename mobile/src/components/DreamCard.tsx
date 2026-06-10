@@ -130,6 +130,9 @@ type Props = {
   disableLetterPaperShadow?: boolean;
   fillLetterRules?: boolean;
   onParentScrollEnabledChange?: (enabled: boolean) => void;
+  // When true (the sender viewing their own card), show a toggle on the card
+  // back that swaps the AI-written letter for the user's original raw input.
+  canViewOriginal?: boolean;
 };
 
 export function DreamCard({
@@ -149,6 +152,7 @@ export function DreamCard({
   disableLetterPaperShadow = false,
   fillLetterRules = false,
   onParentScrollEnabledChange,
+  canViewOriginal = false,
 }: Props) {
   const { width: windowWidth } = useWindowDimensions();
   const sessionUserId = useSessionStore(state => state.userId);
@@ -160,6 +164,7 @@ export function DreamCard({
   const useThumbnail = preferThumbnail || isLite;
   const allowImageActions = showImageActions && !isLite;
   const [isBackVisible, setIsBackVisible] = useState(startsOnBack);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [isImageActionPending, setIsImageActionPending] = useState(false);
   const frontCardCaptureRef = useRef<View>(null);
   const backTouchStart = useRef<{ x: number; y: number } | null>(null);
@@ -263,7 +268,11 @@ export function DreamCard({
   const backStory = dream.privatePostscript
     ? `${dream.story}\n\np.s. ${dream.privatePostscript}`
     : dream.story;
-  const displayBackStory = backStory;
+  const originalText = dream.rawInput?.trim() ?? '';
+  const canShowOriginalToggle =
+    canViewOriginal && canRenderBack && originalText.length > 0;
+  const isShowingOriginal = canShowOriginalToggle && showOriginal;
+  const displayBackStory = isShowingOriginal ? originalText : backStory;
   const letterLineHeight =
     typeof dreamFontStyle.lineHeight === 'number' ? dreamFontStyle.lineHeight : 27;
   const estimatedLetterLineCount = displayBackStory
@@ -1444,6 +1453,37 @@ export function DreamCard({
                       </Text>
                     </View>
                   </ScrollView>
+                  {canShowOriginalToggle ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        isShowingOriginal
+                          ? '꿈카드 내용 보기'
+                          : '내가 쓴 원문 보기'
+                      }
+                      hitSlop={6}
+                      onPress={() => setShowOriginal(value => !value)}
+                      style={({ pressed }) => [
+                        styles.originalToggle,
+                        {
+                          backgroundColor: isDarkTheme
+                            ? 'rgba(35, 33, 46, 0.82)'
+                            : 'rgba(255, 251, 242, 0.92)',
+                          borderColor: frameBorderColor,
+                        },
+                        pressed && interactionStyles.pressedSoft,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.originalToggleText,
+                          { color: letterTextColor },
+                        ]}
+                      >
+                        {isShowingOriginal ? '꿈카드' : '원문'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               </View>
             </DreamCardFrame>
@@ -2190,6 +2230,24 @@ const styles = StyleSheet.create({
   letterPaperBakedBackgroundImage: {
     width: '100%',
     height: '100%',
+  },
+  originalToggle: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    zIndex: 4,
+    minHeight: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  originalToggleText: {
+    fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
+    fontSize: 12,
+    includeFontPadding: false,
   },
   letterPaperBackgroundPreloader: {
     position: 'absolute',
