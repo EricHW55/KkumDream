@@ -14,7 +14,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont } from '../theme/typography';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ClaimDream'>;
 
@@ -212,16 +212,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 26,
     includeFontPadding: false,
   },
   description: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 15,
-    fontWeight: '600',
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -233,9 +231,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 19,
     textAlign: 'center',
   },
@@ -249,8 +246,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 16,
     includeFontPadding: false,
   },
@@ -264,8 +260,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: colors.primary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     includeFontPadding: false,
   },

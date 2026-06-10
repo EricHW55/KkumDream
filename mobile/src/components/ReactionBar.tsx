@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { colors } from '../theme/colors';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont } from '../theme/typography';
 import type {
   DreamReactionSummary,
   DreamReactionToggleResult,
@@ -368,8 +368,7 @@ const styles = StyleSheet.create({
     minWidth: 12,
     textAlign: 'center',
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -417,8 +416,7 @@ const styles = StyleSheet.create({
   },
   toastText: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',

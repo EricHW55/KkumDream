@@ -24,7 +24,7 @@ import { OutboxScreen } from '../screens/OutboxScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont } from '../theme/typography';
 import type { MainTabParamList, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -158,8 +158,7 @@ function MainTabs() {
           overflow: 'visible',
         },
         tabBarLabelStyle: {
-          fontFamily: fontFamily.handwritten,
-          fontWeight: '600',
+          ...handwritingFont('600'),
           fontSize: 12,
         },
         tabBarBackground: TabBarPaperBackground,
@@ -215,8 +214,7 @@ function RootStack() {
         headerBackButtonDisplayMode: 'minimal',
         headerStyle: { backgroundColor: colors.background },
         headerTitleStyle: {
-          fontFamily: fontFamily.handwritten,
-          fontWeight: '700',
+          ...handwritingFont('700'),
           fontSize: 22,
         },
         headerShadowVisible: false,

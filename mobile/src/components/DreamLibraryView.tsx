@@ -41,7 +41,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { colors } from '../theme/colors';
 import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
 import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
@@ -1180,16 +1180,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 28,
     includeFontPadding: false,
   },
   description: {
     marginTop: 8,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1214,8 +1212,7 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     includeFontPadding: false,
   },
@@ -1242,8 +1239,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -1254,8 +1250,7 @@ const styles = StyleSheet.create({
   },
   emptyDreamText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1267,8 +1262,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginBottom: 14,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     includeFontPadding: false,
   },
@@ -1333,9 +1327,8 @@ const styles = StyleSheet.create({
   },
   monthTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 18,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   monthTitleButton: {
@@ -1350,9 +1343,8 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 12,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   monthGrid: {
@@ -1377,9 +1369,8 @@ const styles = StyleSheet.create({
   },
   dayText: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 14,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   dayTextWithDream: {
@@ -1406,9 +1397,8 @@ const styles = StyleSheet.create({
   },
   dayPreviewMood: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 10,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   dayPreviewOverlay: {
@@ -1424,9 +1414,8 @@ const styles = StyleSheet.create({
   },
   dayPreviewDay: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('800'),
     fontSize: 13,
-    fontWeight: '800',
     includeFontPadding: false,
   },
   dayPreviewCount: {
@@ -1435,9 +1424,8 @@ const styles = StyleSheet.create({
     bottom: 3,
     textAlign: 'center',
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('900'),
     fontSize: 11,
-    fontWeight: '900',
     includeFontPadding: false,
     textShadowColor: colors.cardBase,
     textShadowOffset: { width: 0, height: 0 },
@@ -1450,9 +1438,8 @@ const styles = StyleSheet.create({
   },
   calendarHintText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 19,
   },
   pickerBackdrop: {
@@ -1478,9 +1465,8 @@ const styles = StyleSheet.create({
   pickerTitle: {
     flex: 1,
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 17,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   pickerClose: {
@@ -1513,9 +1499,8 @@ const styles = StyleSheet.create({
   },
   monthPickerYearText: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('800'),
     fontSize: 20,
-    fontWeight: '800',
     includeFontPadding: false,
   },
   monthPickerGrid: {
@@ -1539,9 +1524,8 @@ const styles = StyleSheet.create({
   },
   monthPickerOptionText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('800'),
     fontSize: 15,
-    fontWeight: '800',
     includeFontPadding: false,
   },
   monthPickerOptionTextSelected: {
@@ -1590,18 +1574,16 @@ const styles = StyleSheet.create({
   },
   pickerThumbMood: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 12,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   pickerThumbLabel: {
     width: '100%',
     textAlign: 'center',
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 11,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   previewBackdrop: {

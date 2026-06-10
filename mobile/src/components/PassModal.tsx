@@ -17,7 +17,7 @@ import { processPassPurchase } from '../services/passPurchases';
 import { usePassModalStore } from '../store/passModalStore';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont, fontFamily } from '../theme/typography';
 import {
   endBilling,
   fetchPassProduct,
@@ -238,16 +238,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   title: {
-    fontFamily: fontFamily.korean,
+    ...handwritingFont('900'),
     fontSize: 25,
-    fontWeight: '900',
     color: colors.textPrimary,
     marginBottom: 10,
   },
   description: {
-    fontFamily: fontFamily.korean,
+    ...handwritingFont('600'),
     fontSize: 16,
-    fontWeight: '600',
     lineHeight: 24,
     color: colors.textSecondary,
     textAlign: 'center',
@@ -306,9 +304,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   primaryButtonText: {
-    fontFamily: fontFamily.korean,
+    ...handwritingFont('800'),
     fontSize: 16,
-    fontWeight: '800',
     color: '#FFFFFF',
   },
   laterText: {

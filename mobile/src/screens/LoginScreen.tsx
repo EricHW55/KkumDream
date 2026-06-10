@@ -12,7 +12,7 @@ import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '../config/env';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont, fontFamily } from '../theme/typography';
 
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -151,8 +151,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 42,
     includeFontPadding: false,
     textAlign: 'center',
@@ -160,25 +159,22 @@ const styles = StyleSheet.create({
   },
   title2: {
     color: colors.textGoogleLogin,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 20,
     includeFontPadding: false,
     textAlign: 'center',
   },
   subtitle: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 16,
-    fontWeight: '700',
     textAlign: 'center',
     marginTop: 12,
   },
   tagline: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 13,
-    fontWeight: '600',
     textAlign: 'center',
     opacity: 0.8,
   },
@@ -218,8 +214,7 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     color: colors.textGoogleLogin,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 16,
     includeFontPadding: false,
   },
@@ -231,9 +226,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 19,
     textAlign: 'center',
   },

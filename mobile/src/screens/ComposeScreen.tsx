@@ -94,7 +94,7 @@ import {
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont, fontFamily } from '../theme/typography';
 import type {
   Dream,
   DreamDesign,
@@ -2875,8 +2875,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 15,
     includeFontPadding: false,
   },
@@ -2938,8 +2937,7 @@ const styles = StyleSheet.create({
   },
   moodLabel: {
     color: colors.textSecondary,
-    fontWeight: '700',
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 14,
     textAlign: 'center',
     includeFontPadding: false,
@@ -2968,8 +2966,7 @@ const styles = StyleSheet.create({
   },
   toneLabel: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 14,
     includeFontPadding: false,
   },
@@ -2979,17 +2976,15 @@ const styles = StyleSheet.create({
   toneDescription: {
     marginTop: 7,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 12,
     lineHeight: 17,
   },
   toneHint: {
     marginTop: -6,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 12,
-    fontWeight: '600',
     lineHeight: 17,
   },
   lengthBar: {
@@ -3012,8 +3007,7 @@ const styles = StyleSheet.create({
   },
   lengthLabel: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -3035,31 +3029,27 @@ const styles = StyleSheet.create({
   },
   designTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 16,
     includeFontPadding: false,
   },
   designSummary: {
     marginTop: 4,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 12,
     includeFontPadding: false,
   },
   designHint: {
     marginTop: -2,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 12,
     lineHeight: 17,
   },
   designLabel: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -3083,8 +3073,7 @@ const styles = StyleSheet.create({
   },
   letterPaperPreviewButtonText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 12,
     includeFontPadding: false,
   },
@@ -3171,8 +3160,7 @@ const styles = StyleSheet.create({
   },
   frameOptionText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -3181,8 +3169,7 @@ const styles = StyleSheet.create({
   },
   frameOptionDescription: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 10.5,
     lineHeight: 14,
   },
@@ -3222,8 +3209,7 @@ const styles = StyleSheet.create({
   },
   colorOptionText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -3248,9 +3234,8 @@ const styles = StyleSheet.create({
   },
   fontOptionTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('800'),
     fontSize: 14,
-    fontWeight: '800',
     includeFontPadding: false,
   },
   fontOptionTitleActive: {
@@ -3259,8 +3244,7 @@ const styles = StyleSheet.create({
   fontOptionDescription: {
     marginTop: 5,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 12,
     lineHeight: 17,
   },
@@ -3287,9 +3271,8 @@ const styles = StyleSheet.create({
   },
   textureOptionTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('800'),
     fontSize: 14,
-    fontWeight: '800',
     includeFontPadding: false,
   },
   textureOptionTitleActive: {
@@ -3298,8 +3281,7 @@ const styles = StyleSheet.create({
   textureOptionDescription: {
     marginTop: 6,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 12,
     lineHeight: 17,
   },
@@ -3315,8 +3297,7 @@ const styles = StyleSheet.create({
   },
   stampPreviewButtonText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 12,
     includeFontPadding: false,
   },
@@ -3387,8 +3368,7 @@ const styles = StyleSheet.create({
   },
   stampDayLabel: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 12,
     includeFontPadding: false,
   },
@@ -3404,16 +3384,14 @@ const styles = StyleSheet.create({
   },
   previewTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 18,
     includeFontPadding: false,
   },
   previewMeta: {
     marginTop: 5,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 13,
     lineHeight: 18,
   },
@@ -3428,9 +3406,8 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     color: colors.primary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 14,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   editPanel: {
@@ -3443,9 +3420,8 @@ const styles = StyleSheet.create({
   },
   editLabel: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 14,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   editInput: {
@@ -3456,9 +3432,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     backgroundColor: colors.background,
     paddingHorizontal: 14,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 15,
-    fontWeight: '600',
   },
   storyInput: {
     minHeight: 140,
@@ -3482,9 +3457,8 @@ const styles = StyleSheet.create({
   },
   externalShareButtonText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 16,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   loadingBackdrop: {
@@ -3660,9 +3634,8 @@ const styles = StyleSheet.create({
   },
   premiumHintText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('800'),
     fontSize: 11,
-    fontWeight: '800',
     letterSpacing: -0.2,
     lineHeight: 16,
   },
@@ -3703,9 +3676,8 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 22,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   sheetTitleRow: {
@@ -3717,10 +3689,9 @@ const styles = StyleSheet.create({
   sheetSubtitle: {
     marginTop: 6,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 13,
     lineHeight: 19,
-    fontWeight: '600',
   },
   closeButton: {
     width: 38,
@@ -3749,9 +3720,8 @@ const styles = StyleSheet.create({
   },
   modeChipText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 14,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   modeChipTextActive: {
@@ -3769,9 +3739,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 15,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   sectionTitleRow: {
@@ -3782,9 +3751,8 @@ const styles = StyleSheet.create({
   },
   characterCount: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 12,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   labelInput: {
@@ -3795,9 +3763,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     backgroundColor: colors.background,
     paddingHorizontal: 14,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 15,
-    fontWeight: '600',
   },
   postscriptInput: {
     minHeight: 86,
@@ -3807,10 +3774,9 @@ const styles = StyleSheet.create({
   },
   hintText: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 12,
     lineHeight: 18,
-    fontWeight: '600',
   },
   friendPickerButton: {
     minHeight: 68,
@@ -3837,9 +3803,8 @@ const styles = StyleSheet.create({
   friendPickerHint: {
     marginTop: 4,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 12,
-    fontWeight: '600',
     includeFontPadding: false,
   },
   friendPickerOverlay: {
@@ -3872,9 +3837,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 15,
-    fontWeight: '600',
   },
   friendPickerList: {
     maxHeight: 380,
@@ -3904,9 +3868,8 @@ const styles = StyleSheet.create({
   friendName: {
     flex: 1,
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 16,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   // Same as friendName but without flex:1 — used inside the picker button's
@@ -3914,9 +3877,8 @@ const styles = StyleSheet.create({
   // from the hint below.
   friendPickerName: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 16,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   groupList: {
@@ -3941,17 +3903,15 @@ const styles = StyleSheet.create({
   },
   groupName: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 16,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   groupMeta: {
     marginTop: 5,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 13,
-    fontWeight: '600',
   },
   emptyText: {
     color: colors.textSecondary,
@@ -3961,9 +3921,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 19,
   },
 });

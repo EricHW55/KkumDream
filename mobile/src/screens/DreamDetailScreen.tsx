@@ -58,7 +58,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont, fontFamily } from '../theme/typography';
 import type {
   DreamComment,
   Dream,
@@ -1113,23 +1113,20 @@ const styles = StyleSheet.create({
   },
   safetyMenuItemText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },
   safetyMenuDangerText: {
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },
   safetyStatusText: {
     marginTop: -6,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
@@ -1184,8 +1181,7 @@ const styles = StyleSheet.create({
   },
   shareMenuItemText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     includeFontPadding: false,
   },
@@ -1193,9 +1189,8 @@ const styles = StyleSheet.create({
     maxWidth: 180,
     textAlign: 'right',
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 12,
-    fontWeight: '700',
     lineHeight: 18,
   },
   shareActionDisabled: {
@@ -1226,8 +1221,7 @@ const styles = StyleSheet.create({
   },
   commentTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 17,
   },
   commentItem: {
@@ -1248,8 +1242,7 @@ const styles = StyleSheet.create({
   commentAuthor: {
     flexShrink: 1,
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
   },
   commentAuthorActions: {
@@ -1305,15 +1298,13 @@ const styles = StyleSheet.create({
   },
   commentMenuItemText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },
   commentMenuDangerText: {
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },
@@ -1323,8 +1314,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     color: colors.primaryDark,
     backgroundColor: colors.cardBase,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 11,
     includeFontPadding: false,
   },
@@ -1372,8 +1362,7 @@ const styles = StyleSheet.create({
   },
   commentSubmitText: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     includeFontPadding: false,
   },
@@ -1384,16 +1373,14 @@ const styles = StyleSheet.create({
   },
   commentNoticeText: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     lineHeight: 20,
   },
   errorText: {
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 19,
   },
 });

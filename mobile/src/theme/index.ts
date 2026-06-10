@@ -10,7 +10,7 @@ export { colors, palette } from './colors';
 export type { AppColor } from './colors';
 export { nanumHandwritingFonts } from './fonts';
 export type { NanumHandwritingFont } from './fonts';
-export { fontFamily, textStyle } from './typography';
+export { fontFamily, textStyle, handwritingFont } from './typography';
 export type { TextPreset } from './typography';
 export { radius, spacing } from './spacing';
 export { interactionStyles } from './interactions';

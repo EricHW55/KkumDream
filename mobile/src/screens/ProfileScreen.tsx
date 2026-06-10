@@ -60,7 +60,7 @@ import {
   registerPushToken,
   unregisterPushToken,
 } from '../services/pushNotifications';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont, fontFamily } from '../theme/typography';
 
 const PROFILE_EDITOR_MAX_HEIGHT = 560;
 const PROFILE_EDITOR_COLLAPSED_GAP = -12;
@@ -1223,8 +1223,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 24,
     marginBottom: 18,
   },
@@ -1239,15 +1238,13 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 16,
     includeFontPadding: false,
   },
   sectionDescription: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 13,
     lineHeight: 19,
   },
@@ -1271,8 +1268,7 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 18,
   },
   nameRow: {
@@ -1300,8 +1296,7 @@ const styles = StyleSheet.create({
   },
   editProfileButtonText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -1313,8 +1308,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     includeFontPadding: false,
   },
@@ -1325,9 +1319,8 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
     backgroundColor: colors.background,
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     paddingHorizontal: 14,
-    fontWeight: '700',
     fontSize: 16,
   },
   avatarOptions: {
@@ -1363,8 +1356,7 @@ const styles = StyleSheet.create({
   },
   avatarOptionLabel: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 10,
     includeFontPadding: false,
   },
@@ -1373,8 +1365,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 13,
     lineHeight: 19,
   },
@@ -1390,8 +1381,7 @@ const styles = StyleSheet.create({
   },
   saveText: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 15,
     includeFontPadding: false,
   },
@@ -1413,8 +1403,7 @@ const styles = StyleSheet.create({
   },
   passActionText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -1426,8 +1415,7 @@ const styles = StyleSheet.create({
   },
   legalLinkText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 13,
     textDecorationLine: 'underline',
     includeFontPadding: false,
@@ -1444,8 +1432,7 @@ const styles = StyleSheet.create({
   },
   settingsHeaderTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 19,
     includeFontPadding: false,
   },
@@ -1460,8 +1447,7 @@ const styles = StyleSheet.create({
   },
   blockCountText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 12,
     includeFontPadding: false,
   },
@@ -1477,8 +1463,7 @@ const styles = StyleSheet.create({
   blockName: {
     flex: 1,
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 15,
     includeFontPadding: false,
   },
@@ -1494,8 +1479,7 @@ const styles = StyleSheet.create({
   },
   unblockText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 13,
     includeFontPadding: false,
   },
@@ -1511,16 +1495,14 @@ const styles = StyleSheet.create({
   },
   settingsItemTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 18,
     lineHeight: 25,
     includeFontPadding: false,
   },
   settingsItemDescription: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 14.5,
     lineHeight: 21,
   },
@@ -1545,15 +1527,13 @@ const styles = StyleSheet.create({
   },
   pushItemLabel: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 15,
     lineHeight: 21,
   },
   pushItemDescription: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 13.5,
     lineHeight: 19,
   },
@@ -1571,8 +1551,7 @@ const styles = StyleSheet.create({
   wakeTimeLabel: {
     width: 58,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14,
     lineHeight: 20,
     includeFontPadding: false,
@@ -1596,8 +1575,7 @@ const styles = StyleSheet.create({
     minWidth: 72,
     textAlign: 'center',
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },
@@ -1627,8 +1605,7 @@ const styles = StyleSheet.create({
   },
   cardSizeLabel: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },
@@ -1637,8 +1614,7 @@ const styles = StyleSheet.create({
   },
   cardSizeHint: {
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 11,
     includeFontPadding: false,
     textAlign: 'center',
@@ -1656,8 +1632,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 16,
     includeFontPadding: false,
   },
@@ -1676,8 +1651,7 @@ const styles = StyleSheet.create({
   },
   deleteAccountText: {
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },

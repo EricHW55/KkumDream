@@ -2,7 +2,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 
 import passBadgeImage from '../assets/badges/pass_badge.webp';
 import { colors } from '../theme/colors';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont } from '../theme/typography';
 
 type PassBadgeProps = {
   compact?: boolean;
@@ -66,9 +66,8 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('900'),
     fontSize: 12,
-    fontWeight: '900',
     includeFontPadding: false,
   },
 });

@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { fontFamily } from '../theme/typography';
+import { handwritingFont } from '../theme/typography';
 
 const CYCLE_DELAY = 420;
 
@@ -108,8 +108,7 @@ const styles = StyleSheet.create({
   },
   bubbleText: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 14.5,
     lineHeight: 21,
     textAlign: 'center',

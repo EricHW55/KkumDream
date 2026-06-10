@@ -2,7 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont, fontFamily } from '../theme/typography';
 
 type Props = {
   visible: boolean;
@@ -100,8 +100,7 @@ const styles = StyleSheet.create({
   title: {
     textAlign: 'center',
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 20,
     lineHeight: 27,
     includeFontPadding: false,
@@ -110,8 +109,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 14,
     lineHeight: 21,
   },
@@ -138,15 +136,13 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },
   primaryText: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '800',
+    ...handwritingFont('800'),
     fontSize: 15,
     includeFontPadding: false,
   },

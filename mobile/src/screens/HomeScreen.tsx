@@ -40,7 +40,7 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont, fontFamily } from '../theme/typography';
 import type { GroupRoom } from '../types/group';
 
 type Navigation = CompositeNavigationProp<
@@ -641,17 +641,15 @@ const styles = StyleSheet.create({
   },
   wordmark: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 34,
     includeFontPadding: false,
   },
   subtitle: {
     marginTop: 8,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 15,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   headerActions: {
@@ -713,8 +711,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 20,
     includeFontPadding: false,
   },
@@ -757,16 +754,14 @@ const styles = StyleSheet.create({
   },
   addRoomTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 17,
     includeFontPadding: false,
   },
   addRoomSubtitle: {
     marginTop: 5,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 13,
     lineHeight: 18,
   },
@@ -795,17 +790,15 @@ const styles = StyleSheet.create({
   },
   roomName: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 24,
     includeFontPadding: false,
   },
   roomMeta: {
     marginTop: 8,
     color: colors.textMuted,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 15,
-    fontWeight: '700',
     lineHeight: 21,
   },
   roomSide: {
@@ -852,9 +845,8 @@ const styles = StyleSheet.create({
   },
   latestMood: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 16,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   emptyDreamBadge: {
@@ -886,9 +878,8 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 22,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   closeButton: {
@@ -920,17 +911,15 @@ const styles = StyleSheet.create({
   },
   actionTitle: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 17,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   actionSubtitle: {
     marginTop: 5,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 13,
-    fontWeight: '600',
     lineHeight: 18,
   },
   codePanel: {
@@ -938,9 +927,8 @@ const styles = StyleSheet.create({
   },
   codeLabel: {
     color: colors.textPrimary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 16,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   inviteCodeRow: {
@@ -962,9 +950,8 @@ const styles = StyleSheet.create({
   },
   inviteCode: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 24,
-    fontWeight: '700',
     letterSpacing: 1,
     includeFontPadding: false,
   },
@@ -976,9 +963,8 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 19,
   },
   inviteActions: {
@@ -999,9 +985,8 @@ const styles = StyleSheet.create({
   },
   secondaryActionText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 14,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   codeInput: {
@@ -1012,9 +997,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     backgroundColor: colors.cardBase,
     paddingHorizontal: 16,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 18,
-    fontWeight: '700',
   },
   primaryAction: {
     minHeight: 54,
@@ -1028,16 +1012,14 @@ const styles = StyleSheet.create({
   },
   primaryActionText: {
     color: '#FFFFFF',
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 16,
-    fontWeight: '700',
     includeFontPadding: false,
   },
   errorText: {
     color: colors.error,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('700'),
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 19,
   },
 });

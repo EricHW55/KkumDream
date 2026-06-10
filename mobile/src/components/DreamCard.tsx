@@ -39,7 +39,7 @@ import {
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { handwritingFont, fontFamily } from '../theme/typography';
 import { saveDreamImage, shareDreamImage } from '../native/dreamImageActions';
 import type { Dream, DreamLetterPaper } from '../types/dream';
 import { getCachedRooms } from '../data/dreamRepository';
@@ -1798,18 +1798,16 @@ const styles = StyleSheet.create({
   },
   failureText: {
     color: colors.primaryDark,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('800'),
     fontSize: 20,
-    fontWeight: '800',
     includeFontPadding: false,
     textAlign: 'center',
   },
   placeholderHint: {
     marginTop: 10,
     color: colors.textSecondary,
-    fontFamily: fontFamily.handwritten,
+    ...handwritingFont('600'),
     fontSize: 13,
-    fontWeight: '600',
     includeFontPadding: false,
     textAlign: 'center',
   },
@@ -2244,8 +2242,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   originalToggleText: {
-    fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 12,
     includeFontPadding: false,
   },
