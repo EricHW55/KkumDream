@@ -55,7 +55,13 @@ const PREVIEW_CAPTURE_LONG_SIDE = 900;
 // and letting the queue move to the next one. Without it, a thumbnail that never
 // fires onLoad (slow/stalled network, no error event) would block all further
 // baking indefinitely. The card stays unbaked and is retried later.
-const PREVIEW_IMAGE_LOAD_TIMEOUT_MS = 8000;
+//
+// Thumbnails are prefetched by the archive (THUMBNAIL_PREFETCH_LIMIT), so onLoad
+// usually fires near-instantly and this never triggers — it's purely a stall
+// guard. Keep it short so one stuck thumbnail doesn't hog the single-flight
+// queue, but not so short that a legitimately slow load on weak cellular is
+// abandoned (and needlessly retried) before it finishes.
+const PREVIEW_IMAGE_LOAD_TIMEOUT_MS = 4000;
 
 // Aspect ratio (width / height) of the flattened preview, including the shadow
 // margin. The archive grid sizes its cells with this so the preview image fills
