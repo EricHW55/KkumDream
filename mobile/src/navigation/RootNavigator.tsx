@@ -207,6 +207,10 @@ function RootStack() {
     <Stack.Navigator
       screenOptions={{
         headerTintColor: colors.textPrimary,
+        // iOS shows the previous route's title beside the back chevron; since the
+        // parent route is "MainTabs" (no title) it leaked the raw route name.
+        // "minimal" shows only the chevron, matching Android.
+        headerBackButtonDisplayMode: 'minimal',
         headerStyle: { backgroundColor: colors.background },
         headerTitleStyle: {
           fontFamily: fontFamily.handwritten,

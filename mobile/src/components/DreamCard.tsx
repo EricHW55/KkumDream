@@ -342,16 +342,30 @@ export function DreamCard({
   const letterTextColor = usesIllustratedLetterPaper
     ? '#2D2923'
     : designTheme.text;
-  const frontStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }],
-  }));
+  // When the card can flip, the faces are positioned with a perspective+rotateY
+  // 3D transform (backface hidden) so they swap on flip. But on iOS a layer with
+  // a non-identity 3D transform is rasterized into an offscreen bitmap at ~1x
+  // (non-Retina), which visibly blurs the back-face letter-paper illustration.
+  // For static cards (flip disabled: archive, detail, letter-paper preview, the
+  // preview generator) there is no flip, so render the visible face flat — no 3D
+  // transform — to keep it crisp on iOS. Face hiding then can't rely on the
+  // backface rule, so the inactive face is hidden explicitly below.
+  const frontStyle = useAnimatedStyle(() =>
+    flipDisabled
+      ? { transform: [] }
+      : { transform: [{ perspective: 1100 }, { rotateY: `${rotation.value}deg` }] },
+  );
 
-  const backStyle = useAnimatedStyle(() => ({
-    transform: [
-      { perspective: 1100 },
-      { rotateY: `${rotation.value + 180}deg` },
-    ],
-  }));
+  const backStyle = useAnimatedStyle(() =>
+    flipDisabled
+      ? { transform: [] }
+      : {
+          transform: [
+            { perspective: 1100 },
+            { rotateY: `${rotation.value + 180}deg` },
+          ],
+        },
+  );
 
   useEffect(() => {
     setDidRemoteImageFail(false);
@@ -720,6 +734,7 @@ export function DreamCard({
               styles.face,
               { width: layoutCardWidth, height: cardHeight },
               isBackVisible ? styles.faceHidden : styles.faceVisible,
+              flipDisabled && isBackVisible && styles.faceStaticHidden,
               frontStyle,
             ]}
           >
@@ -1131,6 +1146,7 @@ export function DreamCard({
                 styles.backFace,
                 { width: layoutCardWidth, height: cardHeight },
                 isBackVisible ? styles.faceVisible : styles.faceHidden,
+                flipDisabled && !isBackVisible && styles.faceStaticHidden,
                 backStyle,
               ]}
             >
@@ -1542,6 +1558,12 @@ const styles = StyleSheet.create({
   },
   faceHidden: {
     zIndex: 0,
+  },
+  // For static (non-flippable) cards the faces render flat without the 3D
+  // rotateY, so the backface-visibility rule no longer hides the inactive face.
+  // Hide it explicitly so only the active side shows.
+  faceStaticHidden: {
+    opacity: 0,
   },
   backFace: {
     position: 'absolute',

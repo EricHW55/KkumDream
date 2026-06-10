@@ -1124,6 +1124,11 @@ export function ComposeScreen({ navigation }: Props) {
         ref={composeScrollRef}
         style={styles.root}
         keyboardShouldPersistTaps="handled"
+        // iOS has no `adjustResize` equivalent, so the keyboard otherwise covers
+        // the focused TextInput. This makes the ScrollView reserve bottom inset
+        // for the keyboard and keep the caret visible (no-op on Android, which
+        // already resizes via windowSoftInputMode="adjustResize").
+        automaticallyAdjustKeyboardInsets
         scrollEventThrottle={16}
         onScroll={handleComposeScroll}
         contentContainerStyle={[

@@ -59,7 +59,10 @@ StoryLength = Literal["short", "standard", "long"]
 # v3: raised baked preview resolution/quality (600/82 -> 800/88) for sharper text.
 # v4: re-bake — early v3 uploads landed on the old backend (still 600/82) before
 #     the 800/88 deploy, so bump again to regenerate them at the new quality.
-FRONT_PREVIEW_VERSION = 4
+# v5: widened the capture margin + alpha-preserving WebP for the soft shadow; the
+#     host aspect ratio changed, so old previews must be re-baked. Must stay in
+#     sync with the client's FRONT_PREVIEW_VERSION in DreamFrontPreview.tsx.
+FRONT_PREVIEW_VERSION = 5
 
 
 class DreamDesign(ApiModel):
