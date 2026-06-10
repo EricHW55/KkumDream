@@ -15,7 +15,6 @@ import {
   Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -996,19 +995,15 @@ export function ComposeScreen({ navigation }: Props) {
     );
   };
 
-  // iOS can only present one Modal at a time, and presenting a second while the
-  // first is still dismissing also fails — so the friend picker (a separate
-  // Modal) never showed when opened from the recipient sheet. Show only one at a
-  // time: hide the recipient sheet, then open the picker after the dismiss
-  // animation settles (and vice versa). Component state persists across the swap.
-  const MODAL_SWAP_DELAY_MS = Platform.OS === 'ios' ? 320 : 0;
+  // The friend picker is an in-modal overlay rendered inside the recipient
+  // Modal, not a second native Modal. iOS only allows one Modal presentation at
+  // a time, so stacking two (or swapping them with a dismiss delay) was fragile;
+  // an internal overlay shares the same presentation and toggles instantly.
   const openFriendPicker = () => {
-    setIsRecipientModalVisible(false);
-    setTimeout(() => setIsFriendPickerVisible(true), MODAL_SWAP_DELAY_MS);
+    setIsFriendPickerVisible(true);
   };
   const closeFriendPicker = () => {
     setIsFriendPickerVisible(false);
-    setTimeout(() => setIsRecipientModalVisible(true), MODAL_SWAP_DELAY_MS);
   };
 
   const confirmRecipient = () => {
@@ -2252,7 +2247,13 @@ export function ComposeScreen({ navigation }: Props) {
         animationType="fade"
         transparent
         visible={isRecipientModalVisible}
-        onRequestClose={() => setIsRecipientModalVisible(false)}
+        onRequestClose={() => {
+          if (isFriendPickerVisible) {
+            closeFriendPicker();
+          } else {
+            setIsRecipientModalVisible(false);
+          }
+        }}
       >
         <Pressable
           style={styles.modalBackdrop}
@@ -2495,6 +2496,89 @@ export function ComposeScreen({ navigation }: Props) {
             </PrimaryButton>
           </Pressable>
         </Pressable>
+
+        {isFriendPickerVisible ? (
+          <View style={styles.friendPickerOverlay}>
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => closeFriendPicker()}
+            >
+              <Pressable
+                style={styles.friendPickerSheet}
+                onPress={event => event.stopPropagation()}
+              >
+                <View style={styles.sheetHeader}>
+                  <View style={styles.flex}>
+                    <Text style={styles.sheetTitle}>꿈방 멤버 선택</Text>
+                    <Text style={styles.sheetSubtitle}>
+                      함께 가입된 꿈방 멤버 중 받을 사람을 검색해요.
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityLabel="닫기"
+                    accessibilityRole="button"
+                    onPress={() => closeFriendPicker()}
+                    style={({ pressed }) => [
+                      styles.closeButton,
+                      pressed && interactionStyles.pressed,
+                    ]}
+                  >
+                    <X color={colors.textSecondary} size={20} />
+                  </Pressable>
+                </View>
+                <View style={styles.searchInputWrap}>
+                  <Search color={colors.textMuted} size={19} />
+                  <TextInput
+                    autoCorrect={false}
+                    spellCheck={false}
+                    value={friendSearch}
+                    onChangeText={setFriendSearch}
+                    placeholder="이름 검색"
+                    placeholderTextColor={colors.textMuted}
+                    style={styles.searchInput}
+                  />
+                </View>
+                <ScrollView
+                  style={styles.friendPickerList}
+                  contentContainerStyle={styles.friendPickerListContent}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {filteredFriends.map(friend => (
+                    <Pressable
+                      key={friend.id}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setSelectedReceiverId(friend.id);
+                        closeFriendPicker();
+                      }}
+                      style={({ pressed }) => [
+                        styles.friendItem,
+                        selectedReceiverId === friend.id && styles.selectedItem,
+                        pressed && interactionStyles.pressedSoft,
+                      ]}
+                    >
+                      <ProfileAvatar
+                        size={38}
+                        value={friend.profileImageUrl}
+                        fallbackColor={friend.avatarColor}
+                      />
+                      <Text style={styles.friendName}>{friend.name}</Text>
+                      {selectedReceiverId === friend.id ? (
+                        <Check color={colors.primary} size={20} />
+                      ) : null}
+                    </Pressable>
+                  ))}
+                  {filteredFriends.length === 0 ? (
+                    <Text style={styles.emptyText}>
+                      검색 결과가 없어요. 같은 꿈방에 있는 멤버만 선택할 수 있어요.
+                    </Text>
+                  ) : null}
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          </View>
+        ) : null}
       </Modal>
 
       <Modal
@@ -2549,91 +2633,6 @@ export function ComposeScreen({ navigation }: Props) {
         </Pressable>
       </Modal>
 
-      <Modal
-        animationType="fade"
-        transparent
-        visible={isFriendPickerVisible}
-        onRequestClose={() => closeFriendPicker()}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => closeFriendPicker()}
-        >
-          <Pressable
-            style={styles.friendPickerSheet}
-            onPress={event => event.stopPropagation()}
-          >
-            <View style={styles.sheetHeader}>
-              <View style={styles.flex}>
-                <Text style={styles.sheetTitle}>꿈방 멤버 선택</Text>
-                <Text style={styles.sheetSubtitle}>
-                  함께 가입된 꿈방 멤버 중 받을 사람을 검색해요.
-                </Text>
-              </View>
-              <Pressable
-                accessibilityLabel="닫기"
-                accessibilityRole="button"
-                onPress={() => closeFriendPicker()}
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  pressed && interactionStyles.pressed,
-                ]}
-              >
-                <X color={colors.textSecondary} size={20} />
-              </Pressable>
-            </View>
-            <View style={styles.searchInputWrap}>
-              <Search color={colors.textMuted} size={19} />
-              <TextInput
-                autoCorrect={false}
-                spellCheck={false}
-                value={friendSearch}
-                onChangeText={setFriendSearch}
-                placeholder="이름 검색"
-                placeholderTextColor={colors.textMuted}
-                style={styles.searchInput}
-              />
-            </View>
-            <ScrollView
-              style={styles.friendPickerList}
-              contentContainerStyle={styles.friendPickerListContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {filteredFriends.map(friend => (
-                <Pressable
-                  key={friend.id}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setSelectedReceiverId(friend.id);
-                    closeFriendPicker();
-                  }}
-                  style={({ pressed }) => [
-                    styles.friendItem,
-                    selectedReceiverId === friend.id && styles.selectedItem,
-                    pressed && interactionStyles.pressedSoft,
-                  ]}
-                >
-                  <ProfileAvatar
-                    size={38}
-                    value={friend.profileImageUrl}
-                    fallbackColor={friend.avatarColor}
-                  />
-                  <Text style={styles.friendName}>{friend.name}</Text>
-                  {selectedReceiverId === friend.id ? (
-                    <Check color={colors.primary} size={20} />
-                  ) : null}
-                </Pressable>
-              ))}
-              {filteredFriends.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  검색 결과가 없어요. 같은 꿈방에 있는 멤버만 선택할 수 있어요.
-                </Text>
-              ) : null}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -3842,6 +3841,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     includeFontPadding: false,
+  },
+  friendPickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   friendPickerSheet: {
     maxHeight: '82%',
