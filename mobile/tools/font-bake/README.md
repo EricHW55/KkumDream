@@ -8,6 +8,9 @@ hierarchy on iOS — matching how Android renders the weights natively.
 ## What's where
 
 - `bake_bold.py` — the bake script (FontForge stem-aware `changeWeight`, CJK).
+- `pin_metrics.py` — post-process (fontTools): replaces the few glyphs
+  `changeWeight` corrupts and pins each face's vertical metrics to the Regular's
+  (so Android `includeFontPadding` and iOS line height match the Regular exactly).
 - Runtime fonts (bundled on build, listed in `ios/KkumdreamMobile/Info.plist`):
   - `src/assets/fonts/NanumDaHaengCeSemiBold.ttf`  (600)
   - `src/assets/fonts/NanumDaHaengCeBold.ttf`       (700)
@@ -24,13 +27,15 @@ winget install -e --id FontForge.FontForge
 FF="C:\Program Files\FontForgeBuilds\bin\ffpython.exe"
 
 "$FF" tools/font-bake/bake_bold.py                       # all three weights
-"$FF" tools/font-bake/bake_bold.py 26 NanumDaHaengCeBold 700   # one weight: amount name os2
+"$FF" tools/font-bake/bake_bold.py 40 NanumDaHaengCeBold 700   # one weight: amount name os2
+python tools/font-bake/pin_metrics.py                    # ALWAYS run after baking
 ```
 
 `amount` is the `changeWeight` stroke amount (font units, em = 1000); higher =
-thicker. Current amounts: **SemiBold 14, Bold 22, ExtraBold 30** — tune these on
-device against Android (the dev toggle flips Android onto the baked path). After
-re-baking, rebuild the app.
+thicker. Current amounts: **SemiBold 32, Bold 38, ExtraBold 44** — tuned on device
+against Android (the dev toggle flips Android onto the baked path). **Always run
+`pin_metrics.py` after `bake_bold.py`** — it fixes corrupted glyphs and the font
+bbox. After re-baking, rebuild the app.
 
 ## Why FontForge (not outline dilation)
 

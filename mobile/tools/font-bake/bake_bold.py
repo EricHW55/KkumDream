@@ -34,9 +34,9 @@ FONTS = os.path.join(MOBILE, "src", "assets", "fonts")
 SRC = os.path.join(FONTS, "NanumDaHaengCe.ttf")
 
 WEIGHTS = [
-    ("NanumDaHaengCeSemiBold", 14, 600),
-    ("NanumDaHaengCeBold", 22, 700),
-    ("NanumDaHaengCeExtraBold", 30, 800),
+    ("NanumDaHaengCeSemiBold", 32, 600),
+    ("NanumDaHaengCeBold", 38, 700),
+    ("NanumDaHaengCeExtraBold", 44, 800),
 ]
 if len(sys.argv) > 1:
     WEIGHTS = [(sys.argv[2], int(sys.argv[1]), int(sys.argv[3]))]
@@ -55,6 +55,9 @@ def bake(name, amount, os2):
                 n += 1
         except Exception:
             pass
+    # NOTE: changeWeight corrupts a few rare glyphs (runaway coords) and FontForge
+    # recomputes the font bbox from them. pin_metrics.py (run afterwards) replaces
+    # those glyphs and pins the vertical metrics to the Regular's.
     f.familyname = name
     f.fontname = name
     f.fullname = name
