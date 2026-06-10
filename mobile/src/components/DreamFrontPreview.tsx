@@ -2,6 +2,8 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   type LayoutChangeEvent,
   Image,
+  PixelRatio,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -40,6 +42,14 @@ const GEN_PAD_X = 66;
 const GEN_PAD_Y = 72;
 const GEN_HOST_WIDTH = GEN_CARD_WIDTH + GEN_PAD_X * 2;
 const GEN_HOST_HEIGHT = GEN_CARD_HEIGHT + GEN_PAD_Y * 2;
+
+// The backend downscales every uploaded preview to a max 800px long side
+// (storage_service._to_webp). Capturing at the device's full resolution
+// (~1356x2007 on a 3x phone) therefore uploads ~5x more bytes than survive the
+// transcode — pure waste on the slowest (upload) step. Capture at ~900px long
+// side instead: above the 800 cap so the stored WebP is bit-for-bit the same
+// quality, but a fraction of the bytes to upload.
+const PREVIEW_CAPTURE_LONG_SIDE = 900;
 
 // Aspect ratio (width / height) of the flattened preview, including the shadow
 // margin. The archive grid sizes its cells with this so the preview image fills
@@ -209,9 +219,20 @@ export function DreamFrontPreviewGenerator({
         return;
       }
       try {
+        // react-native-view-shot sizing differs by platform: on iOS width/height
+        // are points (output = points x device scale), on Android they are the
+        // final pixels. Normalize so the PNG is ~900px tall on both, keeping the
+        // host aspect ratio so the stored preview geometry is unchanged.
+        const captureScale = Platform.OS === 'ios' ? PixelRatio.get() : 1;
+        const captureHeight = Math.round(PREVIEW_CAPTURE_LONG_SIDE / captureScale);
+        const captureWidth = Math.round(
+          captureHeight * (GEN_HOST_WIDTH / GEN_HOST_HEIGHT),
+        );
         const uri = await captureRef(hostRef, {
           format: 'png',
           quality: 1,
+          width: captureWidth,
+          height: captureHeight,
           result: 'tmpfile',
         });
         if (isCancelled) {
