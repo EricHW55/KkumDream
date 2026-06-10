@@ -41,7 +41,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { colors } from '../theme/colors';
 import { CARD_COLOR_THEMES, normalizeDreamDesign } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { fontFamily, handwritingEmphasis } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import { DreamCard } from './DreamCard';
 import { DREAM_CARD_ASPECT_RATIO } from './DreamCardFrame';
@@ -1181,9 +1181,9 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
     fontSize: 28,
     includeFontPadding: false,
+    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   description: {
     marginTop: 8,

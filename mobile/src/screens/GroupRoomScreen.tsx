@@ -50,7 +50,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { fontFamily, handwritingEmphasis } from '../theme/typography';
 import type { Dream } from '../types/dream';
 import type { GroupMember } from '../types/group';
 
@@ -1236,9 +1236,9 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
     fontSize: 22,
     includeFontPadding: false,
+    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   subtitle: {
     marginTop: 4,
@@ -1559,9 +1559,9 @@ const styles = StyleSheet.create({
   sheetTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
     fontSize: 22,
     includeFontPadding: false,
+    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   sheetSubtitle: {
     marginTop: 5,

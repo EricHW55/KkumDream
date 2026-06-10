@@ -58,7 +58,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { fontFamily, handwritingEmphasis } from '../theme/typography';
 import type {
   DreamComment,
   Dream,
@@ -1227,8 +1227,8 @@ const styles = StyleSheet.create({
   commentTitle: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
-    fontWeight: '700',
     fontSize: 17,
+    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   commentItem: {
     borderRadius: 16,

@@ -94,7 +94,7 @@ import {
   normalizeDreamDesign,
 } from '../theme/dreamDesigns';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily } from '../theme/typography';
+import { fontFamily, handwritingEmphasis } from '../theme/typography';
 import type {
   Dream,
   DreamDesign,
@@ -3705,8 +3705,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
     fontSize: 22,
-    fontWeight: '700',
     includeFontPadding: false,
+    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   sheetTitleRow: {
     flexDirection: 'row',
