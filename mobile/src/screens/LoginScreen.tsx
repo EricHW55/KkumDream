@@ -12,7 +12,7 @@ import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '../config/env';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily, handwritingEmphasis } from '../theme/typography';
+import { fontFamily } from '../theme/typography';
 
 export function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -152,19 +152,19 @@ const styles = StyleSheet.create({
   title: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
     fontSize: 42,
     includeFontPadding: false,
     textAlign: 'center',
     marginTop: 10,
-    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   title2: {
     color: colors.textGoogleLogin,
     fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
     fontSize: 20,
     includeFontPadding: false,
     textAlign: 'center',
-    ...handwritingEmphasis(colors.textGoogleLogin, 'title'),
   },
   subtitle: {
     color: colors.textMuted,

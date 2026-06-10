@@ -2,7 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily, handwritingEmphasis } from '../theme/typography';
+import { fontFamily } from '../theme/typography';
 
 type Props = {
   visible: boolean;
@@ -101,10 +101,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
+    fontWeight: '800',
     fontSize: 20,
     lineHeight: 27,
     includeFontPadding: false,
-    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   message: {
     marginTop: 12,

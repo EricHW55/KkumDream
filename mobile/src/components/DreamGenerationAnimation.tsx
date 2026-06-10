@@ -14,7 +14,7 @@ import cloudRightImage from '../assets/illustrations/dream_loading_cloud_right.p
 import moonImage from '../assets/illustrations/dream_loading_moon.png';
 import starImage from '../assets/illustrations/dream_loading_star.png';
 import { colors } from '../theme/colors';
-import { fontFamily, handwritingEmphasis } from '../theme/typography';
+import { fontFamily } from '../theme/typography';
 
 // Watercolour clouds are drawn wider than they are tall.
 const CLOUD_ASPECT = 0.72;
@@ -195,8 +195,8 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontFamily: fontFamily.handwritten,
     fontSize: 18,
+    fontWeight: '800',
     includeFontPadding: false,
-    ...handwritingEmphasis(colors.primaryDark, 'title'),
   },
   compactTitle: {
     marginTop: 8,

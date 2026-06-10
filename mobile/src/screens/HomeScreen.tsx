@@ -40,7 +40,7 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { useSessionStore } from '../store/sessionStore';
 import { colors } from '../theme/colors';
 import { interactionStyles } from '../theme/interactions';
-import { fontFamily, handwritingEmphasis } from '../theme/typography';
+import { fontFamily } from '../theme/typography';
 import type { GroupRoom } from '../types/group';
 
 type Navigation = CompositeNavigationProp<
@@ -642,9 +642,9 @@ const styles = StyleSheet.create({
   wordmark: {
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
+    fontWeight: '700',
     fontSize: 34,
     includeFontPadding: false,
-    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   subtitle: {
     marginTop: 8,
@@ -888,8 +888,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontFamily: fontFamily.handwritten,
     fontSize: 22,
+    fontWeight: '700',
     includeFontPadding: false,
-    ...handwritingEmphasis(colors.textPrimary, 'title'),
   },
   closeButton: {
     width: 36,
