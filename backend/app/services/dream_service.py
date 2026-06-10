@@ -660,8 +660,12 @@ async def claim_dream_via_token(
         )
 
     dream.receiver_id = user_id
-    if not dream.receiver_display_name:
-        dream.receiver_display_name = await _snapshot_user_name(session, user_id)
+    # An externally-shared dream stored the giver's placeholder label (e.g. "오빠")
+    # in receiver_display_name at give-time. Now that a real user has claimed it,
+    # their account name is authoritative: overwrite the placeholder and clear the
+    # external label so the card shows the claimer instead of the giver's guess.
+    dream.receiver_display_name = await _snapshot_user_name(session, user_id)
+    dream.receiver_label = None
     record.claimed_at = now
     record.claimed_by_id = user_id
     await session.commit()

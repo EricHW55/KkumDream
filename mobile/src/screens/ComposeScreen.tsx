@@ -15,6 +15,7 @@ import {
   Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -993,6 +994,21 @@ export function ComposeScreen({ navigation }: Props) {
         ? currentIds.filter(id => id !== roomId)
         : [...currentIds, roomId],
     );
+  };
+
+  // iOS can only present one Modal at a time, and presenting a second while the
+  // first is still dismissing also fails — so the friend picker (a separate
+  // Modal) never showed when opened from the recipient sheet. Show only one at a
+  // time: hide the recipient sheet, then open the picker after the dismiss
+  // animation settles (and vice versa). Component state persists across the swap.
+  const MODAL_SWAP_DELAY_MS = Platform.OS === 'ios' ? 320 : 0;
+  const openFriendPicker = () => {
+    setIsRecipientModalVisible(false);
+    setTimeout(() => setIsFriendPickerVisible(true), MODAL_SWAP_DELAY_MS);
+  };
+  const closeFriendPicker = () => {
+    setIsFriendPickerVisible(false);
+    setTimeout(() => setIsRecipientModalVisible(true), MODAL_SWAP_DELAY_MS);
   };
 
   const confirmRecipient = () => {
@@ -2316,7 +2332,7 @@ export function ComposeScreen({ navigation }: Props) {
                   <Text style={styles.sectionTitle}>받는 꿈방 멤버</Text>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => setIsFriendPickerVisible(true)}
+                    onPress={openFriendPicker}
                     style={({ pressed }) => [
                       styles.friendPickerButton,
                       selectedReceiver && styles.selectedItem,
@@ -2537,11 +2553,11 @@ export function ComposeScreen({ navigation }: Props) {
         animationType="fade"
         transparent
         visible={isFriendPickerVisible}
-        onRequestClose={() => setIsFriendPickerVisible(false)}
+        onRequestClose={() => closeFriendPicker()}
       >
         <Pressable
           style={styles.modalBackdrop}
-          onPress={() => setIsFriendPickerVisible(false)}
+          onPress={() => closeFriendPicker()}
         >
           <Pressable
             style={styles.friendPickerSheet}
@@ -2557,7 +2573,7 @@ export function ComposeScreen({ navigation }: Props) {
               <Pressable
                 accessibilityLabel="닫기"
                 accessibilityRole="button"
-                onPress={() => setIsFriendPickerVisible(false)}
+                onPress={() => closeFriendPicker()}
                 style={({ pressed }) => [
                   styles.closeButton,
                   pressed && interactionStyles.pressed,
@@ -2590,7 +2606,7 @@ export function ComposeScreen({ navigation }: Props) {
                   accessibilityRole="button"
                   onPress={() => {
                     setSelectedReceiverId(friend.id);
-                    setIsFriendPickerVisible(false);
+                    closeFriendPicker();
                   }}
                   style={({ pressed }) => [
                     styles.friendItem,
