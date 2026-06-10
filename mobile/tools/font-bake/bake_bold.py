@@ -1,90 +1,74 @@
-"""Bake a Bold face of NanumDaHaengCe by outline dilation.
+"""Bake graduated Bold faces of NanumDaHaengCe with FontForge changeWeight (CJK).
 
-The bundled Nanum handwriting font ships only a Regular face, so `fontWeight`
-does nothing on iOS. This bakes a real Bold face so titles render the same,
-cleanly, on both platforms (see src/theme/typography.ts -> handwritingFont).
+The bundled NanumDaHaengCe handwriting font ships only a Regular face, so
+`fontWeight` does nothing on iOS. The app's design uses several weights
+(600/700/800), so we bake one Bold face per weight to preserve that hierarchy
+on iOS — matching how Android renders the weights natively.
 
-Method: for every glyph, union the outline with copies translated in N
-directions by `d` font units (em = 1000), then simplify. This thickens the
-stroke ~d units per side, baked into the outline (no raster overdraw).
+`changeWeight(amount, "cjk")` thickens stems while preserving counters and the
+narrow notches in glyphs like 받 / 정 (unlike naive outline dilation, which fills
+them into blobs). Runs in cubic to avoid TrueType 2nd-order-spline warnings.
 
-Usage (from mobile/):
-    pip install fonttools skia-pathops
-    python tools/font-bake/bake_bold.py            # d=13 -> NanumDaHaengCeBold
-    python tools/font-bake/bake_bold.py 12         # lighter
-    python tools/font-bake/bake_bold.py 14 NanumDaHaengCeBold
+Requires FontForge (NOT a pip package):
+    winget install -e --id FontForge.FontForge
+Run with FontForge's bundled python (ffpython), e.g. on Windows:
+    "C:\\Program Files\\FontForgeBuilds\\bin\\ffpython.exe" tools/font-bake/bake_bold.py
+    ... 22 NanumDaHaengCeBold 700     # bake one weight: amount, name, os2weight
 
-Output goes straight to src/assets/fonts/<Name>.ttf, which is bundled on the
-next native build (and listed in ios/KkumdreamMobile/Info.plist).
+With no args it bakes all three weights below. Output -> src/assets/fonts/.
 
-Current shipped weight: d=13.
+Current amounts (tune to match Android on device):
+    SemiBold (600) = cjk 14
+    Bold     (700) = cjk 22
+    ExtraBold(800) = cjk 30
 """
-import math
 import os
 import sys
 import time
 
-from fontTools.ttLib import TTFont
-from fontTools.pens.ttGlyphPen import TTGlyphPen
-from fontTools.pens.cu2quPen import Cu2QuPen
-from fontTools.pens.recordingPen import DecomposingRecordingPen
-from pathops import Path, op, PathOp
+import fontforge
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MOBILE = os.path.abspath(os.path.join(HERE, "..", ".."))
 FONTS = os.path.join(MOBILE, "src", "assets", "fonts")
 SRC = os.path.join(FONTS, "NanumDaHaengCe.ttf")
 
-D = int(sys.argv[1]) if len(sys.argv) > 1 else 13
-NAME = sys.argv[2] if len(sys.argv) > 2 else "NanumDaHaengCeBold"
-OUT = os.path.join(FONTS, f"{NAME}.ttf")
-N_DIRS = 12
-
-dirs = [
-    (D * math.cos(2 * math.pi * i / N_DIRS), D * math.sin(2 * math.pi * i / N_DIRS))
-    for i in range(N_DIRS)
+WEIGHTS = [
+    ("NanumDaHaengCeSemiBold", 14, 600),
+    ("NanumDaHaengCeBold", 22, 700),
+    ("NanumDaHaengCeExtraBold", 30, 800),
 ]
+if len(sys.argv) > 1:
+    WEIGHTS = [(sys.argv[2], int(sys.argv[1]), int(sys.argv[3]))]
 
-f = TTFont(SRC)
-glyf = f["glyf"]
-gs = f.getGlyphSet()
-start = time.time()
-done = 0
-for name in list(glyf.keys()):
-    g = glyf[name]
-    if g.numberOfContours == 0 or g.isComposite():
-        continue
-    rec = DecomposingRecordingPen(gs)
-    gs[name].draw(rec)
 
-    def build():
-        p = Path()
-        rec.replay(p.getPen())
-        return p
+def bake(name, amount, os2):
+    t = time.time()
+    f = fontforge.open(SRC)
+    f.is_quadratic = False  # cubic avoids 2nd-order-spline warnings
+    f.selection.all()
+    n = 0
+    for g in f.selection.byGlyphs:
+        try:
+            if g.isWorthOutputting():
+                g.changeWeight(amount, "cjk")
+                n += 1
+        except Exception:
+            pass
+    f.familyname = name
+    f.fontname = name
+    f.fullname = name
+    f.weight = "Bold"
+    f.os2_weight = os2
+    f.appendSFNTName("English (US)", "Family", name)
+    f.appendSFNTName("English (US)", "SubFamily", "Regular")
+    f.appendSFNTName("English (US)", "Fullname", name)
+    f.appendSFNTName("English (US)", "PostScriptName", name)
+    out = os.path.join(FONTS, name + ".ttf")
+    f.generate(out)
+    f.close()
+    print("saved %s  (cjk %d, %d glyphs, %.0fs)" % (out, amount, n, time.time() - t))
 
-    result = build()
-    for dx, dy in dirs:
-        # transform() returns a NEW path; it does not mutate in place.
-        result = op(result, build().transform(1, 0, 0, 1, dx, dy), PathOp.UNION)
-    result.simplify()
-    ttp = TTGlyphPen(None)
-    result.draw(Cu2QuPen(ttp, max_err=1.0, reverse_direction=True))
-    glyf[name] = ttp.glyph()
-    done += 1
-    if done % 2000 == 0:
-        print(f"  {done} glyphs  ({time.time() - start:.0f}s)")
 
-name_tbl = f["name"]
-for rec in list(name_tbl.names):
-    if rec.nameID in (1, 4, 6, 16):
-        name_tbl.setName(NAME, rec.nameID, rec.platformID, rec.platEncID, rec.langID)
-    elif rec.nameID in (2, 17):
-        name_tbl.setName("Regular", rec.nameID, rec.platformID, rec.platEncID, rec.langID)
-name_tbl.setName(NAME, 1, 3, 1, 0x409)
-name_tbl.setName("Regular", 2, 3, 1, 0x409)
-name_tbl.setName(NAME, 4, 3, 1, 0x409)
-name_tbl.setName(NAME, 6, 3, 1, 0x409)
-f["OS/2"].usWeightClass = 700
-
-f.save(OUT)
-print(f"saved {OUT}  ({done} glyphs, {time.time() - start:.0f}s, {os.path.getsize(OUT) // 1024} KB)")
+for name, amount, os2 in WEIGHTS:
+    bake(name, amount, os2)

@@ -11,8 +11,6 @@ import starImage from './src/assets/illustrations/dream_loading_star.png';
 import agedLetterPaperTexture from './src/assets/textures/aged_letter_paper.webp';
 import paperTexture from './src/assets/textures/paper_texture.webp';
 import { DreamCardFrame } from './src/components/DreamCardFrame';
-// TEMP preview tooling — delete with src/debug/handwritingBoldPreview.tsx.
-import { HandwritingBoldPreviewToggle } from './src/debug/handwritingBoldPreview';
 import { IosUpdateModal } from './src/components/IosUpdateModal';
 import { PassModal } from './src/components/PassModal';
 import { prehydrateComposeDraftCache } from './src/data/composeDraftCache';
@@ -59,7 +57,6 @@ function App() {
           <StartupPreloader />
           <RootNavigator />
           <PassModal />
-          <HandwritingBoldPreviewToggle />
         </SafeAreaProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>

@@ -9,34 +9,35 @@
 import { Platform, type TextStyle } from 'react-native';
 
 import { nanumHandwritingFonts } from './fonts';
-// TEMP preview toggle — delete with src/debug/handwritingBoldPreview.tsx.
-import { isHandwritingFakeBoldForced } from '../debug/handwritingBoldPreview';
 
 /**
  * Resolve a handwriting weight to a real font face.
  *
- * The Nanum handwriting font ships only a Regular face, so on iOS `fontWeight`
- * is ignored and bold titles render thin. We bundle a pre-baked Bold face
- * (NanumDaHaengCeBold, outline-dilated from the Regular) and select it by name
- * for weight >= 600, which renders identically and cleanly on both platforms.
- *
- * Android keeps its native synthetic-bold (`fontWeight`) for now; the dev
- * preview toggle flips Android onto the baked path so the two can be compared.
- * Once confirmed, drop the toggle and let Android use the baked faces too.
+ * The Nanum handwriting font ships only a Regular face, so `fontWeight` is
+ * ignored on iOS and bold titles render thin. On iOS we select a pre-baked face
+ * instead — one per weight the design uses (SemiBold 600, Bold 700, ExtraBold
+ * 800) — so the weight hierarchy survives. Android keeps its native
+ * synthetic-bold (`fontWeight`), which already renders the design correctly.
  */
-const HANDWRITING_BOLD = 'NanumDaHaengCeBold';
+const BAKED_FACES = {
+  semibold: 'NanumDaHaengCeSemiBold', // 600
+  bold: 'NanumDaHaengCeBold', // 700
+  extrabold: 'NanumDaHaengCeExtraBold', // 800+
+} as const;
+
+function bakedFamily(weight: TextStyle['fontWeight']): string {
+  const w = Number(weight);
+  if (w >= 800) return BAKED_FACES.extrabold;
+  if (w >= 700) return BAKED_FACES.bold;
+  if (w >= 600) return BAKED_FACES.semibold;
+  return nanumHandwritingFonts.dahaeng; // 400/500 stay Regular
+}
 
 export function handwritingFont(
   weight: TextStyle['fontWeight'],
 ): Pick<TextStyle, 'fontFamily' | 'fontWeight'> {
-  const isBold = Number(weight) >= 600;
-  // TEMP: `|| isHandwritingFakeBoldForced()` lets the Android toggle preview the
-  // baked path. Remove the call when deleting the preview tooling.
-  const useBaked = Platform.OS === 'ios' || isHandwritingFakeBoldForced();
-  if (useBaked) {
-    return {
-      fontFamily: isBold ? HANDWRITING_BOLD : nanumHandwritingFonts.dahaeng,
-    };
+  if (Platform.OS === 'ios') {
+    return { fontFamily: bakedFamily(weight) };
   }
   return { fontFamily: nanumHandwritingFonts.dahaeng, fontWeight: weight };
 }

@@ -1,35 +1,43 @@
-# Font baking — NanumDaHaengCe Bold
+# Font baking — NanumDaHaengCe bold weights
 
 The bundled **NanumDaHaengCe** handwriting font ships only a Regular face, so
-`fontWeight` is ignored on iOS and bold titles render thin. We bake a real
-**Bold** face from the Regular outlines so titles look the same — and clean —
-on both platforms.
+`fontWeight` is ignored on iOS and bold text renders thin. The app's design uses
+several weights (600 / 700 / 800), so we bake **one face per weight** to keep the
+hierarchy on iOS — matching how Android renders the weights natively.
 
 ## What's where
 
-- `bake_bold.py` — the bake script (outline dilation).
-- Runtime font: **`src/assets/fonts/NanumDaHaengCeBold.ttf`** (bundled on build,
-  listed in `ios/KkumdreamMobile/Info.plist`). This is the only baked file that
-  ships.
-- Consumed via `handwritingFont(weight)` in `src/theme/typography.ts`
-  (weight ≥ 600 → the Bold face).
+- `bake_bold.py` — the bake script (FontForge stem-aware `changeWeight`, CJK).
+- Runtime fonts (bundled on build, listed in `ios/KkumdreamMobile/Info.plist`):
+  - `src/assets/fonts/NanumDaHaengCeSemiBold.ttf`  (600)
+  - `src/assets/fonts/NanumDaHaengCeBold.ttf`       (700)
+  - `src/assets/fonts/NanumDaHaengCeExtraBold.ttf`  (800+)
+- Consumed via `handwritingFont(weight)` in `src/theme/typography.ts`, which maps
+  each weight to its face (400/500 stay Regular).
 
 ## Re-bake
 
+FontForge is required (a standalone app, not a pip package):
+
 ```bash
-pip install fonttools skia-pathops      # one-time
-python tools/font-bake/bake_bold.py      # d=13 (current), writes the .ttf
-python tools/font-bake/bake_bold.py 12   # lighter
-python tools/font-bake/bake_bold.py 14   # heavier
+winget install -e --id FontForge.FontForge
+FF="C:\Program Files\FontForgeBuilds\bin\ffpython.exe"
+
+"$FF" tools/font-bake/bake_bold.py                       # all three weights
+"$FF" tools/font-bake/bake_bold.py 26 NanumDaHaengCeBold 700   # one weight: amount name os2
 ```
 
-`d` is the dilation amount in font units (em = 1000); higher = thicker. The
-current shipped weight is **d = 13**. After re-baking, rebuild the app.
+`amount` is the `changeWeight` stroke amount (font units, em = 1000); higher =
+thicker. Current amounts: **SemiBold 14, Bold 22, ExtraBold 30** — tune these on
+device against Android (the dev toggle flips Android onto the baked path). After
+re-baking, rebuild the app.
 
-## Notes / limitations
+## Why FontForge (not outline dilation)
 
-- Dilation thickens uniformly, so very tight inner angles (e.g. the joints in
-  ㅈ / ㅏ) fill in slightly at higher `d` — lower `d` if it bothers you, or use a
-  stem-aware tool (FontForge `changeWeight`) for crisper counters.
-- To add another weight (e.g. a SemiBold for `fontWeight: '600'`), bake a second
-  file with a different name and split the mapping in `handwritingFont`.
+A naive "dilate the outline" embolden grows every edge uniformly, so it **fills
+the narrow notches** in handwriting glyphs (e.g. the ㅏ joint in 받, the crossing
+in ㅈ) into solid blobs. `changeWeight(amount, "cjk")` is stem-aware: it thickens
+strokes while preserving counters and notches, so the bold stays clean.
+
+`changeWeight` prints `Invalid 2nd order spline` / `overlap` internal warnings on
+some glyphs — non-fatal; the generated fonts render correctly.

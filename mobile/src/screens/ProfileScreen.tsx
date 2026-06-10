@@ -426,12 +426,21 @@ export function ProfileScreen() {
     }
   };
 
-  const logout = async () => {
-    if (token) {
-      await unregisterPushToken(token);
-    }
-    await signOutGoogle();
+  const logout = () => {
+    // Switch to the login screen immediately; the push-token unregister and
+    // Google sign-out are best-effort cleanup that doesn't need to block the UI.
+    const currentToken = token;
     clearSession();
+    void (async () => {
+      try {
+        if (currentToken) {
+          await unregisterPushToken(currentToken);
+        }
+        await signOutGoogle();
+      } catch {
+        // Cleanup is best-effort; the session is already cleared.
+      }
+    })();
   };
 
   const deleteAccountConfirmed = async () => {
