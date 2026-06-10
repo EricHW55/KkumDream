@@ -64,6 +64,24 @@ def create_app() -> FastAPI:
         )
         return HTMLResponse(html)
 
+    @app.get("/r/{invite_code}", response_class=HTMLResponse, include_in_schema=False)
+    async def room_invite_landing(invite_code: str) -> HTMLResponse:
+        encoded_invite_code = quote(invite_code, safe="")
+        deep_link = f"kkumdream://r/{encoded_invite_code}"
+        html = _build_share_landing_html(
+            deep_link=deep_link,
+            play_store_url=settings.android_play_store_url,
+            app_store_url=settings.ios_app_store_url,
+            title="꿈방 초대",
+            heading="꿈방 초대",
+            description=(
+                "앱이 설치되어 있으면 꿈드림이 열려 꿈방에 참가하고, "
+                "설치되어 있지 않으면 설치 페이지로 이동합니다."
+            ),
+            button_label="앱에서 꿈방 참가",
+        )
+        return HTMLResponse(html)
+
     @app.get("/account-deletion", response_class=HTMLResponse, include_in_schema=False)
     async def account_deletion_page() -> HTMLResponse:
         return HTMLResponse(
@@ -123,7 +141,12 @@ def create_app() -> FastAPI:
     async def apple_app_site_association() -> JSONResponse:
         details = []
         if settings.ios_app_id:
-            details.append({"appIDs": [settings.ios_app_id], "components": [{"/": "/d/*"}]})
+            details.append(
+                {
+                    "appIDs": [settings.ios_app_id],
+                    "components": [{"/": "/d/*"}, {"/": "/r/*"}],
+                }
+            )
         return JSONResponse({"applinks": {"details": details}})
 
     return app
@@ -136,8 +159,19 @@ def _build_share_landing_html(
     deep_link: str,
     play_store_url: str,
     app_store_url: str,
+    title: str = "꿈카드 받기",
+    heading: str = "꿈카드 받기",
+    description: str = (
+        "앱이 설치되어 있으면 꿈드림이 열리고, "
+        "설치되어 있지 않으면 설치 페이지로 이동합니다."
+    ),
+    button_label: str = "앱에서 열기",
 ) -> str:
     escaped_deep_link = escape(deep_link, quote=True)
+    escaped_title = escape(title)
+    escaped_heading = escape(heading)
+    escaped_description = escape(description)
+    escaped_button_label = escape(button_label)
     js_deep_link = json.dumps(deep_link)
     js_play_store_url = json.dumps(play_store_url)
     js_app_store_url = json.dumps(app_store_url)
@@ -146,7 +180,7 @@ def _build_share_landing_html(
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>꿈카드 받기</title>
+  <title>{escaped_title}</title>
   <style>
     body {{
       margin: 0;
@@ -182,9 +216,9 @@ def _build_share_landing_html(
 </head>
 <body>
   <main>
-    <h1>꿈카드 받기</h1>
-    <p>앱이 설치되어 있으면 꿈드림이 열리고, 설치되어 있지 않으면 설치 페이지로 이동합니다.</p>
-    <a id="open-app" href="{escaped_deep_link}">앱에서 열기</a>
+    <h1>{escaped_heading}</h1>
+    <p>{escaped_description}</p>
+    <a id="open-app" href="{escaped_deep_link}">{escaped_button_label}</a>
   </main>
   <script>
     const deepLink = {js_deep_link};

@@ -18,6 +18,7 @@ import { DreamDetailScreen } from '../screens/DreamDetailScreen';
 import { GroupRoomScreen } from '../screens/GroupRoomScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { InboxScreen } from '../screens/InboxScreen';
+import { JoinRoomScreen } from '../screens/JoinRoomScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { OutboxScreen } from '../screens/OutboxScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -38,6 +39,7 @@ const linking: LinkingOptions<RootStackParamList> = {
   config: {
     screens: {
       ClaimDream: 'd/:dreamId',
+      JoinRoom: 'r/:inviteCode',
       MainTabs: {
         screens: {
           Home: '',
@@ -260,6 +262,11 @@ function RootStack() {
         name="ClaimDream"
         component={ClaimDreamScreen}
         options={{ title: '꿈카드 받기' }}
+      />
+      <Stack.Screen
+        name="JoinRoom"
+        component={JoinRoomScreen}
+        options={{ title: '꿈방 참가' }}
       />
     </Stack.Navigator>
   );

@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Compose: undefined;
   DreamDetail: { dream: Dream };
   ClaimDream: { dreamId?: string; claim?: string; token?: string } | undefined;
+  JoinRoom: { inviteCode?: string } | undefined;
 };
 
 export type MainTabParamList = {

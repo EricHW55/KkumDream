@@ -63,6 +63,10 @@
                 android:scheme="https"
                 android:host="kkumdream.app"
                 android:pathPrefix="/d" />
+            <data
+                android:scheme="https"
+                android:host="kkumdream.app"
+                android:pathPrefix="/r" />
         </intent-filter>
       </activity>
     </application>
