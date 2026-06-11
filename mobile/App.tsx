@@ -35,9 +35,18 @@ import {
   CARD_COLOR_THEMES,
   CARD_FRAME_OPTIONS,
 } from './src/theme/dreamDesigns';
-import { nanumHandwritingFonts } from './src/theme/fonts';
+import {
+  nanumDahaengWeightFonts,
+  nanumHandwritingFonts,
+} from './src/theme/fonts';
 
 const queryClient = new QueryClient();
+const PRELOAD_FONT_FAMILIES = Array.from(
+  new Set([
+    ...Object.values(nanumHandwritingFonts),
+    ...Object.values(nanumDahaengWeightFonts),
+  ]),
+);
 
 prehydrateComposeDraftCache(useSessionStore.getState().userId);
 
@@ -161,7 +170,7 @@ function StartupPreloader() {
 
   return (
     <View pointerEvents="none" style={styles.preloadHost}>
-      {Object.values(nanumHandwritingFonts).map(font => (
+      {PRELOAD_FONT_FAMILIES.map(font => (
         <Text key={font} style={[styles.preloadText, { fontFamily: font }]}>
           꿈드림
         </Text>

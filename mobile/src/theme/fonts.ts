@@ -6,5 +6,12 @@ export const nanumHandwritingFonts = {
   yedang: 'NanumYeDangCe',
 } as const;
 
+export const nanumDahaengWeightFonts = {
+  regular: nanumHandwritingFonts.dahaeng,
+  semibold: 'NanumDaHaengCeSemiBold',
+  bold: 'NanumDaHaengCeBold',
+  extrabold: 'NanumDaHaengCeExtraBold',
+} as const;
+
 export type NanumHandwritingFont =
   (typeof nanumHandwritingFonts)[keyof typeof nanumHandwritingFonts];

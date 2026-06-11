@@ -8,7 +8,7 @@
 
 import { Platform, type TextStyle } from 'react-native';
 
-import { nanumHandwritingFonts } from './fonts';
+import { nanumDahaengWeightFonts, nanumHandwritingFonts } from './fonts';
 
 /**
  * Resolve a handwriting weight to a real font face.
@@ -20,9 +20,9 @@ import { nanumHandwritingFonts } from './fonts';
  * synthetic-bold (`fontWeight`), which already renders the design correctly.
  */
 const BAKED_FACES = {
-  semibold: 'NanumDaHaengCeSemiBold', // 600
-  bold: 'NanumDaHaengCeBold', // 700
-  extrabold: 'NanumDaHaengCeExtraBold', // 800+
+  semibold: nanumDahaengWeightFonts.semibold, // 600
+  bold: nanumDahaengWeightFonts.bold, // 700
+  extrabold: nanumDahaengWeightFonts.extrabold, // 800+
 } as const;
 
 function bakedFamily(weight: TextStyle['fontWeight']): string {

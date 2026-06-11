@@ -12,7 +12,9 @@ import {
   Image,
   type ImageSourcePropType,
   InteractionManager,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
@@ -2255,6 +2257,14 @@ export function ComposeScreen({ navigation }: Props) {
           }
         }}
       >
+        <KeyboardAvoidingView
+          behavior={
+            Platform.OS === 'ios' && !isFriendPickerVisible
+              ? 'padding'
+              : undefined
+          }
+          style={styles.modalKeyboardAvoider}
+        >
         <Pressable
           style={styles.modalBackdrop}
           onPress={() => setIsRecipientModalVisible(false)}
@@ -2326,6 +2336,8 @@ export function ComposeScreen({ navigation }: Props) {
             <ScrollView
               style={styles.sheetScroll}
               contentContainerStyle={styles.sheetScrollContent}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
               showsVerticalScrollIndicator={false}
             >
               {recipientMode === 'friend' ? (
@@ -2498,7 +2510,10 @@ export function ComposeScreen({ navigation }: Props) {
         </Pressable>
 
         {isFriendPickerVisible ? (
-          <View style={styles.friendPickerOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.friendPickerOverlay}
+          >
             <Pressable
               style={styles.modalBackdrop}
               onPress={() => closeFriendPicker()}
@@ -2542,6 +2557,7 @@ export function ComposeScreen({ navigation }: Props) {
                   style={styles.friendPickerList}
                   contentContainerStyle={styles.friendPickerListContent}
                   keyboardShouldPersistTaps="handled"
+                  automaticallyAdjustKeyboardInsets
                   showsVerticalScrollIndicator={false}
                 >
                   {filteredFriends.map(friend => (
@@ -2577,8 +2593,9 @@ export function ComposeScreen({ navigation }: Props) {
                 </ScrollView>
               </Pressable>
             </Pressable>
-          </View>
+          </KeyboardAvoidingView>
         ) : null}
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
@@ -3653,6 +3670,9 @@ const styles = StyleSheet.create({
   letterPaperPreviewDotActive: {
     width: 18,
     backgroundColor: colors.primary,
+  },
+  modalKeyboardAvoider: {
+    flex: 1,
   },
   modalBackdrop: {
     flex: 1,
