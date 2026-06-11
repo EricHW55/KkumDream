@@ -124,7 +124,7 @@ ANTHROPIC_TOKEN_PRICES = {
 
 CREATE_DREAM_CARD_TOOL = {
     "name": "create_dream_card",
-    "description": "Create the Korean dream-card text and a short image scene.",
+    "description": "Create the Korean dream-card text and a compact image scene.",
     "input_schema": {
         "type": "object",
         "additionalProperties": False,
@@ -164,7 +164,9 @@ CREATE_DREAM_CARD_TOOL = {
             "imageScene": {
                 "type": "string",
                 "description": (
-                    "English visual scene only, 30-60 words, no style terms."
+                    "English visual scene only, 30-60 words, no style terms. "
+                    "Describe a place, main subject, action, and 2-4 concrete "
+                    "supporting details."
                 ),
             },
         },
@@ -196,6 +198,14 @@ linework, flat soft matte lighting, cozy and emotionally warm, clear focal subje
 mobile card thumbnail friendly, absolutely not a photograph, not photorealistic,
 not a 3D render, not CGI, not anime, no glossy reflections, no camera bokeh,
 no realistic skin or fabric texture
+""".replace("\n", " ").strip()
+IMAGE_WORLD_BUILDING_GUIDE = """
+turn the dream memo into a layered emotional situation rather than isolated
+symbols; show a small believable world with foreground, midground, and background
+details; include several relevant objects, environmental clues, and a clear path
+for the eye to travel; prefer poetic visual metaphor, scale contrast, and
+atmosphere over literal diagram-like explanation; keep the scene readable and not
+cluttered
 """.replace("\n", " ").strip()
 # Keep each mood to palette + atmosphere ONLY, so the hand-drawn medium stays
 # identical across moods and just the feeling shifts.
@@ -355,7 +365,8 @@ Write the dream card:
 - Do not end with post-dream feelings, interpretation, comfort, lessons, reader
   questions, or sentimental reflection.
 - imageScene: English visual scene only. Describe the main objects, place,
-  atmosphere, and visual action. No style words, no "no text" phrases.
+  atmosphere, visual action, and a few supporting objects. Make it one situation
+  inside a place, not a list of symbols. No style words, no "no text" phrases.
 
 Avoid: dream interpretation, fortune-telling, therapy or moral lessons; new
 characters, violence, gore, sexual content, and real brand names.
@@ -525,7 +536,8 @@ def _build_final_image_prompt(image_scene: str, mood: str) -> str:
     scene = " ".join(image_scene.split()).strip()
     mood_guide = MOOD_IMAGE_GUIDES.get(mood, MOOD_IMAGE_GUIDES[DEFAULT_MOOD])
     return (
-        f"{IMAGE_STYLE_PREFIX} of {scene}. {mood_guide}. {IMAGE_STYLE_GUIDE}, "
+        f"{IMAGE_STYLE_PREFIX} of {scene}. {mood_guide}. "
+        f"{IMAGE_WORLD_BUILDING_GUIDE}. {IMAGE_STYLE_GUIDE}, "
         "square composition, no text, no logo, no watermark"
     )
 
