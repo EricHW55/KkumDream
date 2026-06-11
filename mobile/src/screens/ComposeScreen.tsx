@@ -30,6 +30,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useHeaderHeight } from '@react-navigation/elements';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   Check,
@@ -197,6 +198,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
 export function ComposeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const { width: windowWidth } = useWindowDimensions();
   const composeScrollRef = useRef<ScrollView>(null);
   const queryClient = useQueryClient();
@@ -1129,7 +1131,11 @@ export function ComposeScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.screenRoot}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      style={styles.screenRoot}
+    >
       {shouldPreloadLetterPaperBackgrounds ? (
         <DreamCardLetterPaperBackgroundPreloader />
       ) : null}
@@ -1137,11 +1143,6 @@ export function ComposeScreen({ navigation }: Props) {
         ref={composeScrollRef}
         style={styles.root}
         keyboardShouldPersistTaps="handled"
-        // iOS has no `adjustResize` equivalent, so the keyboard otherwise covers
-        // the focused TextInput. This makes the ScrollView reserve bottom inset
-        // for the keyboard and keep the caret visible (no-op on Android, which
-        // already resizes via windowSoftInputMode="adjustResize").
-        automaticallyAdjustKeyboardInsets
         scrollEventThrottle={16}
         onScroll={handleComposeScroll}
         contentContainerStyle={[
@@ -2650,7 +2651,7 @@ export function ComposeScreen({ navigation }: Props) {
         </Pressable>
       </Modal>
 
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

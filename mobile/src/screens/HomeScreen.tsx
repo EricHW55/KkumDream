@@ -2,7 +2,9 @@ import { useCallback, useState } from 'react';
 import {
   Clipboard,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   Share,
   StyleSheet,
@@ -293,6 +295,10 @@ export function HomeScreen() {
         visible={isRoomSheetVisible}
         onRequestClose={() => setIsRoomSheetVisible(false)}
       >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.sheetKeyboardAvoider}
+        >
         <Pressable
           style={styles.sheetBackdrop}
           onPress={() => setIsRoomSheetVisible(false)}
@@ -489,6 +495,7 @@ export function HomeScreen() {
             ) : null}
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </Screen>
   );
@@ -861,6 +868,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(40, 35, 63, 0.28)',
+  },
+  sheetKeyboardAvoider: {
+    flex: 1,
   },
   sheet: {
     borderTopLeftRadius: 28,
