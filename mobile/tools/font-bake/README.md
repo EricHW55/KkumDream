@@ -1,22 +1,27 @@
-# Font baking — NanumDaHaengCe bold weights
+# Font baking - NanumDaHaengCe iOS weights
 
 The bundled **NanumDaHaengCe** handwriting font ships only a Regular face, so
-`fontWeight` is ignored on iOS and bold text renders thin. The app's design uses
-several weights (600 / 700 / 800), so we bake **one face per weight** to keep the
-hierarchy on iOS — matching how Android renders the weights natively.
+`fontWeight` is not rendered identically across iOS and Android. Android is the
+design baseline and keeps the Regular face plus native `fontWeight`; iOS uses
+one baked face per Android weight.
 
 ## What's where
 
-- `bake_bold.py` — the bake script (FontForge stem-aware `changeWeight`, CJK).
-- `pin_metrics.py` — post-process (fontTools): replaces the few glyphs
+- `bake_bold.py` - the bake script (FontForge stem-aware `changeWeight`, CJK).
+- `pin_metrics.py` - post-process (fontTools): replaces the few glyphs
   `changeWeight` corrupts and pins each face's vertical metrics to the Regular's
-  (so Android `includeFontPadding` and iOS line height match the Regular exactly).
-- Runtime fonts (bundled on build, listed in `ios/KkumdreamMobile/Info.plist`):
-  - `src/assets/fonts/NanumDaHaengCeSemiBold.ttf`  (600)
-  - `src/assets/fonts/NanumDaHaengCeBold.ttf`       (700)
-  - `src/assets/fonts/NanumDaHaengCeExtraBold.ttf`  (800+)
-- Consumed via `handwritingFont(weight)` in `src/theme/typography.ts`, which maps
-  each weight to its face (400/500 stay Regular).
+  so baked faces keep the same line box.
+- Runtime iOS fonts are bundled on build and listed in
+  `ios/KkumdreamMobile/Info.plist`:
+  - `src/assets/fonts/NanumDaHaengCeMedium.ttf` (500)
+  - `src/assets/fonts/NanumDaHaengCeSemiBold.ttf` (600)
+  - `src/assets/fonts/NanumDaHaengCeBold.ttf` (700)
+  - `src/assets/fonts/NanumDaHaengCeExtraBold.ttf` (800)
+  - `src/assets/fonts/NanumDaHaengCeHeavy.ttf` (900+)
+- `handwritingFont(weight)` in `src/theme/typography.ts` maps iOS to baked
+  faces and Android to the existing Regular + `fontWeight` path.
+- The temporary floating font toggle switches between `ios-baked` and
+  `android-native` render modes for device comparison.
 
 ## Re-bake
 
@@ -26,23 +31,24 @@ FontForge is required (a standalone app, not a pip package):
 winget install -e --id FontForge.FontForge
 FF="C:\Program Files\FontForgeBuilds\bin\ffpython.exe"
 
-"$FF" tools/font-bake/bake_bold.py                       # all three weights
-"$FF" tools/font-bake/bake_bold.py 40 NanumDaHaengCeBold 700   # one weight: amount name os2
-python tools/font-bake/pin_metrics.py                    # ALWAYS run after baking
+"$FF" tools/font-bake/bake_bold.py
+"$FF" tools/font-bake/bake_bold.py 20 NanumDaHaengCeBold 700
+python tools/font-bake/pin_metrics.py
 ```
 
-`amount` is the `changeWeight` stroke amount (font units, em = 1000); higher =
-thicker. Current amounts: **SemiBold 32, Bold 38, ExtraBold 44** — tuned on device
-against Android (the dev toggle flips Android onto the baked path). **Always run
-`pin_metrics.py` after `bake_bold.py`** — it fixes corrupted glyphs and the font
-bbox. After re-baking, rebuild the app.
+`amount` is the `changeWeight` stroke amount (font units, em = 1000); higher is
+thicker. Current amounts: **Medium 7, SemiBold 12, Bold 20, ExtraBold 28,
+Heavy 36**. Use the floating font toggle to compare the iOS baked path against
+Android's native `fontWeight` path on device.
 
-## Why FontForge (not outline dilation)
+Always run `pin_metrics.py` after `bake_bold.py`. It fixes corrupted glyphs and
+the font bbox. After re-baking, rebuild the app.
 
-A naive "dilate the outline" embolden grows every edge uniformly, so it **fills
-the narrow notches** in handwriting glyphs (e.g. the ㅏ joint in 받, the crossing
-in ㅈ) into solid blobs. `changeWeight(amount, "cjk")` is stem-aware: it thickens
-strokes while preserving counters and notches, so the bold stays clean.
+## Why FontForge
 
-`changeWeight` prints `Invalid 2nd order spline` / `overlap` internal warnings on
-some glyphs — non-fatal; the generated fonts render correctly.
+A naive outline dilation emboldens every edge uniformly and can fill narrow
+notches in handwriting glyphs. `changeWeight(amount, "cjk")` is stem-aware: it
+thickens strokes while preserving counters and notches, so the bold stays clean.
+
+`changeWeight` prints `Invalid 2nd order spline` / `overlap` internal warnings
+on some glyphs. Those warnings are non-fatal.

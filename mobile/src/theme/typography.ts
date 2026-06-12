@@ -8,35 +8,39 @@
 
 import { Platform, type TextStyle } from 'react-native';
 
+import { getHandwritingFontMode } from '../data/fontMode';
 import { nanumDahaengWeightFonts, nanumHandwritingFonts } from './fonts';
 
 /**
- * Resolve a handwriting weight to a real font face.
+ * Resolve the handwritten UI font.
  *
- * The Nanum handwriting font ships only a Regular face, so `fontWeight` is
- * ignored on iOS and bold titles render thin. On iOS we select a pre-baked face
- * instead — one per weight the design uses (SemiBold 600, Bold 700, ExtraBold
- * 800) — so the weight hierarchy survives. Android keeps its native
- * synthetic-bold (`fontWeight`), which already renders the design correctly.
+ * Android's design baseline uses the Regular font plus native `fontWeight`.
+ * iOS does not synthesize the same handwritten weights, so its default mode
+ * maps each Android weight to a baked face. The floating test toggle switches
+ * between these two render paths.
  */
 const BAKED_FACES = {
+  medium: nanumDahaengWeightFonts.medium, // 500
   semibold: nanumDahaengWeightFonts.semibold, // 600
   bold: nanumDahaengWeightFonts.bold, // 700
-  extrabold: nanumDahaengWeightFonts.extrabold, // 800+
+  extrabold: nanumDahaengWeightFonts.extrabold, // 800
+  heavy: nanumDahaengWeightFonts.heavy, // 900+
 } as const;
 
 function bakedFamily(weight: TextStyle['fontWeight']): string {
   const w = Number(weight);
+  if (w >= 900) return BAKED_FACES.heavy;
   if (w >= 800) return BAKED_FACES.extrabold;
   if (w >= 700) return BAKED_FACES.bold;
   if (w >= 600) return BAKED_FACES.semibold;
-  return nanumHandwritingFonts.dahaeng; // 400/500 stay Regular
+  if (w >= 500) return BAKED_FACES.medium;
+  return nanumHandwritingFonts.dahaeng; // 400 stays Regular
 }
 
 export function handwritingFont(
   weight: TextStyle['fontWeight'],
 ): Pick<TextStyle, 'fontFamily' | 'fontWeight'> {
-  if (Platform.OS === 'ios') {
+  if (getHandwritingFontMode() === 'ios-baked') {
     return { fontFamily: bakedFamily(weight) };
   }
   return { fontFamily: nanumHandwritingFonts.dahaeng, fontWeight: weight };
@@ -87,20 +91,17 @@ export const textStyle = {
     letterSpacing: -0.2,
   },
   subtitle: {
-    fontFamily: fontFamily.korean,
-    fontWeight: '700',
+    ...handwritingFont('700'),
     fontSize: 16,
     lineHeight: 22,
   },
   body: {
-    fontFamily: fontFamily.korean,
-    fontWeight: '500',
+    ...handwritingFont('500'),
     fontSize: 14,
     lineHeight: 21,
   },
   caption: {
-    fontFamily: fontFamily.korean,
-    fontWeight: '600',
+    ...handwritingFont('600'),
     fontSize: 12,
     lineHeight: 17,
   },

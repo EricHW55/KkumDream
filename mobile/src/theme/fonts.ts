@@ -8,9 +8,11 @@ export const nanumHandwritingFonts = {
 
 export const nanumDahaengWeightFonts = {
   regular: nanumHandwritingFonts.dahaeng,
+  medium: 'NanumDaHaengCeMedium',
   semibold: 'NanumDaHaengCeSemiBold',
   bold: 'NanumDaHaengCeBold',
   extrabold: 'NanumDaHaengCeExtraBold',
+  heavy: 'NanumDaHaengCeHeavy',
 } as const;
 
 export type NanumHandwritingFont =

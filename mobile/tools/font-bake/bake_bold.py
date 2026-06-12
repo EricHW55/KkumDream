@@ -1,9 +1,9 @@
-"""Bake graduated Bold faces of NanumDaHaengCe with FontForge changeWeight (CJK).
+"""Bake graduated faces of NanumDaHaengCe with FontForge changeWeight (CJK).
 
-The bundled NanumDaHaengCe handwriting font ships only a Regular face, so
-`fontWeight` does nothing on iOS. The app's design uses several weights
-(600/700/800), so we bake one Bold face per weight to preserve that hierarchy
-on iOS — matching how Android renders the weights natively.
+The bundled NanumDaHaengCe handwriting font ships only a Regular face, and
+iOS does not synthesize the same handwritten weights as Android. Android keeps
+the Regular font plus native `fontWeight`; iOS maps the Android weights to
+baked faces.
 
 `changeWeight(amount, "cjk")` thickens stems while preserving counters and the
 narrow notches in glyphs like 받 / 정 (unlike naive outline dilation, which fills
@@ -13,14 +13,16 @@ Requires FontForge (NOT a pip package):
     winget install -e --id FontForge.FontForge
 Run with FontForge's bundled python (ffpython), e.g. on Windows:
     "C:\\Program Files\\FontForgeBuilds\\bin\\ffpython.exe" tools/font-bake/bake_bold.py
-    ... 22 NanumDaHaengCeBold 700     # bake one weight: amount, name, os2weight
+    ... 20 NanumDaHaengCeBold 700     # bake one weight: amount, name, os2weight
 
-With no args it bakes all three weights below. Output -> src/assets/fonts/.
+With no args it bakes all weights below. Output -> src/assets/fonts/.
 
-Current amounts (tune to match Android on device):
-    SemiBold (600) = cjk 14
-    Bold     (700) = cjk 22
-    ExtraBold(800) = cjk 30
+Current amounts (tune on device with the floating font-mode toggle):
+    Medium   (500) = cjk 7
+    SemiBold (600) = cjk 12
+    Bold     (700) = cjk 20
+    ExtraBold(800) = cjk 28
+    Heavy    (900) = cjk 36
 """
 import os
 import sys
@@ -34,9 +36,11 @@ FONTS = os.path.join(MOBILE, "src", "assets", "fonts")
 SRC = os.path.join(FONTS, "NanumDaHaengCe.ttf")
 
 WEIGHTS = [
-    ("NanumDaHaengCeSemiBold", 32, 600),
-    ("NanumDaHaengCeBold", 38, 700),
-    ("NanumDaHaengCeExtraBold", 44, 800),
+    ("NanumDaHaengCeMedium", 7, 500),
+    ("NanumDaHaengCeSemiBold", 12, 600),
+    ("NanumDaHaengCeBold", 20, 700),
+    ("NanumDaHaengCeExtraBold", 28, 800),
+    ("NanumDaHaengCeHeavy", 36, 900),
 ]
 if len(sys.argv) > 1:
     WEIGHTS = [(sys.argv[2], int(sys.argv[1]), int(sys.argv[3]))]

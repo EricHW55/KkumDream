@@ -19,6 +19,13 @@ private const val DREAM_ACTIVITY_CHANNEL_ID = "dream_activity"
 private val DREAM_FONT_ASSETS =
     mapOf(
         "NanumDaHaengCe" to "fonts/NanumDaHaengCe.ttf",
+        // Default Android UI still uses NanumDaHaengCe + fontWeight.
+        // These baked faces are registered for the temporary iOS-mode toggle.
+        "NanumDaHaengCeMedium" to "fonts/NanumDaHaengCeMedium.ttf",
+        "NanumDaHaengCeSemiBold" to "fonts/NanumDaHaengCeSemiBold.ttf",
+        "NanumDaHaengCeBold" to "fonts/NanumDaHaengCeBold.ttf",
+        "NanumDaHaengCeExtraBold" to "fonts/NanumDaHaengCeExtraBold.ttf",
+        "NanumDaHaengCeHeavy" to "fonts/NanumDaHaengCeHeavy.ttf",
         "NanumDaeGwangYuRi" to "fonts/NanumDaeGwangYuRi.ttf",
         "NanumMiRaeNaMu" to "fonts/NanumMiRaeNaMu.ttf",
         "NanumAGiSaRangCe" to "fonts/NanumAGiSaRangCe.ttf",

@@ -27,7 +27,13 @@ def is_outlier(bounds):
     return ymax > 1000 or ymin < -650 or xmax > 1200 or xmin < -650
 
 
-for name in ("NanumDaHaengCeSemiBold", "NanumDaHaengCeBold", "NanumDaHaengCeExtraBold"):
+for name in (
+    "NanumDaHaengCeMedium",
+    "NanumDaHaengCeSemiBold",
+    "NanumDaHaengCeBold",
+    "NanumDaHaengCeExtraBold",
+    "NanumDaHaengCeHeavy",
+):
     p = os.path.join(FONTS, name + ".ttf")
     f = TTFont(p)
     gs = f.getGlyphSet()

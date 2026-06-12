@@ -52,9 +52,11 @@
 		<string>NanumAGiSaRangCe.ttf</string>
 		<string>NanumDaeGwangYuRi.ttf</string>
 		<string>NanumDaHaengCe.ttf</string>
+		<string>NanumDaHaengCeMedium.ttf</string>
 		<string>NanumDaHaengCeSemiBold.ttf</string>
 		<string>NanumDaHaengCeBold.ttf</string>
 		<string>NanumDaHaengCeExtraBold.ttf</string>
+		<string>NanumDaHaengCeHeavy.ttf</string>
 		<string>NanumMiRaeNaMu.ttf</string>
 		<string>NanumYeDangCe.ttf</string>
 	</array>

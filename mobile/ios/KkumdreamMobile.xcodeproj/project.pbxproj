@@ -15,9 +15,11 @@
 		A10100000000000000000003 /* NanumDaHaengCe.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000003 /* NanumDaHaengCe.ttf */; };
 		A10100000000000000000004 /* NanumMiRaeNaMu.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000004 /* NanumMiRaeNaMu.ttf */; };
 		A10100000000000000000005 /* NanumYeDangCe.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000005 /* NanumYeDangCe.ttf */; };
+		A10100000000000000000010 /* NanumDaHaengCeMedium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000010 /* NanumDaHaengCeMedium.ttf */; };
 		A10100000000000000000007 /* NanumDaHaengCeSemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000007 /* NanumDaHaengCeSemiBold.ttf */; };
 		A10100000000000000000008 /* NanumDaHaengCeBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000008 /* NanumDaHaengCeBold.ttf */; };
 		A10100000000000000000009 /* NanumDaHaengCeExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000009 /* NanumDaHaengCeExtraBold.ttf */; };
+		A10100000000000000000011 /* NanumDaHaengCeHeavy.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A20100000000000000000011 /* NanumDaHaengCeHeavy.ttf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
@@ -33,9 +35,11 @@
 		A20100000000000000000003 /* NanumDaHaengCe.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumDaHaengCe.ttf; path = ../src/assets/fonts/NanumDaHaengCe.ttf; sourceTree = "<group>"; };
 		A20100000000000000000004 /* NanumMiRaeNaMu.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumMiRaeNaMu.ttf; path = ../src/assets/fonts/NanumMiRaeNaMu.ttf; sourceTree = "<group>"; };
 		A20100000000000000000005 /* NanumYeDangCe.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumYeDangCe.ttf; path = ../src/assets/fonts/NanumYeDangCe.ttf; sourceTree = "<group>"; };
+		A20100000000000000000010 /* NanumDaHaengCeMedium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumDaHaengCeMedium.ttf; path = ../src/assets/fonts/NanumDaHaengCeMedium.ttf; sourceTree = "<group>"; };
 		A20100000000000000000007 /* NanumDaHaengCeSemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumDaHaengCeSemiBold.ttf; path = ../src/assets/fonts/NanumDaHaengCeSemiBold.ttf; sourceTree = "<group>"; };
 		A20100000000000000000008 /* NanumDaHaengCeBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumDaHaengCeBold.ttf; path = ../src/assets/fonts/NanumDaHaengCeBold.ttf; sourceTree = "<group>"; };
 		A20100000000000000000009 /* NanumDaHaengCeExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumDaHaengCeExtraBold.ttf; path = ../src/assets/fonts/NanumDaHaengCeExtraBold.ttf; sourceTree = "<group>"; };
+		A20100000000000000000011 /* NanumDaHaengCeHeavy.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = NanumDaHaengCeHeavy.ttf; path = ../src/assets/fonts/NanumDaHaengCeHeavy.ttf; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-KkumdreamMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KkumdreamMobile.debug.xcconfig"; path = "Target Support Files/Pods-KkumdreamMobile/Pods-KkumdreamMobile.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-KkumdreamMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-KkumdreamMobile.release.xcconfig"; path = "Target Support Files/Pods-KkumdreamMobile/Pods-KkumdreamMobile.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-KkumdreamMobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-KkumdreamMobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -63,9 +67,11 @@
 				A20100000000000000000001 /* NanumAGiSaRangCe.ttf */,
 				A20100000000000000000002 /* NanumDaeGwangYuRi.ttf */,
 				A20100000000000000000003 /* NanumDaHaengCe.ttf */,
+				A20100000000000000000010 /* NanumDaHaengCeMedium.ttf */,
 				A20100000000000000000007 /* NanumDaHaengCeSemiBold.ttf */,
 				A20100000000000000000008 /* NanumDaHaengCeBold.ttf */,
 				A20100000000000000000009 /* NanumDaHaengCeExtraBold.ttf */,
+				A20100000000000000000011 /* NanumDaHaengCeHeavy.ttf */,
 				A20100000000000000000004 /* NanumMiRaeNaMu.ttf */,
 				A20100000000000000000005 /* NanumYeDangCe.ttf */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
@@ -187,9 +193,11 @@
 				A10100000000000000000001 /* NanumAGiSaRangCe.ttf in Resources */,
 				A10100000000000000000002 /* NanumDaeGwangYuRi.ttf in Resources */,
 				A10100000000000000000003 /* NanumDaHaengCe.ttf in Resources */,
+				A10100000000000000000010 /* NanumDaHaengCeMedium.ttf in Resources */,
 				A10100000000000000000007 /* NanumDaHaengCeSemiBold.ttf in Resources */,
 				A10100000000000000000008 /* NanumDaHaengCeBold.ttf in Resources */,
 				A10100000000000000000009 /* NanumDaHaengCeExtraBold.ttf in Resources */,
+				A10100000000000000000011 /* NanumDaHaengCeHeavy.ttf in Resources */,
 				A10100000000000000000004 /* NanumMiRaeNaMu.ttf in Resources */,
 				A10100000000000000000005 /* NanumYeDangCe.ttf in Resources */,
 				A10000000000000000000006 /* GoogleService-Info.plist in Resources */,
