@@ -1166,7 +1166,7 @@ function Avatar({
 
 function buildInviteMessage(roomName: string, inviteCode: string) {
   const inviteUrl = `https://kkumdream.app/r/${encodeURIComponent(inviteCode)}`;
-  return `꿈드림 꿈방 "${roomName}"에 초대합니다.\n초대 코드: ${inviteCode}\n\n${inviteUrl}\n\n링크를 열면 꿈드림 앱에서 바로 꿈방에 참가할 수 있어요.`;
+  return `꿈드림 꿈방 "${roomName}"에 초대합니다.\n함께 모여 오늘의 꿈을 나눠봐요.\n초대 코드: ${inviteCode}\n\n${inviteUrl}\n\n링크를 열면 꿈드림 앱에서 바로 꿈방에 참가할 수 있어요.`;
 }
 
 function inviteCollapsedCacheKey(roomId: string, userId?: string | null) {

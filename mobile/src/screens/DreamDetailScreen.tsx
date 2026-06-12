@@ -924,8 +924,8 @@ export function DreamDetailScreen({ route, navigation }: Props) {
 
 function buildShareLinkMessage(dream: Dream, shareUrl: string) {
   const recipient = dream.receiverLabel?.trim();
-  const recipientText = recipient ? `${recipient}에게 보낸 꿈카드` : '꿈카드';
-  return `${recipientText}\n"${dream.shortMessage}"\n\n${shareUrl}\n\n링크를 열면 꿈드림 앱에서 바로 카드를 받을 수 있어요.`;
+  const recipientText = recipient ? `${recipient}에게 전하는 꿈` : '전하는 꿈';
+  return `${recipientText}\n"${dream.shortMessage}"\n\n${shareUrl}\n\n링크를 열면 꿈드림 앱에서 선물받은 꿈을 받을 수 있어요.`;
 }
 
 function isImagePending(dream?: Dream) {

@@ -20,7 +20,7 @@ private val DREAM_FONT_ASSETS =
     mapOf(
         "NanumDaHaengCe" to "fonts/NanumDaHaengCe.ttf",
         // Default Android UI still uses NanumDaHaengCe + fontWeight.
-        // These baked faces are registered for the temporary iOS-mode toggle.
+        // The baked faces are registered so shared components can preload them.
         "NanumDaHaengCeMedium" to "fonts/NanumDaHaengCeMedium.ttf",
         "NanumDaHaengCeSemiBold" to "fonts/NanumDaHaengCeSemiBold.ttf",
         "NanumDaHaengCeBold" to "fonts/NanumDaHaengCeBold.ttf",

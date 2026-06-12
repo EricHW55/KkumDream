@@ -2767,7 +2767,7 @@ function buildExternalShareMessage(
   recipientLabel: string,
 ) {
   const recipientText = recipientLabel || dream.receiverLabel || '친구';
-  return `${recipientText}에게 보낸 꿈카드\n"${dream.shortMessage}"\n\n${shareUrl}\n\n링크를 열면 꿈드림 앱에서 바로 카드를 받을 수 있어요.`;
+  return `${recipientText}에게 전하는 꿈\n"${dream.shortMessage}"\n\n${shareUrl}\n\n링크를 열면 꿈드림 앱에서 선물받은 꿈을 받을 수 있어요.`;
 }
 
 type FadingHorizontalScrollProps = {

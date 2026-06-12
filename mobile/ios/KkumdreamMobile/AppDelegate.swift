@@ -2,9 +2,10 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import UserNotifications
 
 @main
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
   var window: UIWindow?
 
   var reactNativeDelegate: ReactNativeDelegate?
@@ -20,6 +21,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
+    UNUserNotificationCenter.current().delegate = self
 
     window = UIWindow(frame: UIScreen.main.bounds)
 
@@ -50,6 +52,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       continue: userActivity,
       restorationHandler: restorationHandler
     )
+  }
+
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    if
+      let urlString = response.notification.request.content.userInfo["url"] as? String,
+      let url = URL(string: urlString)
+    {
+      RCTLinkingManager.application(UIApplication.shared, open: url, options: [:])
+    }
+    completionHandler()
   }
 }
 

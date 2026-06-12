@@ -8,7 +8,11 @@ import com.facebook.react.uimanager.ViewManager
 class DreamImageActionsPackage : ReactPackage {
   override fun createNativeModules(
       reactContext: ReactApplicationContext
-  ): List<NativeModule> = listOf(DreamImageActionsModule(reactContext))
+  ): List<NativeModule> =
+      listOf(
+          DreamImageActionsModule(reactContext),
+          MorningReminderModule(reactContext),
+      )
 
   override fun createViewManagers(
       reactContext: ReactApplicationContext

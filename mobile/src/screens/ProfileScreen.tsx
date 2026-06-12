@@ -76,15 +76,15 @@ const PUSH_NOTIFICATION_ITEMS: {
   label: string;
   description?: string;
 }[] = [
-  { type: 'dream_given', label: '새 꿈카드가 도착했을 때' },
-  { type: 'dream_ready', label: '내가 보낸 꿈의 이미지가 완성됐을 때' },
-  { type: 'dream_comment', label: '받은 꿈카드에 댓글이 달렸을 때' },
-  { type: 'owner_comment', label: '꿈 주인이 댓글에 답을 남겼을 때' },
-  { type: 'dream_claimed', label: '공유한 꿈카드를 상대가 받았을 때' },
+  { type: 'dream_given', label: '친구의 꿈을 선물받았을 때' },
+  { type: 'dream_ready', label: '내가 전한 꿈의 장면이 완성됐을 때' },
+  { type: 'dream_comment', label: '꿈에 대한 반응이 도착했을 때' },
+  { type: 'owner_comment', label: '꿈 주인이 마음을 남겼을 때' },
+  { type: 'dream_claimed', label: '전하는 꿈을 상대가 받았을 때' },
   {
     type: 'morning_dream_card',
-    label: '아침에 일어나 꿈카드를 적을 때',
-    description: '간밤의 꿈이 흐려지기 전에 살짝 깨워드릴게요.',
+    label: '아침에 꿈을 기록할 때',
+    description: '꿈이 흐릿해지기 전에 살짝 깨워드릴게요.',
   },
 ];
 

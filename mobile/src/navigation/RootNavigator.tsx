@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
   DefaultTheme,
   NavigationContainer,
+  createNavigationContainerRef,
   type LinkingOptions,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -29,6 +30,8 @@ import type { MainTabParamList, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+export const rootNavigationRef =
+  createNavigationContainerRef<RootStackParamList>();
 const TAB_BAR_BASE_HEIGHT = 64;
 const TAB_BAR_TOP_RADIUS = 30;
 const TAB_BAR_BASE_PADDING_BOTTOM = 8;
@@ -40,6 +43,7 @@ const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       ClaimDream: 'd/:dreamId',
       JoinRoom: 'r/:inviteCode',
+      Compose: 'compose',
       MainTabs: {
         screens: {
           Home: '',
@@ -272,7 +276,7 @@ function RootStack() {
 
 export function RootNavigator() {
   return (
-    <NavigationContainer theme={theme} linking={linking}>
+    <NavigationContainer ref={rootNavigationRef} theme={theme} linking={linking}>
       <RootStack />
     </NavigationContainer>
   );

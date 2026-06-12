@@ -62,7 +62,7 @@ class DreamImageActionsModule(private val reactContext: ReactApplicationContext)
   }
 
   @ReactMethod
-  fun shareImage(imageUrl: String, fileName: String?, promise: Promise) {
+  fun shareImage(imageUrl: String, fileName: String?, message: String?, promise: Promise) {
     Thread {
           try {
             val image = readImage(imageUrl)
@@ -84,6 +84,9 @@ class DreamImageActionsModule(private val reactContext: ReactApplicationContext)
                 Intent(Intent.ACTION_SEND).apply {
                   type = image.mimeType
                   putExtra(Intent.EXTRA_STREAM, uri)
+                  if (!message.isNullOrBlank()) {
+                    putExtra(Intent.EXTRA_TEXT, message)
+                  }
                   addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             val chooser = Intent.createChooser(shareIntent, "꿈카드 이미지 공유")

@@ -636,7 +636,7 @@ function upsertRoom(rooms: GroupRoom[], room: GroupRoom) {
 
 function buildInviteMessage(room: GroupRoom) {
   const inviteUrl = `https://kkumdream.app/r/${encodeURIComponent(room.inviteCode)}`;
-  return `꿈드림 꿈방 "${room.name}"에 초대합니다.\n초대 코드: ${room.inviteCode}\n\n${inviteUrl}\n\n링크를 열면 꿈드림 앱에서 바로 꿈방에 참가할 수 있어요.`;
+  return `꿈드림 꿈방 "${room.name}"에 초대합니다.\n함께 모여 오늘의 꿈을 나눠봐요.\n초대 코드: ${room.inviteCode}\n\n${inviteUrl}\n\n링크를 열면 꿈드림 앱에서 바로 꿈방에 참가할 수 있어요.`;
 }
 
 const styles = StyleSheet.create({

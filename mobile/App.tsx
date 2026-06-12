@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import messaging, {
+  type FirebaseMessagingTypes,
+} from '@react-native-firebase/messaging';
 import { Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -15,7 +18,11 @@ import { IosUpdateModal } from './src/components/IosUpdateModal';
 import { PassModal } from './src/components/PassModal';
 import { prehydrateComposeDraftCache } from './src/data/composeDraftCache';
 import { usePassPurchaseRecovery } from './src/hooks/usePassPurchaseRecovery';
-import { RootNavigator } from './src/navigation/RootNavigator';
+import {
+  RootNavigator,
+  rootNavigationRef,
+} from './src/navigation/RootNavigator';
+import { fetchDream } from './src/api/dreams';
 import {
   checkForIosUpdateNotice,
   dismissIosUpdateNotice,
@@ -28,6 +35,10 @@ import {
   unregisterPushToken,
 } from './src/services/pushNotifications';
 import { checkForImmediateAndroidUpdate } from './src/services/inAppUpdates';
+import {
+  cancelMorningDreamReminder,
+  scheduleMorningDreamReminder,
+} from './src/native/morningReminder';
 import { useSessionStore } from './src/store/sessionStore';
 import { isAnyPushEnabled, useSettingsStore } from './src/store/settingsStore';
 import { colors } from './src/theme/colors';
@@ -60,9 +71,11 @@ function App() {
             backgroundColor={colors.background}
           />
           <PushNotificationRegistrar />
+          <PushNotificationNavigator />
           <AndroidInAppUpdateGate />
           <IosUpdateGate />
           <PassPurchaseRecovery />
+          <MorningDreamReminderScheduler />
           <StartupPreloader />
           <RootNavigator />
           <PassModal />
@@ -116,6 +129,79 @@ function IosUpdateGate() {
 function PassPurchaseRecovery() {
   usePassPurchaseRecovery();
   return null;
+}
+
+function MorningDreamReminderScheduler() {
+  const enabled = useSettingsStore(
+    state => state.pushPreferences.morning_dream_card,
+  );
+  const wakeReminderTime = useSettingsStore(state => state.wakeReminderTime);
+
+  useEffect(() => {
+    if (enabled) {
+      scheduleMorningDreamReminder(wakeReminderTime).catch(() => undefined);
+    } else {
+      cancelMorningDreamReminder().catch(() => undefined);
+    }
+  }, [enabled, wakeReminderTime]);
+
+  return null;
+}
+
+function PushNotificationNavigator() {
+  const token = useSessionStore(state => state.token);
+
+  useEffect(() => {
+    if (!token) {
+      return undefined;
+    }
+
+    const unsubscribe = messaging().onNotificationOpenedApp(message => {
+      openNotificationTarget(message, token).catch(() => undefined);
+    });
+
+    messaging()
+      .getInitialNotification()
+      .then(message => {
+        if (message) {
+          openNotificationTarget(message, token).catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+
+    return unsubscribe;
+  }, [token]);
+
+  return null;
+}
+
+async function openNotificationTarget(
+  message: FirebaseMessagingTypes.RemoteMessage,
+  token: string,
+) {
+  const route = String(message.data?.route ?? '');
+  const dreamId = String(message.data?.dreamId ?? '');
+  if (route !== 'DreamDetail' || !dreamId) {
+    return;
+  }
+
+  const dream = await fetchDream(dreamId, token);
+  navigateWhenReady(() => {
+    rootNavigationRef.navigate('DreamDetail', { dream });
+  });
+}
+
+function navigateWhenReady(navigate: () => void, attempts = 10) {
+  if (rootNavigationRef.isReady()) {
+    navigate();
+    return;
+  }
+
+  if (attempts <= 0) {
+    return;
+  }
+
+  setTimeout(() => navigateWhenReady(navigate, attempts - 1), 120);
 }
 
 function PushNotificationRegistrar() {

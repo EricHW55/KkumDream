@@ -38,8 +38,8 @@ def initialize_firebase() -> bool:
 async def send_dream_ready_push(token: str, dream_id: str) -> None:
     await _send_token_push(
         token=token,
-        title="꿈 이미지가 완성됐어요",
-        body="받은 꿈카드에서 이미지를 확인해보세요.",
+        title="꿈의 장면이 완성됐어요",
+        body="보관함에서 선물받은 꿈의 장면을 열어보세요.",
         dream_id=dream_id,
         notification_type="dream_ready",
         channel_id=DREAM_ACTIVITY_CHANNEL_ID,
@@ -56,8 +56,8 @@ async def send_dream_given_push(
     await _send_user_pushes(
         session=session,
         recipient_ids=[receiver_id],
-        title="꿈카드가 도착했어요",
-        body=f'"{dream_title}" 카드를 열어보세요.',
+        title="친구의 꿈을 선물받았어요",
+        body=f'"{dream_title}"에 담긴 마음을 열어보세요.',
         dream_id=dream_id,
         notification_type="dream_given",
         channel_id=DREAM_IMPORTANT_CHANNEL_ID,
@@ -74,8 +74,8 @@ async def send_owner_comment_push(
     await _send_user_pushes(
         session=session,
         recipient_ids=[giver_id],
-        title="꿈주인이 댓글을 남겼어요",
-        body=f'"{dream_title}"에 답장이 도착했어요.',
+        title="꿈 주인이 마음을 남겼어요",
+        body=f'"{dream_title}"에 도착한 답장을 확인해보세요.',
         dream_id=dream_id,
         notification_type="owner_comment",
         channel_id=DREAM_IMPORTANT_CHANNEL_ID,
@@ -92,8 +92,8 @@ async def send_dream_comment_push(
     await _send_user_pushes(
         session=session,
         recipient_ids=recipient_ids,
-        title="꿈카드에 댓글이 달렸어요",
-        body=f'"{dream_title}"에서 새 댓글을 확인해보세요.',
+        title="꿈에 대한 반응이 도착했어요",
+        body=f'"{dream_title}"에 남겨진 마음을 확인해보세요.',
         dream_id=dream_id,
         notification_type="dream_comment",
         channel_id=DREAM_ACTIVITY_CHANNEL_ID,
@@ -110,8 +110,8 @@ async def send_dream_claimed_push(
     await _send_user_pushes(
         session=session,
         recipient_ids=[giver_id],
-        title="공유한 꿈카드가 받아졌어요",
-        body=f'"{dream_title}" 카드가 공유 링크로 전달됐어요.',
+        title="전하는 꿈이 받아졌어요",
+        body=f'"{dream_title}"이 상대의 보관함에 조용히 도착했어요.',
         dream_id=dream_id,
         notification_type="dream_claimed",
         channel_id=DREAM_ACTIVITY_CHANNEL_ID,
