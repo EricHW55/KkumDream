@@ -15,7 +15,7 @@ from app.services.user_service import (
     get_user,
     update_user_profile,
 )
-from app.services.storage_service import store_profile_image
+from app.services.storage_service import delete_profile_image, store_profile_image
 
 router = APIRouter()
 
@@ -110,8 +110,13 @@ async def upload_profile_image(
             detail="프로필 이미지는 5MB 이하로 업로드해주세요.",
         )
 
+    existing_user = await get_user(session, user_id)
+    previous_profile_image_url = (
+        existing_user.profile_image_url if existing_user is not None else None
+    )
     image_url = await store_profile_image(user_id, image_bytes)
     user = await update_user_profile(session, user_id, None, image_url)
+    await delete_profile_image(previous_profile_image_url, keep_url=image_url)
     return UserOut.model_validate(user)
 
 

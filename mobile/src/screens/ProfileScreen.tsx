@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -28,6 +30,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { deleteAccount, updateProfile, uploadProfileImage } from '../api/auth';
 import { fetchEntitlement, getPlatformPassProductId } from '../api/billing';
 import { claimDream } from '../api/dreams';
+import { ApiError } from '../api/httpClient';
 import { fetchBlockedUsers, unblockUser } from '../api/safety';
 import { signOutGoogle } from '../auth/googleSignIn';
 import { useConfirmDialog } from '../components/ConfirmDialog';
@@ -70,6 +73,8 @@ const SETTINGS_PANEL_MAX_HEIGHT = 720;
 const SETTINGS_PANEL_COLLAPSED_GAP = -12;
 const BLOCK_PANEL_MAX_HEIGHT = 520;
 const BLOCK_PANEL_COLLAPSED_GAP = -12;
+const PROFILE_SAVE_RETRY_DELAYS_MS = [900, 1800, 3200, 5000];
+const RETRYABLE_PROFILE_SAVE_STATUSES = new Set([502, 503, 504]);
 
 const PUSH_NOTIFICATION_ITEMS: {
   type: PushNotificationType;
@@ -108,6 +113,42 @@ function shiftWakeReminderTime(
     hour: Math.floor(nextMinutes / 60),
     minute: nextMinutes % 60,
   };
+}
+
+function wait(ms: number) {
+  return new Promise<void>(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function isRetryableProfileSaveError(error: unknown) {
+  if (error instanceof ApiError) {
+    return RETRYABLE_PROFILE_SAVE_STATUSES.has(error.status);
+  }
+  return error instanceof Error && error.message === 'Network request failed';
+}
+
+async function retryProfileSaveRequest<T>(request: () => Promise<T>) {
+  let lastError: unknown;
+  for (
+    let attempt = 0;
+    attempt <= PROFILE_SAVE_RETRY_DELAYS_MS.length;
+    attempt += 1
+  ) {
+    try {
+      return await request();
+    } catch (error) {
+      lastError = error;
+      const shouldRetry =
+        attempt < PROFILE_SAVE_RETRY_DELAYS_MS.length &&
+        isRetryableProfileSaveError(error);
+      if (!shouldRetry) {
+        throw error;
+      }
+      await wait(PROFILE_SAVE_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  throw lastError;
 }
 
 const CARD_SIZE_OPTIONS: {
@@ -527,25 +568,29 @@ export function ProfileScreen() {
     setIsSaving(true);
     try {
       let nextProfileImageUrl = profileAvatarValue || DEFAULT_PROFILE_AVATAR;
-      if (pendingProfileImage?.uri) {
-        const uploadedUser = await uploadProfileImage(
-          {
+      const profileImageToUpload = pendingProfileImage?.uri
+        ? {
             uri: pendingProfileImage.uri,
             fileName: pendingProfileImage.fileName,
             type: pendingProfileImage.type,
-          },
-          token,
+          }
+        : null;
+      if (profileImageToUpload) {
+        const uploadedUser = await retryProfileSaveRequest(() =>
+          uploadProfileImage(profileImageToUpload, token),
         );
         nextProfileImageUrl =
           uploadedUser.profileImageUrl ?? DEFAULT_PROFILE_AVATAR;
       }
 
-      const nextUser = await updateProfile(
-        {
-          nickname,
-          profileImageUrl: nextProfileImageUrl,
-        },
-        token,
+      const nextUser = await retryProfileSaveRequest(() =>
+        updateProfile(
+          {
+            nickname,
+            profileImageUrl: nextProfileImageUrl,
+          },
+          token,
+        ),
       );
       updateUser(nextUser);
       setPendingProfileImage(null);
@@ -730,6 +775,22 @@ export function ProfileScreen() {
             </Animated.View>
           ) : null}
         </View>
+        <Modal
+          animationType="fade"
+          transparent
+          visible={isSaving}
+          onRequestClose={() => undefined}
+        >
+          <View style={styles.savingOverlay}>
+            <View style={styles.savingModal}>
+              <ActivityIndicator color={colors.primary} size="large" />
+              <Text style={styles.savingTitle}>내 정보를 저장하고 있어요</Text>
+              <Text style={styles.savingDescription}>
+                사진을 정리해 꿈드림 보관함에 올리는 중이에요.
+              </Text>
+            </View>
+          </View>
+        </Modal>
         <View style={styles.panel}>
           <Pressable
             accessibilityRole="button"
@@ -1393,6 +1454,39 @@ const styles = StyleSheet.create({
     ...handwritingFont('700'),
     fontSize: 15,
     includeFontPadding: false,
+  },
+  savingOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    backgroundColor: 'rgba(31, 27, 39, 0.32)',
+  },
+  savingModal: {
+    width: '100%',
+    maxWidth: 320,
+    borderRadius: 22,
+    paddingVertical: 26,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.cardBase,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  savingTitle: {
+    color: colors.textPrimary,
+    ...handwritingFont('800'),
+    fontSize: 17,
+    includeFontPadding: false,
+    textAlign: 'center',
+  },
+  savingDescription: {
+    color: colors.textSecondary,
+    ...handwritingFont('600'),
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
   },
   passActions: {
     flexDirection: 'row',

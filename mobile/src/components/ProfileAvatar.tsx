@@ -4,17 +4,18 @@ import { UserRound } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { MoonAvatar } from './MoonAvatar';
 
-export const DEFAULT_PROFILE_AVATAR = 'kkumdream-avatar:app-default';
+export const DEFAULT_PROFILE_AVATAR = 'kkumdream-avatar:google-default';
+export const APP_DEFAULT_PROFILE_AVATAR = 'kkumdream-avatar:app-default';
 
 export const PROFILE_AVATAR_PRESETS = [
   {
-    value: 'kkumdream-avatar:google-default',
+    value: DEFAULT_PROFILE_AVATAR,
     label: '기본',
     type: 'google',
     color: colors.textMuted,
   },
   {
-    value: DEFAULT_PROFILE_AVATAR,
+    value: APP_DEFAULT_PROFILE_AVATAR,
     label: '새벽달',
     type: 'app',
     color: colors.primary,

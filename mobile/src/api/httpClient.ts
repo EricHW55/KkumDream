@@ -4,6 +4,18 @@ type RequestOptions = RequestInit & {
   token?: string | null;
 };
 
+export class ApiError extends Error {
+  status: number;
+  body: string;
+
+  constructor(status: number, message: string, body: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
 export async function requestJson<T>(
   path: string,
   options: RequestOptions = {},
@@ -36,7 +48,11 @@ async function sendRequest(path: string, options: RequestOptions): Promise<Respo
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(getErrorMessage(response.status, body));
+    throw new ApiError(
+      response.status,
+      getErrorMessage(response.status, body),
+      body,
+    );
   }
 
   return response;

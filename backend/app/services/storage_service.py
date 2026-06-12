@@ -1,6 +1,6 @@
 import asyncio
 from io import BytesIO
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import boto3
 import httpx
@@ -37,9 +37,15 @@ async def store_generated_image(dream_id: UUID, source_url: str) -> tuple[str, s
 
 async def store_profile_image(user_id: UUID, image_bytes: bytes) -> str:
     avatar_bytes = await asyncio.to_thread(_to_webp, image_bytes, 512, 90)
-    avatar_key = f"profiles/{user_id}/avatar.webp"
+    avatar_key = f"profiles/{user_id}/avatar/{uuid4().hex}.webp"
     await asyncio.to_thread(_upload, avatar_key, avatar_bytes)
     return f"{settings.r2_public_base_url}/{avatar_key}"
+
+
+async def delete_profile_image(image_url: str | None, keep_url: str | None = None) -> None:
+    if not image_url or image_url == keep_url:
+        return
+    await asyncio.to_thread(_delete_profile_image, image_url, keep_url)
 
 
 async def store_front_preview(
@@ -117,6 +123,32 @@ def _upload(key: str, body: bytes) -> None:
         ContentType="image/webp",
         CacheControl="public, max-age=31536000, immutable",
     )
+
+
+def _delete_profile_image(image_url: str, keep_url: str | None = None) -> None:
+    try:
+        key = _key_from_public_url(image_url)
+        keep_key = _key_from_public_url(keep_url) if keep_url else None
+        if key is None or key == keep_key:
+            return
+        client = _r2_client()
+        client.delete_object(Bucket=settings.r2_bucket, Key=key)
+    except (BotoCoreError, ClientError, RuntimeError):
+        # Old profile images are cleanup-only; a failed delete should not break
+        # an otherwise successful profile update.
+        pass
+
+
+def _key_from_public_url(image_url: str | None) -> str | None:
+    if not image_url:
+        return None
+    base_url = f"{settings.r2_public_base_url.rstrip('/')}/"
+    if not image_url.startswith(base_url):
+        return None
+    key = image_url[len(base_url) :].split("?", 1)[0]
+    if not key.startswith("profiles/"):
+        return None
+    return key
 
 
 def _delete_other_front_previews(dream_id: UUID, keep_key: str) -> None:
