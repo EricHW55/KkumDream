@@ -13,16 +13,16 @@ Requires FontForge (NOT a pip package):
     winget install -e --id FontForge.FontForge
 Run with FontForge's bundled python (ffpython), e.g. on Windows:
     "C:\\Program Files\\FontForgeBuilds\\bin\\ffpython.exe" tools/font-bake/bake_bold.py
-    ... 20 NanumDaHaengCeBold 700     # bake one weight: amount, name, os2weight
+    ... 26 NanumDaHaengCeBold 700     # bake one weight: amount, name, os2weight
 
 With no args it bakes all weights below. Output -> src/assets/fonts/.
 
 Current amounts (tune on device with the floating font-mode toggle):
-    Medium   (500) = cjk 7
-    SemiBold (600) = cjk 12
-    Bold     (700) = cjk 20
-    ExtraBold(800) = cjk 28
-    Heavy    (900) = cjk 36
+    Medium   (500) = cjk 11
+    SemiBold (600) = cjk 16
+    Bold     (700) = cjk 26
+    ExtraBold(800) = cjk 32
+    Heavy    (900) = cjk 40
 """
 import os
 import sys
@@ -36,11 +36,11 @@ FONTS = os.path.join(MOBILE, "src", "assets", "fonts")
 SRC = os.path.join(FONTS, "NanumDaHaengCe.ttf")
 
 WEIGHTS = [
-    ("NanumDaHaengCeMedium", 7, 500),
-    ("NanumDaHaengCeSemiBold", 12, 600),
-    ("NanumDaHaengCeBold", 20, 700),
-    ("NanumDaHaengCeExtraBold", 28, 800),
-    ("NanumDaHaengCeHeavy", 36, 900),
+    ("NanumDaHaengCeMedium", 11, 500),
+    ("NanumDaHaengCeSemiBold", 16, 600),
+    ("NanumDaHaengCeBold", 26, 700),
+    ("NanumDaHaengCeExtraBold", 32, 800),
+    ("NanumDaHaengCeHeavy", 40, 900),
 ]
 if len(sys.argv) > 1:
     WEIGHTS = [(sys.argv[2], int(sys.argv[1]), int(sys.argv[3]))]

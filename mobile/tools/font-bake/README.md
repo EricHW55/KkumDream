@@ -32,13 +32,13 @@ winget install -e --id FontForge.FontForge
 FF="C:\Program Files\FontForgeBuilds\bin\ffpython.exe"
 
 "$FF" tools/font-bake/bake_bold.py
-"$FF" tools/font-bake/bake_bold.py 20 NanumDaHaengCeBold 700
+"$FF" tools/font-bake/bake_bold.py 26 NanumDaHaengCeBold 700
 python tools/font-bake/pin_metrics.py
 ```
 
 `amount` is the `changeWeight` stroke amount (font units, em = 1000); higher is
-thicker. Current amounts: **Medium 7, SemiBold 12, Bold 20, ExtraBold 28,
-Heavy 36**. Use the floating font toggle to compare the iOS baked path against
+thicker. Current amounts: **Medium 11, SemiBold 16, Bold 26, ExtraBold 32,
+Heavy 40**. Use the floating font toggle to compare the iOS baked path against
 Android's native `fontWeight` path on device.
 
 Always run `pin_metrics.py` after `bake_bold.py`. It fixes corrupted glyphs and

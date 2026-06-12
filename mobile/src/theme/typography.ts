@@ -8,16 +8,14 @@
 
 import { Platform, type TextStyle } from 'react-native';
 
-import { getHandwritingFontMode } from '../data/fontMode';
 import { nanumDahaengWeightFonts, nanumHandwritingFonts } from './fonts';
 
 /**
  * Resolve the handwritten UI font.
  *
  * Android's design baseline uses the Regular font plus native `fontWeight`.
- * iOS does not synthesize the same handwritten weights, so its default mode
- * maps each Android weight to a baked face. The floating test toggle switches
- * between these two render paths.
+ * iOS does not synthesize the same handwritten weights, so it maps each
+ * Android weight to a baked face.
  */
 const BAKED_FACES = {
   medium: nanumDahaengWeightFonts.medium, // 500
@@ -40,7 +38,7 @@ function bakedFamily(weight: TextStyle['fontWeight']): string {
 export function handwritingFont(
   weight: TextStyle['fontWeight'],
 ): Pick<TextStyle, 'fontFamily' | 'fontWeight'> {
-  if (getHandwritingFontMode() === 'ios-baked') {
+  if (Platform.OS === 'ios') {
     return { fontFamily: bakedFamily(weight) };
   }
   return { fontFamily: nanumHandwritingFonts.dahaeng, fontWeight: weight };
