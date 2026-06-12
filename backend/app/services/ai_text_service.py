@@ -164,9 +164,10 @@ CREATE_DREAM_CARD_TOOL = {
             "imageScene": {
                 "type": "string",
                 "description": (
-                    "English visual scene only, 30-60 words, no style terms. "
-                    "Describe a place, main subject, action, and 2-4 concrete "
-                    "supporting details."
+                    "English visual scene only, 35-75 words, no style terms. "
+                    "Describe one place, named roles, gender/age cues when "
+                    "present, the exact visual action, who does it to whom, "
+                    "and 2-4 concrete supporting details."
                 ),
             },
         },
@@ -206,6 +207,12 @@ details; include several relevant objects, environmental clues, and a clear path
 for the eye to travel; prefer poetic visual metaphor, scale contrast, and
 atmosphere over literal diagram-like explanation; keep the scene readable and not
 cluttered
+""".replace("\n", " ").strip()
+IMAGE_ACTION_FIDELITY_GUIDE = """
+keep the user's core visual action unambiguous; preserve character roles, gender
+cues, and who is touching or holding what; avoid vague words like someone or
+another person when ownership matters; show tense physical contact only as
+non-graphic, non-sexual, no-injury body language
 """.replace("\n", " ").strip()
 # Keep each mood to palette + atmosphere ONLY, so the hand-drawn medium stays
 # identical across moods and just the feeling shifts.
@@ -367,9 +374,17 @@ Write the dream card:
 - imageScene: English visual scene only. Describe the main objects, place,
   atmosphere, visual action, and a few supporting objects. Make it one situation
   inside a place, not a list of symbols. No style words, no "no text" phrases.
+- For imageScene, make character roles visually specific. Preserve gender/age
+  cues from the memo, name the actor and receiver of each action, and clarify
+  ownership and body location when clothing or contact is involved. Prefer
+  "the narrator's trouser cuff near the ankle" over "someone's pants", and
+  "a former male classmate grips the front of the narrator's jacket collar"
+  over "a boy reaches toward a girl".
 
 Avoid: dream interpretation, fortune-telling, therapy or moral lessons; new
-characters, violence, gore, sexual content, and real brand names.
+characters, added violence, gore, nudity, sexual content, and real brand names.
+If the user's dream includes tense physical contact, preserve the core action
+in a non-graphic, non-sexual, no-injury way.
 Avoid closing lines like "마음이 남아있었어", "따뜻함이 남았어",
 "너는 무엇을 느꼈을까", "깨어나니 그리웠어", or similar reflective endings.
 """.strip()
@@ -537,7 +552,8 @@ def _build_final_image_prompt(image_scene: str, mood: str) -> str:
     mood_guide = MOOD_IMAGE_GUIDES.get(mood, MOOD_IMAGE_GUIDES[DEFAULT_MOOD])
     return (
         f"{IMAGE_STYLE_PREFIX} of {scene}. {mood_guide}. "
-        f"{IMAGE_WORLD_BUILDING_GUIDE}. {IMAGE_STYLE_GUIDE}, "
+        f"{IMAGE_ACTION_FIDELITY_GUIDE}. {IMAGE_WORLD_BUILDING_GUIDE}. "
+        f"{IMAGE_STYLE_GUIDE}, "
         "square composition, no text, no logo, no watermark"
     )
 
