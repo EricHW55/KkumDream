@@ -521,6 +521,7 @@ async def toggle_dream_reaction(
     user_id: UUID,
     dream_id: UUID,
     reaction_type: ReactionType,
+    desired_reacted: bool | None = None,
 ) -> dict[str, object]:
     dream = await get_dream_for_user(session, user_id, dream_id)
     existing = await session.scalar(
@@ -530,24 +531,31 @@ async def toggle_dream_reaction(
             DreamReaction.reaction_type == reaction_type,
         )
     )
-    if existing is None:
+    should_react = (
+        existing is None
+        if desired_reacted is None
+        else desired_reacted
+    )
+    if should_react:
         # One reaction per card: clear any other reaction this user left first.
-        await session.execute(
-            delete(DreamReaction).where(
-                DreamReaction.dream_id == dream.id,
-                DreamReaction.user_id == user_id,
+        if existing is None:
+            await session.execute(
+                delete(DreamReaction).where(
+                    DreamReaction.dream_id == dream.id,
+                    DreamReaction.user_id == user_id,
+                )
             )
-        )
-        session.add(
-            DreamReaction(
-                dream_id=dream.id,
-                user_id=user_id,
-                reaction_type=reaction_type,
+            session.add(
+                DreamReaction(
+                    dream_id=dream.id,
+                    user_id=user_id,
+                    reaction_type=reaction_type,
+                )
             )
-        )
         reacted = True
     else:
-        await session.delete(existing)
+        if existing is not None:
+            await session.delete(existing)
         reacted = False
     await session.commit()
 

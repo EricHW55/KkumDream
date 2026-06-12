@@ -312,14 +312,16 @@ export function DreamDetailScreen({ route, navigation }: Props) {
     !isSender && commentDraft.trim().length > 0 && !isSubmittingComment;
 
   const onToggleReaction = useCallback(
-    (reactionType: DreamReactionType) =>
-      toggleDreamReaction(dream.id, reactionType, token).then(result => {
-        queryClient.setQueryData<DreamReactionSummary[]>(
-          ['dreams', dream.id, 'reactions', token],
-          result.summary,
-        );
-        return result;
-      }),
+    (reactionType: DreamReactionType, reacted: boolean) =>
+      toggleDreamReaction(dream.id, reactionType, reacted, token).then(
+        result => {
+          queryClient.setQueryData<DreamReactionSummary[]>(
+            ['dreams', dream.id, 'reactions', token],
+            result.summary,
+          );
+          return result;
+        },
+      ),
     [dream.id, queryClient, token],
   );
 

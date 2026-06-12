@@ -156,6 +156,7 @@ class DreamCommentOut(ApiModel):
 
 class DreamReactionToggle(ApiModel):
     reaction_type: ReactionType
+    reacted: bool | None = None
 
 
 class DreamReactionSummary(ApiModel):

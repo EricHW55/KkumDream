@@ -176,7 +176,7 @@ class DreamClaimToken(Base):
 class DreamReaction(Base):
     __tablename__ = "dream_reactions"
     __table_args__ = (
-        UniqueConstraint("dream_id", "user_id", "reaction_type", name="dream_reactions_key"),
+        UniqueConstraint("dream_id", "user_id", name="dream_reactions_dream_user_key"),
         Index("ix_dream_reactions_dream_id", "dream_id"),
         Index("ix_dream_reactions_user_id", "user_id"),
     )

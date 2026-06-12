@@ -202,7 +202,13 @@ async def toggle_reaction(
     user_id: UUID = Depends(current_user_id),
     session: AsyncSession = Depends(db_session),
 ) -> DreamReactionToggleResponse:
-    result = await toggle_dream_reaction(session, user_id, dream_id, payload.reaction_type)
+    result = await toggle_dream_reaction(
+        session,
+        user_id,
+        dream_id,
+        payload.reaction_type,
+        payload.reacted,
+    )
     return DreamReactionToggleResponse.model_validate(result)
 
 

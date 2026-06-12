@@ -165,6 +165,7 @@ export function fetchDreamReactions(dreamId: string, token?: string | null) {
 export function toggleDreamReaction(
   dreamId: string,
   reactionType: DreamReactionType,
+  reacted?: boolean,
   token?: string | null,
 ) {
   return requestJson<DreamReactionToggleResult>(
@@ -172,7 +173,7 @@ export function toggleDreamReaction(
     {
       method: 'POST',
       token,
-      body: JSON.stringify({ reactionType }),
+      body: JSON.stringify({ reactionType, reacted }),
     },
   );
 }
