@@ -46,6 +46,7 @@ export function PassModal() {
   const queryClient = useQueryClient();
 
   const [product, setProduct] = useState<PassProduct | null>(null);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -106,15 +107,43 @@ export function PassModal() {
     if (!isOpen || !productId) {
       return;
     }
+    let mounted = true;
+    setIsLoadingProduct(true);
+    setError(null);
     fetchPassProduct(productId)
-      .then(setProduct)
-      .catch(() => undefined);
+      .then(nextProduct => {
+        if (!mounted) {
+          return;
+        }
+        setProduct(nextProduct);
+        if (!nextProduct) {
+          setError('구독 상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setProduct(null);
+          setError('구독 상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setIsLoadingProduct(false);
+        }
+      });
+    return () => {
+      mounted = false;
+    };
   }, [isOpen, productId]);
 
   const priceLabel = getDisplayPrice(product) ?? '1,900원';
 
   const handlePurchase = async () => {
     if (!productId) {
+      return;
+    }
+    if (!product) {
+      setError('구독 상품을 불러온 뒤 다시 시도해 주세요.');
       return;
     }
     if (!userId) {
@@ -141,6 +170,7 @@ export function PassModal() {
   };
 
   const busy = status === 'purchasing' || status === 'verifying';
+  const purchaseDisabled = busy || isLoadingProduct || !product;
 
   return (
     <Modal
@@ -187,18 +217,25 @@ export function PassModal() {
               {error ? <Text style={styles.error}>{error}</Text> : null}
 
               <Pressable
-                style={[styles.primaryButton, busy && styles.primaryButtonBusy]}
+                style={[
+                  styles.primaryButton,
+                  purchaseDisabled && styles.primaryButtonBusy,
+                ]}
                 onPress={handlePurchase}
-                disabled={busy}
+                disabled={purchaseDisabled}
               >
-                {busy ? (
+                {busy || isLoadingProduct ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <Text style={styles.primaryButtonText}>구독하기</Text>
                 )}
               </Pressable>
 
-              <Pressable onPress={handleClose} hitSlop={8} disabled={busy}>
+              <Pressable
+                onPress={handleClose}
+                hitSlop={8}
+                disabled={busy}
+              >
                 <Text style={styles.laterText}>다음에 할게요</Text>
               </Pressable>
             </>

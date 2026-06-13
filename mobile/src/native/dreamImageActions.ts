@@ -18,7 +18,7 @@ export async function saveDreamImage(imageUrl: string, fileName?: string) {
     return nativeModule.saveImage(imageUrl, fileName);
   }
 
-  await Share.share({ url: imageUrl, message: imageUrl });
+  await Share.share({ url: imageUrl });
   return imageUrl;
 }
 
@@ -33,6 +33,6 @@ export async function shareDreamImage(imageUrl: string, fileName?: string) {
 
   await Share.share({
     url: imageUrl,
-    message: `${DREAM_IMAGE_SHARE_MESSAGE}\n${imageUrl}`,
+    message: DREAM_IMAGE_SHARE_MESSAGE,
   });
 }
