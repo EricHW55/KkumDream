@@ -139,6 +139,7 @@ function DeferredPassPurchaseRecovery() {
 }
 
 function MorningDreamReminderScheduler() {
+  const token = useSessionStore(state => state.token);
   const enabled = useSettingsStore(
     state => state.pushPreferences.morning_dream_card,
   );
@@ -152,7 +153,7 @@ function MorningDreamReminderScheduler() {
         if (cancelled) {
           return;
         }
-        const task = enabled
+        const task = enabled && token
           ? scheduleMorningDreamReminder(wakeReminderTime)
           : cancelMorningDreamReminder();
         task.catch(() => undefined);
@@ -166,7 +167,7 @@ function MorningDreamReminderScheduler() {
       }
       interaction.cancel();
     };
-  }, [enabled, wakeReminderTime]);
+  }, [enabled, token, wakeReminderTime]);
 
   return null;
 }
