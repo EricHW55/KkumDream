@@ -63,6 +63,10 @@ import {
   registerPushToken,
   unregisterPushToken,
 } from '../services/pushNotifications';
+import {
+  cancelMorningDreamReminder,
+  scheduleMorningDreamReminder,
+} from '../native/morningReminder';
 import { handwritingFont, fontFamily } from '../theme/typography';
 
 const PROFILE_EDITOR_MAX_HEIGHT = 560;
@@ -384,12 +388,23 @@ export function ProfileScreen() {
   };
 
   const handleTogglePush = (type: PushNotificationType, next: boolean) => {
-    const hadAnyEnabled = isAnyPushEnabled(pushPreferences);
-    const willHaveAnyEnabled = isAnyPushEnabled({
+    const nextPushPreferences = {
       ...pushPreferences,
       [type]: next,
-    });
+    };
+    const hadAnyEnabled = isAnyPushEnabled(pushPreferences);
+    const willHaveAnyEnabled = isAnyPushEnabled(nextPushPreferences);
+
     setPushPreference(type, next);
+
+    if (type === 'morning_dream_card') {
+      if (next) {
+        scheduleMorningDreamReminder(wakeReminderTime).catch(() => undefined);
+      } else {
+        cancelMorningDreamReminder().catch(() => undefined);
+      }
+    }
+
     if (!token) {
       return;
     }
@@ -403,9 +418,14 @@ export function ProfileScreen() {
   };
 
   const adjustWakeReminderTime = (minuteDelta: number) => {
-    setWakeReminderTime(
-      shiftWakeReminderTime(wakeReminderTime, minuteDelta),
+    const nextWakeReminderTime = shiftWakeReminderTime(
+      wakeReminderTime,
+      minuteDelta,
     );
+    setWakeReminderTime(nextWakeReminderTime);
+    if (pushPreferences.morning_dream_card) {
+      scheduleMorningDreamReminder(nextWakeReminderTime).catch(() => undefined);
+    }
   };
 
   const pickProfileImage = async () => {

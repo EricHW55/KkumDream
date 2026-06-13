@@ -34,7 +34,7 @@ const DEFAULT_PUSH_PREFERENCES: PushPreferences = {
   dream_comment: true,
   owner_comment: true,
   dream_claimed: true,
-  morning_dream_card: true,
+  morning_dream_card: false,
 };
 
 function readPushPreferences(): PushPreferences {
@@ -42,7 +42,8 @@ function readPushPreferences(): PushPreferences {
   if (!stored || typeof stored !== 'object') {
     return { ...DEFAULT_PUSH_PREFERENCES };
   }
-  // Merge with defaults so newly added notification kinds default to on.
+  // Merge with defaults so newly added notification kinds get explicit values.
+  // The local morning reminder stays opt-in to avoid prompting on app upgrade.
   const merged = { ...DEFAULT_PUSH_PREFERENCES };
   (Object.keys(DEFAULT_PUSH_PREFERENCES) as PushNotificationType[]).forEach(
     type => {

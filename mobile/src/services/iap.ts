@@ -19,17 +19,46 @@ export type PassProduct = NonNullable<
   Awaited<ReturnType<typeof fetchProducts>>
 >[number];
 
+let billingReady = false;
+let billingInitPromise: Promise<boolean> | null = null;
+
 export async function initBilling(): Promise<void> {
-  await initConnection();
+  if (billingReady) {
+    return;
+  }
+
+  if (!billingInitPromise) {
+    billingInitPromise = initConnection()
+      .then(connected => {
+        billingReady = connected;
+        return connected;
+      })
+      .finally(() => {
+        billingInitPromise = null;
+      });
+  }
+
+  const connected = await billingInitPromise;
+  if (!connected) {
+    throw new Error('Billing connection was not initialized.');
+  }
 }
 
 export async function endBilling(): Promise<void> {
+  if (billingInitPromise) {
+    await billingInitPromise.catch(() => false);
+  }
+  if (!billingReady) {
+    return;
+  }
+  billingReady = false;
   await endConnection();
 }
 
 export async function fetchPassProduct(
   productId: string,
 ): Promise<PassProduct | null> {
+  await initBilling();
   const products = await fetchProducts({ skus: [productId], type: 'subs' });
   return products?.[0] ?? null;
 }
@@ -62,6 +91,7 @@ export async function requestPassPurchase(
   product: PassProduct | null,
   account: { obfuscatedAccountId: string; appAccountToken: string },
 ): Promise<void> {
+  await initBilling();
   const offerToken = getOfferToken(product);
   if (Platform.OS === 'ios') {
     await requestPurchase({
@@ -88,6 +118,7 @@ export async function requestPassPurchase(
 }
 
 export async function getAvailablePassPurchases(productId: string): Promise<Purchase[]> {
+  await initBilling();
   const purchases = await getAvailablePurchases({
     onlyIncludeActiveItemsIOS: true,
     includeSuspendedAndroid: false,

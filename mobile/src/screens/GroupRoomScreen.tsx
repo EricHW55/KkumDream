@@ -87,7 +87,7 @@ export function GroupRoomScreen({ navigation, route }: Props) {
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [isInviteCollapsed, setIsInviteCollapsed] = useState(true);
   const [isRoomContentHydrated, setIsRoomContentHydrated] = useState(false);
-  const [isRestoringRoomScroll, setIsRestoringRoomScroll] = useState(false);
+  const [, setIsRestoringRoomScroll] = useState(false);
   const [isSavingRoom, setIsSavingRoom] = useState(false);
   const [isLeavingRoom, setIsLeavingRoom] = useState(false);
   const [viewableDreamIds, setViewableDreamIds] = useState<string[]>([]);

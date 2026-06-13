@@ -3,7 +3,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import messaging, {
   type FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
-import { Image, StatusBar, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  InteractionManager,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -74,7 +81,7 @@ function App() {
           <PushNotificationNavigator />
           <AndroidInAppUpdateGate />
           <IosUpdateGate />
-          <PassPurchaseRecovery />
+          <DeferredPassPurchaseRecovery />
           <MorningDreamReminderScheduler />
           <StartupPreloader />
           <RootNavigator />
@@ -126,8 +133,8 @@ function IosUpdateGate() {
   );
 }
 
-function PassPurchaseRecovery() {
-  usePassPurchaseRecovery();
+function DeferredPassPurchaseRecovery() {
+  usePassPurchaseRecovery({ auto: true });
   return null;
 }
 
@@ -138,11 +145,27 @@ function MorningDreamReminderScheduler() {
   const wakeReminderTime = useSettingsStore(state => state.wakeReminderTime);
 
   useEffect(() => {
-    if (enabled) {
-      scheduleMorningDreamReminder(wakeReminderTime).catch(() => undefined);
-    } else {
-      cancelMorningDreamReminder().catch(() => undefined);
-    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const interaction = InteractionManager.runAfterInteractions(() => {
+      timer = setTimeout(() => {
+        if (cancelled) {
+          return;
+        }
+        const task = enabled
+          ? scheduleMorningDreamReminder(wakeReminderTime)
+          : cancelMorningDreamReminder();
+        task.catch(() => undefined);
+      }, 1500);
+    });
+
+    return () => {
+      cancelled = true;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      interaction.cancel();
+    };
   }, [enabled, wakeReminderTime]);
 
   return null;
@@ -156,20 +179,25 @@ function PushNotificationNavigator() {
       return undefined;
     }
 
-    const unsubscribe = messaging().onNotificationOpenedApp(message => {
-      openNotificationTarget(message, token).catch(() => undefined);
-    });
+    try {
+      const firebaseMessaging = messaging();
+      const unsubscribe = firebaseMessaging.onNotificationOpenedApp(message => {
+        openNotificationTarget(message, token).catch(() => undefined);
+      });
 
-    messaging()
-      .getInitialNotification()
-      .then(message => {
-        if (message) {
-          openNotificationTarget(message, token).catch(() => undefined);
-        }
-      })
-      .catch(() => undefined);
+      firebaseMessaging
+        .getInitialNotification()
+        .then(message => {
+          if (message) {
+            openNotificationTarget(message, token).catch(() => undefined);
+          }
+        })
+        .catch(() => undefined);
 
-    return unsubscribe;
+      return unsubscribe;
+    } catch {
+      return undefined;
+    }
   }, [token]);
 
   return null;

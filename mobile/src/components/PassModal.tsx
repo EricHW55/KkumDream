@@ -52,6 +52,10 @@ export function PassModal() {
   const productId = getPlatformPassProductId(passInfo);
 
   useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
     let mounted = true;
     initBilling().catch(() => undefined);
 
@@ -96,7 +100,7 @@ export function PassModal() {
       errorSub.remove();
       endBilling().catch(() => undefined);
     };
-  }, [productId, token, queryClient, userId]);
+  }, [isOpen, productId, token, queryClient, userId]);
 
   useEffect(() => {
     if (!isOpen || !productId) {
