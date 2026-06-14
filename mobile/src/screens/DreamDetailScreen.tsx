@@ -101,7 +101,9 @@ export function DreamDetailScreen({ route, navigation }: Props) {
   const { confirm, dialog } = useConfirmDialog();
   const queryClient = useQueryClient();
   const scrollRef = useRef<ScrollView>(null);
+  const commentBoxOffsetYRef = useRef(0);
   const composerOffsetYRef = useRef(0);
+  const composerScrollTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [displayDream, setDisplayDream] = useState(route.params.dream);
   const dream = displayDream;
   const token = useSessionStore(state => state.token);
@@ -326,6 +328,17 @@ export function DreamDetailScreen({ route, navigation }: Props) {
   );
 
   const onDeleteComment = async (commentId: string) => {
+    const ok = await confirm({
+      title: '댓글을 삭제할까요?',
+      message: '삭제한 댓글은 되돌릴 수 없어요.',
+      confirmText: '삭제',
+      tone: 'danger',
+    });
+    if (!ok) {
+      return;
+    }
+    setCommentError(null);
+
     if (token) {
       try {
         await deleteDreamComment(dream.id, commentId, token);
@@ -582,15 +595,39 @@ export function DreamDetailScreen({ route, navigation }: Props) {
     setCommentInputKey(key => key + 1);
   };
 
+  const clearScheduledComposerScroll = useCallback(() => {
+    composerScrollTimersRef.current.forEach(timer => clearTimeout(timer));
+    composerScrollTimersRef.current = [];
+  }, []);
+
+  const scrollToComposer = useCallback(() => {
+    scrollRef.current?.scrollTo({
+      y: Math.max(
+        0,
+        commentBoxOffsetYRef.current + composerOffsetYRef.current - 24,
+      ),
+      animated: true,
+    });
+  }, []);
+
+  const scheduleComposerScroll = useCallback(
+    (delays: number[]) => {
+      clearScheduledComposerScroll();
+      composerScrollTimersRef.current = delays.map(delay =>
+        setTimeout(scrollToComposer, delay),
+      );
+    },
+    [clearScheduledComposerScroll, scrollToComposer],
+  );
+
   const onCommentInputFocus = useCallback(() => {
-    // Wait for the soft keyboard to settle (and the window to resize on
-    // Android) before bringing the composer fully into view.
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, composerOffsetYRef.current - 24),
-        animated: true,
-      });
-    }, 250);
+    // Let the keyboard animate and, on Android, let the resized viewport settle
+    // before scrolling the composer above the keyboard.
+    scheduleComposerScroll([80, 260, 420]);
+  }, [scheduleComposerScroll]);
+
+  const onCommentBoxLayout = useCallback((event: LayoutChangeEvent) => {
+    commentBoxOffsetYRef.current = event.nativeEvent.layout.y;
   }, []);
 
   const onComposerLayout = useCallback((event: LayoutChangeEvent) => {
@@ -605,22 +642,19 @@ export function DreamDetailScreen({ route, navigation }: Props) {
 
     const onShow = Keyboard.addListener(showEvent, event => {
       setKeyboardHeight(event.endCoordinates.height);
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({
-          y: Math.max(0, composerOffsetYRef.current - 24),
-          animated: true,
-        });
-      }, 60);
+      scheduleComposerScroll([80, 240, 420]);
     });
     const onHide = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
+      clearScheduledComposerScroll();
     });
 
     return () => {
       onShow.remove();
       onHide.remove();
+      clearScheduledComposerScroll();
     };
-  }, []);
+  }, [clearScheduledComposerScroll, scheduleComposerScroll]);
 
   const ensureShareUrl = useCallback(async (): Promise<string | null> => {
     if (shareUrl) {
@@ -701,7 +735,9 @@ export function DreamDetailScreen({ route, navigation }: Props) {
           styles.content,
           {
             paddingBottom: Math.max(
-              insets.bottom + 44 + (Platform.OS === 'android' ? keyboardHeight : 0),
+              insets.bottom +
+                44 +
+                (Platform.OS === 'android' ? keyboardHeight : 0),
               88,
             ),
           },
@@ -730,7 +766,7 @@ export function DreamDetailScreen({ route, navigation }: Props) {
           <Text style={styles.safetyStatusText}>{safetyStatus}</Text>
         ) : null}
 
-        <View style={styles.commentBox}>
+        <View style={styles.commentBox} onLayout={onCommentBoxLayout}>
           <View style={styles.commentHeader}>
             <MessageCircle color={colors.primary} size={20} />
             <Text style={styles.commentTitle}>댓글</Text>

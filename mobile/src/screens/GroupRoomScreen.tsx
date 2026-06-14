@@ -16,10 +16,12 @@ import {
 import {
   Clipboard,
   FlatList,
+  KeyboardAvoidingView,
   type LayoutChangeEvent,
   Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Platform,
   Pressable,
   Share,
   StyleSheet,
@@ -823,10 +825,14 @@ export function GroupRoomScreen({ navigation, route }: Props) {
         visible={isSettingsVisible}
         onRequestClose={() => setIsSettingsVisible(false)}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setIsSettingsVisible(false)}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalKeyboardAvoider}
         >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setIsSettingsVisible(false)}
+          >
           <Pressable
             style={styles.sheet}
             onPress={event => event.stopPropagation()}
@@ -896,7 +902,8 @@ export function GroupRoomScreen({ navigation, route }: Props) {
               </Text>
             </Pressable>
           </Pressable>
-        </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
@@ -1530,6 +1537,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(40, 35, 63, 0.28)',
+  },
+  modalKeyboardAvoider: {
+    flex: 1,
   },
   sheet: {
     borderTopLeftRadius: 28,
