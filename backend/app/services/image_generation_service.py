@@ -10,24 +10,30 @@ REPLICATE_IMAGE_COSTS = {
 DEFAULT_IMAGE_TEXTURE = "oil_pastel"
 IMAGE_TEXTURE_GUIDES = {
     "watercolor": (
-        "watercolor texture with translucent washes, soft pigment blooms, "
-        "wet-on-dry edges, and visible absorbent paper grain"
+        "transparent watercolor material with translucent layered washes, "
+        "wet-on-wet color bleeding, pigment granulation, paint blooms and "
+        "backruns, uneven pooled pigment along ink edges, and rough cold-press "
+        "paper fibers visible through every painted area"
     ),
     "acrylic": (
-        "acrylic paint texture with opaque color, visible brush strokes, "
-        "slightly thick matte paint, and layered hand-painted surfaces"
+        "matte acrylic paint material with opaque layered color, visible brush "
+        "strokes, dry-brush streaks, slight raised paint ridges, scumbled edges, "
+        "and hand-painted paper tooth visible under the paint"
     ),
     "crayon": (
-        "crayon texture with waxy strokes, uneven pressure marks, rough paper "
-        "grain, and hand-colored surfaces"
+        "wax crayon material with chunky waxy strokes, uneven pressure marks, "
+        "broken color gaps, overlapping hand-colored scribble texture, colored "
+        "wax buildup at edges, and rough paper grain showing through"
     ),
     "colored_pencil": (
-        "colored pencil texture with fine pencil hatching, layered pigment, "
-        "visible paper tooth, and delicate hand-drawn shading"
+        "colored pencil material with fine pencil hatching, visible directional "
+        "strokes, layered translucent pigment, soft burnished shading, uneven "
+        "pressure, and paper tooth showing through the color"
     ),
     "oil_pastel": (
-        "oil pastel and gouache texture with soft smudged pastel color, creamy "
-        "brush marks, visible crayon edges, and matte paper grain"
+        "oil pastel and gouache material with creamy smudged pastel strokes, "
+        "opaque soft color, finger-blended edges, visible waxy pastel ridges, "
+        "gouache brush marks, and matte paper grain"
     ),
 }
 
@@ -65,8 +71,12 @@ def apply_image_texture_prompt(image_prompt: str, image_texture: str | None) -> 
     texture_guide = IMAGE_TEXTURE_GUIDES[texture]
     return (
         f"{image_prompt}. Use {texture_guide}; keep the same hand-drawn "
-        "storybook drawing style and change only the physical art texture and "
-        "material finish"
+        "storybook drawing style, rounded picture-book shapes, muted cozy "
+        "palette, and imperfect ink linework. Change only the physical art "
+        "texture and material finish. Make the selected texture visible across "
+        "the whole image, including characters, clothing, objects, sky, ground, "
+        "and background. Not clean flat digital fills, not smooth vector-like "
+        "coloring"
     )
 
 

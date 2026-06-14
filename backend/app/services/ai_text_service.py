@@ -195,10 +195,10 @@ IMAGE_STYLE_PREFIX = "A hand-drawn storybook illustration"
 IMAGE_STYLE_GUIDE = """
 drawn by hand on grainy textured art paper, gentle muted color palette, naive
 children's picture-book art, rounded hand-painted shapes, imperfect hand-made
-linework, flat soft matte lighting, cozy and emotionally warm, clear focal subject,
-mobile card thumbnail friendly, absolutely not a photograph, not photorealistic,
-not a 3D render, not CGI, not anime, no glossy reflections, no camera bokeh,
-no realistic skin or fabric texture
+linework, soft diffuse overcast light, cozy and emotionally warm, clear focal
+subject, mobile card thumbnail friendly, absolutely not a photograph, not
+photorealistic, not a 3D render, not CGI, not anime, no glossy reflections, no
+camera bokeh, no realistic skin or fabric texture
 """.replace("\n", " ").strip()
 IMAGE_WORLD_BUILDING_GUIDE = """
 turn the dream memo into a layered emotional situation rather than isolated
