@@ -29,6 +29,15 @@ def test_marketing_landing_page() -> None:
     assert "오늘 꾼 꿈을, 친구에게 선물해요." in response.text
     assert "Google Play" in response.text
     assert "App Store" in response.text
+    assert "/static/marketing/app_icon_dawn_moon.png" in response.text
+
+
+def test_favicon() -> None:
+    client = TestClient(create_app())
+    response = client.get("/favicon.ico")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/")
 
 
 def test_support_page() -> None:

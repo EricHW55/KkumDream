@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
@@ -80,6 +80,10 @@ def create_app() -> FastAPI:
     @app.get("/admin/moderation", response_class=HTMLResponse, include_in_schema=False)
     async def moderation_admin_page() -> HTMLResponse:
         return HTMLResponse(_build_moderation_admin_html())
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> FileResponse:
+        return FileResponse(STATIC_DIR / "marketing" / "app_icon_dawn_moon.png")
 
     @app.get("/d/{dream_id}", response_class=HTMLResponse, include_in_schema=False)
     async def dream_share_landing(dream_id: str, claim: str | None = None) -> HTMLResponse:
@@ -226,6 +230,9 @@ def _build_marketing_landing_html(
   <meta name="description" content="오늘 꾼 꿈을, 친구에게 선물해요. 꿈드림은 꿈을 작은 카드로 만들어 가까운 사람에게 전하는 앱입니다." />
   <meta property="og:title" content="꿈드림" />
   <meta property="og:description" content="오늘 꾼 꿈을, 친구에게 선물해요." />
+  <meta property="og:image" content="/static/marketing/app_icon_dawn_moon.png" />
+  <link rel="icon" href="/static/marketing/app_icon_dawn_moon.png" />
+  <link rel="apple-touch-icon" href="/static/marketing/app_icon_dawn_moon.png" />
   <title>꿈드림 - 오늘 꾼 꿈을, 친구에게 선물해요</title>
   <style>
     :root {{
@@ -310,6 +317,18 @@ def _build_marketing_landing_html(
       color: var(--violet);
       font-size: 15px;
       font-weight: 800;
+    }}
+    .hero-title {{
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }}
+    .hero-app-icon {{
+      width: 82px;
+      height: 82px;
+      flex: 0 0 auto;
+      border-radius: 22px;
+      box-shadow: 0 16px 34px rgba(67, 53, 121, 0.18);
     }}
     h1 {{
       margin: 0;
@@ -556,46 +575,140 @@ def _build_marketing_landing_html(
     }}
     @media (max-width: 820px) {{
       .hero {{
-        min-height: 94svh;
+        min-height: 100svh;
+        width: min(430px, calc(100vw - 24px));
+        padding: 12px 0 10px;
+      }}
+      nav {{
+        min-height: 38px;
+      }}
+      .brand {{
+        gap: 8px;
+      }}
+      .brand img {{
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+      }}
+      .nav-links {{
+        gap: 12px;
+        font-size: 13px;
       }}
       .hero-main {{
         grid-template-columns: 1fr;
-        gap: 8px;
-        padding-top: 24px;
+        gap: 6px;
+        padding: 16px 0 8px;
+        align-content: start;
+      }}
+      .eyebrow {{
+        margin-bottom: 8px;
+        font-size: 14px;
+      }}
+      .hero-title {{
+        gap: 12px;
+      }}
+      .hero-app-icon {{
+        width: 56px;
+        height: 56px;
+        border-radius: 15px;
+      }}
+      h1 {{
+        font-size: clamp(42px, 15vw, 56px);
+      }}
+      .tagline {{
+        margin-top: 10px;
+        font-size: clamp(20px, 6vw, 24px);
+        line-height: 1.24;
+      }}
+      .lead {{
+        margin-top: 10px;
+        font-size: 15px;
+        line-height: 1.58;
       }}
       .scene {{
-        min-height: 330px;
+        min-height: 218px;
       }}
       .phone {{
         right: 50%;
-        top: 20px;
+        top: 12px;
+        width: min(202px, 58vw);
+        height: 230px;
+        border-radius: 28px;
         transform: translateX(50%) rotate(1.5deg);
-        height: 312px;
+        box-shadow: 0 16px 42px rgba(67, 53, 121, 0.14);
+      }}
+      .phone::before {{
+        inset: 14px 20px auto;
+        height: 6px;
+      }}
+      .dream-card {{
+        left: 20px;
+        right: 20px;
+        top: 42px;
+        padding: 14px 14px;
+        border-radius: 18px;
+      }}
+      .dream-card strong {{
+        margin-bottom: 8px;
+        font-size: 19px;
+        line-height: 1.25;
+      }}
+      .dream-card p {{
+        font-size: 13px;
+        line-height: 1.48;
+      }}
+      .message-chip {{
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        padding: 10px 12px;
+        border-radius: 15px 15px 15px 6px;
+        font-size: 13px;
+        line-height: 1.35;
       }}
       .moon-art {{
-        right: calc(50% + 72px);
-        width: 170px;
+        right: calc(50% + 52px);
+        top: 12px;
+        width: 124px;
       }}
       .star-art {{
-        right: calc(50% - 190px);
-        top: 214px;
+        right: calc(50% - 154px);
+        top: 142px;
+        width: 58px;
+      }}
+      .small-star {{
+        display: none;
       }}
       .store-panel {{
         align-items: stretch;
         flex-direction: column;
+        gap: 8px;
+        padding-top: 10px;
+      }}
+      .store-copy {{
+        display: none;
       }}
       .store-buttons {{
         justify-content: stretch;
+        gap: 8px;
+        flex-wrap: nowrap;
       }}
       .store-button {{
-        flex: 1 1 150px;
+        min-width: 0;
+        min-height: 48px;
+        flex: 1 1 0;
+        padding: 7px 12px;
+        border-radius: 12px;
+      }}
+      .store-button span {{
+        font-size: 10px;
+      }}
+      .store-button strong {{
+        font-size: 15px;
       }}
       .features,
       .flow {{
         grid-template-columns: 1fr;
-      }}
-      .nav-links {{
-        gap: 12px;
       }}
       footer .section-inner {{
         flex-direction: column;
@@ -619,7 +732,10 @@ def _build_marketing_landing_html(
       <div class="hero-main">
         <div>
           <p class="eyebrow">꿈을 카드로 만들어 전하는 작은 선물</p>
-          <h1>꿈드림</h1>
+          <div class="hero-title">
+            <img class="hero-app-icon" src="/static/marketing/app_icon_dawn_moon.png" alt="" />
+            <h1>꿈드림</h1>
+          </div>
           <p class="tagline">오늘 꾼 꿈을, 친구에게 선물해요.</p>
           <p class="lead">
             잠에서 깬 뒤 희미하게 남은 장면을 적으면, 꿈드림이 짧은 이야기와 그림 카드로
