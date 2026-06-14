@@ -9,13 +9,15 @@ from app.models.dream import (
 )
 from app.models.friendship import Friendship
 from app.models.group import Group, GroupMember
-from app.models.safety import ContentReport, UserBlock
+from app.models.safety import ContentModerationAction, ContentReport, UserBlock
 from app.models.subscription import RtdnEvent, Subscription
 from app.models.user import DeviceToken, User
 
 __all__ = [
     "AiGenerationJob",
     "AiGenerationLog",
+    "ContentModerationAction",
+    "ContentReport",
     "DailyGiveLimit",
     "Dream",
     "DreamClaimToken",
@@ -29,4 +31,5 @@ __all__ = [
     "RtdnEvent",
     "Subscription",
     "User",
+    "UserBlock",
 ]

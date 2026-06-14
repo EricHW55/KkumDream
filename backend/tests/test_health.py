@@ -18,3 +18,35 @@ def test_app_config() -> None:
     assert data["ios"]["latestVersion"]
     assert data["ios"]["minSupportedVersion"]
     assert data["ios"]["storeUrl"]
+
+
+def test_marketing_landing_page() -> None:
+    client = TestClient(create_app())
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "오늘 꾼 꿈을, 친구에게 선물해요." in response.text
+    assert "Google Play" in response.text
+    assert "App Store" in response.text
+
+
+def test_support_page() -> None:
+    client = TestClient(create_app())
+    response = client.get("/support")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "꿈드림 지원" in response.text
+    assert "계정 및 데이터 삭제 안내" in response.text
+    assert "yueric55@gmail.com" in response.text
+
+
+def test_moderation_admin_page() -> None:
+    client = TestClient(create_app())
+    response = client.get("/admin/moderation")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "신고 관리" in response.text
+    assert "ADMIN_API_TOKEN" in response.text

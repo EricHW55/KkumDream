@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import Depends
@@ -24,5 +25,14 @@ async def current_user_id(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Account has been deleted",
+        )
+    if (
+        user is not None
+        and user.suspended_until is not None
+        and user.suspended_until > datetime.now(UTC)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account is suspended until {user.suspended_until.isoformat()}",
         )
     return user_id

@@ -5,7 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import current_user_id, db_session
 from app.core.config import settings
+from app.models.dream import Dream, DreamComment
+from app.models.user import User
 from app.schemas.safety import (
+    AdminModerationActionCreate,
+    AdminModerationActionOut,
     AdminReportOut,
     BlockCreate,
     BlockedUserOut,
@@ -16,6 +20,7 @@ from app.schemas.safety import (
     ReportTargetSummary,
 )
 from app.services.safety_service import (
+    apply_admin_moderation_action,
     block_user,
     create_report,
     list_blocked_users,
@@ -94,22 +99,43 @@ async def admin_reports(
     session: AsyncSession = Depends(db_session),
 ) -> list[AdminReportOut]:
     rows = await list_reports_for_admin(session, status_filter, min(max(limit, 1), 500))
-    return [
-        AdminReportOut(
-            id=report.id,
-            target_type=report.target_type,
-            target_id=report.target_id,
-            reporter_id=report.reporter_id,
-            reporter_nickname=reporter_nick,
-            reported_user_id=report.reported_user_id,
-            reported_user_nickname=reported_nick,
-            reason=report.reason,
-            detail=report.detail,
-            status=report.status,
-            created_at=report.created_at,
+    result: list[AdminReportOut] = []
+    for report, reporter_nick, reported_nick in rows:
+        target_title, target_content, target_hidden = await _report_target_preview(
+            session,
+            report.target_type,
+            report.target_id,
         )
-        for report, reporter_nick, reported_nick in rows
-    ]
+        reported_user = (
+            await session.get(User, report.reported_user_id)
+            if report.reported_user_id is not None
+            else None
+        )
+        result.append(
+            AdminReportOut(
+                id=report.id,
+                target_type=report.target_type,
+                target_id=report.target_id,
+                target_title=target_title,
+                target_content=target_content,
+                target_hidden=target_hidden,
+                reporter_id=report.reporter_id,
+                reporter_nickname=reporter_nick,
+                reported_user_id=report.reported_user_id,
+                reported_user_nickname=reported_nick,
+                reported_user_deleted_at=(
+                    reported_user.deleted_at if reported_user is not None else None
+                ),
+                reported_user_suspended_until=(
+                    reported_user.suspended_until if reported_user is not None else None
+                ),
+                reason=report.reason,
+                detail=report.detail,
+                status=report.status,
+                created_at=report.created_at,
+            )
+        )
+    return result
 
 
 @router.get(
@@ -135,3 +161,45 @@ async def admin_report_summary(
             for target_type, target_id, reporters, reports in top_targets
         ],
     )
+
+
+@router.post(
+    "/admin/actions",
+    response_model=AdminModerationActionOut,
+    dependencies=[Depends(require_admin)],
+)
+async def admin_moderation_action(
+    payload: AdminModerationActionCreate,
+    session: AsyncSession = Depends(db_session),
+) -> AdminModerationActionOut:
+    action = await apply_admin_moderation_action(session, payload)
+    return AdminModerationActionOut.model_validate(action)
+
+
+async def _report_target_preview(
+    session: AsyncSession,
+    target_type: str,
+    target_id: UUID | None,
+) -> tuple[str | None, str | None, bool]:
+    if target_id is None:
+        return None, None, False
+    if target_type == "dream":
+        dream = await session.get(Dream, target_id)
+        if dream is None:
+            return None, None, False
+        content = " / ".join(
+            part
+            for part in (
+                dream.short_message,
+                dream.story,
+                dream.raw_input,
+            )
+            if part
+        )
+        return dream.title, content[:500], dream.hidden_at is not None
+    if target_type == "comment":
+        comment = await session.get(DreamComment, target_id)
+        if comment is None:
+            return None, None, False
+        return "댓글", comment.content[:500], comment.hidden_at is not None
+    return None, None, False

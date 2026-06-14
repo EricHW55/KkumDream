@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 import httpx
@@ -45,6 +46,16 @@ async def google_login(
         nickname=google_user.get("name") or google_user.get("email"),
         profile_image_url=google_user.get("picture"),
     )
+    if user.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account has been deleted",
+        )
+    if user.suspended_until is not None and user.suspended_until > datetime.now(UTC):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account is suspended until {user.suspended_until.isoformat()}",
+        )
     return AuthSessionOut(
         access_token=create_app_access_token(user.id),
         user=UserOut.model_validate(user),

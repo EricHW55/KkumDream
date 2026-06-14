@@ -68,10 +68,15 @@ class AdminReportOut(ApiModel):
     id: UUID
     target_type: str
     target_id: UUID | None = None
+    target_title: str | None = None
+    target_content: str | None = None
+    target_hidden: bool = False
     reporter_id: UUID
     reporter_nickname: str | None = None
     reported_user_id: UUID | None = None
     reported_user_nickname: str | None = None
+    reported_user_deleted_at: datetime | None = None
+    reported_user_suspended_until: datetime | None = None
     reason: str
     detail: str | None = None
     status: str
@@ -89,3 +94,37 @@ class ReportSummaryOut(ApiModel):
     open_reports: int
     auto_hide_threshold: int
     top_targets: list[ReportTargetSummary]
+
+
+AdminModerationActionType = Literal[
+    "mark_resolved",
+    "dismiss_report",
+    "hide_dream",
+    "restore_dream",
+    "hide_comment",
+    "restore_comment",
+    "suspend_user",
+    "delete_user",
+]
+
+
+class AdminModerationActionCreate(ApiModel):
+    report_id: UUID | None = None
+    action: AdminModerationActionType
+    target_type: ReportTargetType | None = None
+    target_id: UUID | None = None
+    reported_user_id: UUID | None = None
+    duration_days: int | None = Field(default=None, ge=1, le=365)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class AdminModerationActionOut(ApiModel):
+    id: UUID
+    report_id: UUID | None = None
+    action: str
+    target_type: str | None = None
+    target_id: UUID | None = None
+    reported_user_id: UUID | None = None
+    duration_days: int | None = None
+    note: str | None = None
+    created_at: datetime
